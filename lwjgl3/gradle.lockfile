@@ -1,0 +1,15 @@
+# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+com.badlogicgames.gdx:gdx-backend-lwjgl3:1.14.2=compileClasspath
+com.badlogicgames.gdx:gdx-jnigen-loader:2.5.2=compileClasspath
+com.badlogicgames.gdx:gdx:1.14.2=compileClasspath
+com.badlogicgames.jlayer:jlayer:1.0.1-gdx=compileClasspath
+org.jcraft:jorbis:0.0.17=compileClasspath
+org.lwjgl:lwjgl-glfw:3.3.3=compileClasspath
+org.lwjgl:lwjgl-jemalloc:3.3.3=compileClasspath
+org.lwjgl:lwjgl-openal:3.3.3=compileClasspath
+org.lwjgl:lwjgl-opengl:3.3.3=compileClasspath
+org.lwjgl:lwjgl-stb:3.3.3=compileClasspath
+org.lwjgl:lwjgl:3.3.3=compileClasspath
+empty=annotationProcessor

@@ -1,0 +1,8 @@
+dependencies {
+    implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+    testImplementation platform("org.junit:junit-bom:$junitVersion")
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+sourceSets.main.resources.srcDirs = [rootProject.file('assets')]
+test { systemProperty 'assets.path', rootProject.file('assets').absolutePath }

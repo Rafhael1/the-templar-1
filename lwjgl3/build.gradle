@@ -1,0 +1,46 @@
+plugins { id 'application' }
+dependencies {
+    implementation project(':core')
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    runtimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+}
+def mac = System.getProperty('os.name').toLowerCase().contains('mac')
+application {
+    mainClass = 'br.com.thecruzader.desktop.DesktopLauncher'
+    applicationName = 'the-cruzader'
+    applicationDefaultJvmArgs = mac ? ['-XstartOnFirstThread'] : []
+}
+tasks.named('run') { workingDir = rootProject.projectDir }
+tasks.register('smokeTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs the real OpenGL renderer and writes screenshots; needs a desktop session.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    jvmArgs application.applicationDefaultJvmArgs
+    args '--smoke', layout.buildDirectory.dir('screenshots').get().asFile.absolutePath
+}
+tasks.register('cleanAppImage', Delete) {
+    delete layout.buildDirectory.dir('app-image')
+}
+tasks.register('appImage', Exec) {
+    group = 'distribution'
+    description = 'Packages a native desktop app with its own Java runtime for the current OS/architecture.'
+    dependsOn installDist, cleanAppImage
+    def destination = layout.buildDirectory.dir('app-image')
+    outputs.dir(destination)
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }.get()
+    commandLine launcher.metadata.installationPath.file('bin/jpackage').asFile,
+        '--type', 'app-image', '--name', 'The Cruzader', '--app-version', project.version,
+        '--vendor', 'The Cruzader', '--input', layout.buildDirectory.dir('install/the-cruzader/lib').get().asFile,
+        '--main-jar', tasks.jar.archiveFileName.get(), '--main-class', application.mainClass.get(),
+        '--dest', destination.get().asFile
+    if (mac) args '--java-options', '-XstartOnFirstThread'
+}
+
+tasks.named('jar') {
+    manifest {
+        attributes 'Main-Class': application.mainClass.get(),
+            'Class-Path': configurations.runtimeClasspath.files.collect { it.name }.join(' ')
+    }
+}

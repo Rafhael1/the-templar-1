@@ -1,0 +1,21 @@
+plugins { id 'base' }
+allprojects {
+    group = 'br.com.thecruzader'
+    version = '1.0.0'
+    repositories { mavenCentral() }
+}
+subprojects {
+    apply plugin: 'java'
+    java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = 21
+        options.compilerArgs += ['-Xlint:all', '-Werror']
+    }
+    tasks.withType(Test).configureEach { useJUnitPlatform() }
+    tasks.withType(AbstractArchiveTask).configureEach {
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+    }
+    dependencyLocking { lockAllConfigurations() }
+}

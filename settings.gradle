@@ -1,0 +1,2 @@
+rootProject.name = 'the-cruzader'
+include 'core', 'lwjgl3'
