@@ -14,15 +14,21 @@ public final class DesktopLauncher {
         ApplicationListener app;
         if (args.length == 0) app = new CrusaderGame();
         else if (args.length == 2 && args[0].equals("--smoke")) app = new SmokeTest(args[1]);
+        else if (args.length == 1 && args[0].equals("--profile")) app = new PerformanceTest();
         else
             throw new IllegalArgumentException(
-                    "Usage: The Cruzader [--smoke screenshot-directory]");
+                    "Usage: The Cruzader [--smoke screenshot-directory | --profile]");
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
         config.setTitle("The Cruzader");
-        config.setWindowedMode(1152, 648);
-        config.setWindowSizeLimits(800, 450, -1, -1);
+        config.setWindowedMode(960, 540);
+        config.setWindowSizeLimits(640, 360, -1, -1);
         config.useVsync(true);
-        config.setForegroundFPS(120);
+        config.setForegroundFPS(0);
+        if (app instanceof PerformanceTest) {
+            config.setWindowedMode(960, 540);
+            config.useVsync(false);
+            config.setForegroundFPS(0);
+        }
         config.setWindowListener(
                 new Lwjgl3WindowAdapter() {
                     @Override

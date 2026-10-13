@@ -2,7 +2,7 @@
 
 Sprites, cenários, mapa e arquivos WAV em `assets/` são originais deste projeto e foram produzidos por `tools/generate_assets.py`. Não há imagens, personagens, trilhas ou trechos de código extraídos de Blasphemous.
 
-A fonte bitmap padrão é a distribuída pelo libGDX. O runtime inclui libGDX, LWJGL e suas dependências de áudio/native loading; os avisos distribuídos pelos autores são mantidos nos artefatos originais. Principais projetos:
+A interface usa DejaVu Sans, rasterizada em alta resolução por `tools/generate_font.py`. O TTF original e o aviso de licença Bitstream/DejaVu/Arev estão em `assets/ui/DejaVuSans.ttf` e `assets/ui/DejaVu-LICENSE.txt`. O runtime inclui libGDX, LWJGL e suas dependências de áudio/native loading; os avisos distribuídos pelos autores são mantidos nos artefatos originais. Principais projetos:
 
 - libGDX — Apache 2.0: https://github.com/libgdx/libgdx/blob/master/LICENSE
 - LWJGL — BSD: https://github.com/LWJGL/lwjgl3/blob/master/LICENSE.md

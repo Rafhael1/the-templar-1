@@ -23,17 +23,26 @@ public final class GameWorld {
     private final MovementSystem movement = new MovementSystem();
     private final EnemySystem enemySystem = new EnemySystem();
     private final CombatSystem combat = new CombatSystem();
+    private final BodyCollisionSystem bodies = new BodyCollisionSystem();
     private final List<Enemy> enemies = new ArrayList<>();
     private final List<Enemy> enemyView = java.util.Collections.unmodifiableList(enemies);
     private final List<GameEvent> events = new ArrayList<>();
     private Player player;
+    private Enemy guardian;
+    private final Bounds shrine;
     private State state = State.PLAYING;
-    private boolean checkpoint, relic, paused;
+    private boolean checkpoint, paused;
+    private final boolean[] collectedBreads;
+    private final List<Arrow> arrows = new ArrayList<>();
+    private final List<Arrow> arrowView = java.util.Collections.unmodifiableList(arrows);
+    private final ProjectileSystem projectiles = new ProjectileSystem();
     private double time;
 
     public GameWorld(LevelData level) {
         this.level = Objects.requireNonNull(level);
+        collectedBreads = new boolean[level.breads().size()];
         collision = new CollisionWorld(level);
+        shrine = new Bounds(level.checkpoint().x() - 20, level.checkpoint().y(), 60, 80);
         player = new Player(level.spawn());
         populate();
     }
@@ -41,6 +50,7 @@ public final class GameWorld {
     private void populate() {
         enemies.clear();
         level.enemies().forEach(spawn -> enemies.add(new Enemy(spawn)));
+        guardian = enemies.stream().filter(Enemy::boss).findFirst().orElseThrow();
     }
 
     public void update(double dt, PlayerInput input) {
@@ -49,6 +59,9 @@ public final class GameWorld {
         Objects.requireNonNull(input);
         if (paused || state != State.PLAYING) return;
         time += dt;
+        player.previousX = player.x;
+        player.previousY = player.y;
+        boolean locked = gateLocked();
         player.attack.update(dt);
         movement.prepare(player, input, dt, events);
         if (input.direction() != 0 && !player.attack.running() && !player.dodging())
@@ -59,28 +72,34 @@ public final class GameWorld {
                     ? Player.AttackDirection.DOWN : Player.AttackDirection.SIDE;
             events.add(GameEvent.SWING);
         }
-        movement.move(player, input, dt, collision, gateLocked());
+        movement.move(player, input, dt, collision, locked);
         for (Enemy enemy : enemies) {
-            enemySystem.update(enemy, player, dt);
-            collision.move(enemy, dt, gateLocked());
+            enemy.previousX = enemy.x;
+            enemy.previousY = enemy.y;
+            enemySystem.update(enemy, player, dt, arrows);
+            collision.move(enemy, dt, locked);
         }
         combat.resolve(player, enemies, events);
+        bodies.resolve(player, enemies, collision, gateLocked());
+        projectiles.update(arrows, player, level, gateLocked(), dt, events);
         if (player.y < -100) player.health = 0;
         if (player.health <= 0) {
             state = State.DEAD;
             events.add(GameEvent.DEATH);
             return;
         }
-        Bounds shrine = new Bounds(level.checkpoint().x() - 20, level.checkpoint().y(), 60, 80);
         if (!checkpoint && shrine.overlaps(player.bounds())) {
             checkpoint = true;
             player.health = Player.MAX_HEALTH;
             events.add(GameEvent.CHECKPOINT);
         }
-        if (!relic && level.relic().overlaps(player.bounds())) {
-            relic = true;
-            player.health = Math.min(Player.MAX_HEALTH, player.health + 2);
-            events.add(GameEvent.RELIC);
+        for (int i = 0; i < collectedBreads.length; i++) {
+            if (!collectedBreads[i] && player.health < Player.MAX_HEALTH
+                    && level.breads().get(i).overlaps(player.bounds())) {
+                collectedBreads[i] = true;
+                player.health = Math.min(Player.MAX_HEALTH, player.health + 2);
+                events.add(GameEvent.RELIC);
+            }
         }
         if (!gateLocked() && level.exit().overlaps(player.bounds())) {
             state = State.WON;
@@ -92,6 +111,7 @@ public final class GameWorld {
         if (state != State.DEAD) throw new IllegalStateException("Respawn requires a dead player");
         player = new Player(checkpoint ? level.checkpoint() : level.spawn());
         populate();
+        arrows.clear();
         events.clear();
         paused = false;
         state = State.PLAYING;
@@ -104,7 +124,7 @@ public final class GameWorld {
     }
 
     public boolean gateLocked() {
-        return enemies.stream().anyMatch(enemy -> enemy.boss && enemy.health > 0);
+        return guardian.health > 0;
     }
 
     public Player player() {
@@ -131,9 +151,15 @@ public final class GameWorld {
         return checkpoint;
     }
 
-    public boolean relic() {
-        return relic;
+    public boolean breadCollected(int index) { return collectedBreads[index]; }
+
+    public int collectedBreadCount() {
+        int count = 0;
+        for (boolean collected : collectedBreads) if (collected) count++;
+        return count;
     }
+
+    public List<Arrow> arrows() { return arrowView; }
 
     public boolean paused() {
         return paused;

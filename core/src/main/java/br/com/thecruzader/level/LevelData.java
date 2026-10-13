@@ -8,28 +8,33 @@ public record LevelData(
         double height,
         Point spawn,
         Point checkpoint,
-        Bounds relic,
+        List<Bounds> breads,
         Bounds gate,
         Bounds exit,
         List<Bounds> solids,
         List<Spawn> enemies) {
     public record Point(double x, double y) {}
 
-    public record Spawn(double x, double y, boolean boss) {}
+    public enum EnemyKind { SENTINEL, ARCHER, GUARDIAN }
+
+    public record Spawn(double x, double y, EnemyKind kind) {
+        public Spawn { Objects.requireNonNull(kind); }
+    }
 
     public LevelData {
         if (width <= 0 || height <= 0)
             throw new IllegalArgumentException("Level dimensions must be positive");
         Objects.requireNonNull(spawn);
         Objects.requireNonNull(checkpoint);
-        Objects.requireNonNull(relic);
+        breads = List.copyOf(breads);
+        if (breads.isEmpty()) throw new IllegalArgumentException("Level requires bread pickups");
         Objects.requireNonNull(gate);
         Objects.requireNonNull(exit);
         solids = List.copyOf(solids);
         enemies = List.copyOf(enemies);
         if (solids.isEmpty())
             throw new IllegalArgumentException("Level requires collision geometry");
-        if (enemies.stream().filter(Spawn::boss).count() != 1)
+        if (enemies.stream().filter(enemy -> enemy.kind() == EnemyKind.GUARDIAN).count() != 1)
             throw new IllegalArgumentException("Level requires exactly one guardian");
     }
 }

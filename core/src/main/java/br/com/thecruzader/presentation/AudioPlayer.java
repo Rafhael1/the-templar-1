@@ -11,7 +11,7 @@ public final class AudioPlayer {
     public AudioPlayer(GameAssets assets) {
         this.assets = assets;
         assets.ambience().setLooping(true);
-        assets.ambience().setVolume(0.30f);
+        assets.ambience().setVolume(0.65f);
         assets.ambience().play();
     }
 

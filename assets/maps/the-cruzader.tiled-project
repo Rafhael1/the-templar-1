@@ -82,6 +82,17 @@
       "useAs": [
         "object"
       ]
+    },
+    {
+      "color": "#ff647650",
+      "drawFill": true,
+      "id": 8,
+      "members": [],
+      "name": "archer",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
     }
   ]
 }

@@ -19,7 +19,8 @@ public final class LevelLoader {
         List<Bounds> solids = new ArrayList<>();
         List<LevelData.Spawn> enemies = new ArrayList<>();
         LevelData.Point spawn = null, checkpoint = null;
-        Bounds relic = null, gate = null, exit = null;
+        List<Bounds> breads = new ArrayList<>();
+        Bounds gate = null, exit = null;
         for (XmlReader.Element group : map.getChildrenByName("objectgroup")) {
             String layer = group.getAttribute("name");
             if (!layer.equals("collisions") && !layer.equals("entities")) continue;
@@ -41,8 +42,7 @@ public final class LevelLoader {
                         checkpoint = new LevelData.Point(x, y);
                     }
                     case "relic" -> {
-                        requireUnique(relic, type);
-                        relic = rectangle(object, x, y);
+                        breads.add(rectangle(object, x, y));
                     }
                     case "gate" -> {
                         requireUnique(gate, type);
@@ -52,16 +52,17 @@ public final class LevelLoader {
                         requireUnique(exit, type);
                         exit = rectangle(object, x, y);
                     }
-                    case "sentinel", "guardian" ->
-                            enemies.add(new LevelData.Spawn(x, y, type.equals("guardian")));
+                    case "sentinel", "archer", "guardian" ->
+                            enemies.add(new LevelData.Spawn(x, y,
+                                    LevelData.EnemyKind.valueOf(type.toUpperCase(java.util.Locale.ROOT))));
                     default -> throw new IllegalArgumentException("Unknown entity type: " + type);
                 }
             }
         }
-        if (spawn == null || checkpoint == null || relic == null || gate == null || exit == null)
+        if (spawn == null || checkpoint == null || breads.isEmpty() || gate == null || exit == null)
             throw new IllegalArgumentException(
                     "Map requires spawn, checkpoint, relic, gate and exit");
-        return new LevelData(width, height, spawn, checkpoint, relic, gate, exit, solids, enemies);
+        return new LevelData(width, height, spawn, checkpoint, breads, gate, exit, solids, enemies);
     }
 
     private static Bounds rectangle(XmlReader.Element object, double x, double top) {

@@ -13,9 +13,9 @@ class DefenseAndAirAttackTest {
     private GameWorld world() {
         return new GameWorld(new LevelData(3200, 544,
                 new LevelData.Point(100, 64), new LevelData.Point(1400, 64),
-                new Bounds(740, 232, 22, 30), new Bounds(2950, 64, 40, 176),
+                List.of(new Bounds(740, 232, 22, 30)), new Bounds(2950, 64, 40, 176),
                 new Bounds(3010, 64, 110, 100), List.of(new Bounds(0, 0, 3200, 64)),
-                List.of(new LevelData.Spawn(620, 64, false), new LevelData.Spawn(2700, 64, true))));
+                List.of(new LevelData.Spawn(620, 64, LevelData.EnemyKind.SENTINEL), new LevelData.Spawn(2700, 64, LevelData.EnemyKind.GUARDIAN))));
     }
 
     @Test
@@ -42,8 +42,8 @@ class DefenseAndAirAttackTest {
     void downwardAttackHitsBelowOnceAndStopsDealingDamageOnLanding() {
         Player p = new Player(new LevelData.Point(100, 150));
         p.attackDirection = Player.AttackDirection.DOWN;
-        Enemy below = new Enemy(new LevelData.Spawn(104, 64, false));
-        Enemy beside = new Enemy(new LevelData.Spawn(150, 150, false));
+        Enemy below = new Enemy(new LevelData.Spawn(104, 64, LevelData.EnemyKind.SENTINEL));
+        Enemy beside = new Enemy(new LevelData.Spawn(150, 150, LevelData.EnemyKind.SENTINEL));
         var events = new ArrayList<GameEvent>();
         CombatSystem combat = new CombatSystem();
         p.attack.start();
@@ -81,10 +81,10 @@ class DefenseAndAirAttackTest {
     }
 
     private Enemy strike(double x, int facing) {
-        Enemy enemy = new Enemy(new LevelData.Spawn(x, 64, false));
+        Enemy enemy = new Enemy(new LevelData.Spawn(x, 64, LevelData.EnemyKind.SENTINEL));
         enemy.facing = facing;
         enemy.attack.start();
-        enemy.attack.update(.33);
+        enemy.attack.update(.56);
         return enemy;
     }
 

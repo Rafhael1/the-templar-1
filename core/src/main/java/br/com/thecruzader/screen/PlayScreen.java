@@ -9,6 +9,7 @@ import br.com.thecruzader.presentation.AudioPlayer;
 import br.com.thecruzader.presentation.GameAssets;
 import br.com.thecruzader.presentation.Hud;
 import br.com.thecruzader.presentation.WorldRenderer;
+import br.com.thecruzader.presentation.SceneryTransition;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
@@ -23,6 +24,7 @@ public final class PlayScreen extends ScreenAdapter {
     private final Hud hud;
     private final AudioPlayer audio;
     private double accumulator;
+    private int visitedRegions;
 
     public PlayScreen(CrusaderGame game, GameAssets assets, AudioPlayer audio) {
         this.game = game;
@@ -56,7 +58,7 @@ public final class PlayScreen extends ScreenAdapter {
             audio.setPaused(world.paused());
         }
         if (input.takeRestart()) {
-            if (world.state() == GameWorld.State.DEAD) {
+            if (world.state() == GameWorld.State.DEAD && renderer.deathElapsed() >= 1) {
                 world.respawn();
                 input.clear();
                 accumulator = 0;
@@ -81,10 +83,19 @@ public final class PlayScreen extends ScreenAdapter {
             if (event == GameEvent.CHECKPOINT)
                 hud.announce("SANTUARIO ACESO  -  Vida restaurada. Ponto de retorno ativado.");
             if (event == GameEvent.RELIC)
-                hud.announce("FRAGMENTO DO VOTO  -  Reliquia encontrada.");
+                hud.announce("PÃO DA VIDA  -  Até dois pontos de vida restaurados.");
         }
-        renderer.render(world);
-        hud.render(world, delta, audio.muted());
+        int nextRegion = SceneryTransition.regionAt(world.player().x());
+        if ((visitedRegions & (1 << nextRegion)) == 0) {
+            visitedRegions |= 1 << nextRegion;
+            hud.announce(new String[] {"I / O ACAMPAMENTO - A marcha começa",
+                    "II / ANATÓLIA - Pelas estradas do Oriente",
+                    "III / ANTIOQUIA - Entre ruínas e emboscadas",
+                    "IV / JERUSALÉM - À sombra das muralhas"}[nextRegion]);
+        }
+        renderer.render(world, delta, world.paused() || world.state() != GameWorld.State.PLAYING
+                ? 1 : (float) (accumulator / GameWorld.STEP));
+        hud.render(world, delta, audio.muted(), renderer.deathElapsed());
     }
 
     @Override

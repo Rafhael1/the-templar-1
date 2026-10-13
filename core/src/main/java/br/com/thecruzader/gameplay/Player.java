@@ -6,6 +6,7 @@ import br.com.thecruzader.level.LevelData;
 public final class Player {
     public static final double WIDTH = 28, HEIGHT = 52, DODGE_COOLDOWN = 0.8;
     public static final int MAX_HEALTH = 5;
+    double previousX, previousY;
     double x, y, vx, vy, invulnerable, dodge, dodgeCooldown, coyote, jumpBuffer;
     int facing = 1, health = MAX_HEALTH;
     public enum AttackDirection { SIDE, DOWN }
@@ -16,9 +17,12 @@ public final class Player {
     final Attack attack = new Attack(0.10, 0.12, 0.22);
 
     Player(LevelData.Point point) {
-        x = point.x();
-        y = point.y();
+        previousX = x = point.x();
+        previousY = y = point.y();
     }
+
+    public double interpolatedX(double alpha) { return previousX + (x - previousX) * alpha; }
+    public double interpolatedY(double alpha) { return previousY + (y - previousY) * alpha; }
 
     public double x() {
         return x;

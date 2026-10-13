@@ -44,3 +44,13 @@ tasks.named('jar') {
             'Class-Path': configurations.runtimeClasspath.files.collect { it.name }.join(' ')
     }
 }
+
+tasks.register('performanceTest', JavaExec) {
+    group = 'verification'
+    description = 'Measures full-HD simulation and rendering across all four regions; needs a desktop session.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    jvmArgs application.applicationDefaultJvmArgs
+    args '--profile'
+}

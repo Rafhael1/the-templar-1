@@ -21,11 +21,22 @@ public final class CollisionWorld {
         lockedSolids = List.copyOf(withGate);
     }
 
+    double constrainX(double fromX, double targetX, double y, double width, double height, boolean locked) {
+        List<Bounds> solids = locked ? lockedSolids : level.solids();
+        double x = Math.max(0, Math.min(level.width() - width, targetX));
+        for (Bounds solid : solids) {
+            if (!solid.overlaps(x, y, width, height)) continue;
+            if (targetX > fromX) x = Math.min(x, solid.x() - width);
+            else if (targetX < fromX) x = Math.max(x, solid.right());
+        }
+        return Math.max(0, Math.min(level.width() - width, x));
+    }
+
     void move(Player p, double dt, boolean gateLocked) {
         List<Bounds> solids = gateLocked ? lockedSolids : level.solids();
         p.x += p.vx * dt;
         for (Bounds solid : solids)
-            if (p.bounds().overlaps(solid)) {
+            if (solid.overlaps(p.x, p.y, Player.WIDTH, Player.HEIGHT)) {
                 if (p.vx > 0) p.x = solid.x() - Player.WIDTH;
                 else if (p.vx < 0) p.x = solid.right();
             }
@@ -33,7 +44,7 @@ public final class CollisionWorld {
         p.y += p.vy * dt;
         p.grounded = false;
         for (Bounds solid : solids)
-            if (p.bounds().overlaps(solid)) {
+            if (solid.overlaps(p.x, p.y, Player.WIDTH, Player.HEIGHT)) {
                 if (p.vy < 0) {
                     p.y = solid.top();
                     p.grounded = true;
@@ -45,18 +56,18 @@ public final class CollisionWorld {
         if (enemy.health <= 0) return;
         List<Bounds> solids = gateLocked ? lockedSolids : level.solids();
         double previousX = enemy.x;
-        enemy.x = Math.max(0, Math.min(level.width() - enemy.bounds().width(),
+        enemy.x = Math.max(0, Math.min(level.width() - enemy.width(),
                 enemy.x + enemy.vx * dt));
         for (Bounds solid : solids) {
-            if (!enemy.bounds().overlaps(solid)) continue;
+            if (!solid.overlaps(enemy.x, enemy.y, enemy.width(), enemy.height())) continue;
             double rise = solid.top() - enemy.y;
             Bounds stepped = new Bounds(enemy.x, solid.top(),
-                    enemy.bounds().width(), enemy.bounds().height());
+                    enemy.width(), enemy.height());
             if (enemy.grounded && rise > 0 && rise <= 32
                     && solids.stream().noneMatch(other -> stepped.overlaps(other))) {
                 enemy.y = solid.top();
             } else if (enemy.x > previousX) {
-                enemy.x = solid.x() - enemy.bounds().width();
+                enemy.x = solid.x() - enemy.width();
             } else if (enemy.x < previousX) {
                 enemy.x = solid.right();
             }
@@ -65,12 +76,12 @@ public final class CollisionWorld {
         enemy.y += enemy.vy * dt;
         enemy.grounded = false;
         for (Bounds solid : solids) {
-            if (!enemy.bounds().overlaps(solid)) continue;
+            if (!solid.overlaps(enemy.x, enemy.y, enemy.width(), enemy.height())) continue;
             if (enemy.vy < 0) {
                 enemy.y = solid.top();
                 enemy.grounded = true;
             } else if (enemy.vy > 0) {
-                enemy.y = solid.y() - enemy.bounds().height();
+                enemy.y = solid.y() - enemy.height();
             }
             enemy.vy = 0;
         }

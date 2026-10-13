@@ -29,6 +29,21 @@ class GameWorldTest {
     }
 
     @Test
+    void renderedPositionInterpolatesBetweenSimulationStepsAndResetsOnRespawn() {
+        GameWorld w = world();
+        double start = w.player().x();
+        w.update(STEP, new PlayerInput(1, false, false, false, false, false));
+        assertEquals(start, w.player().interpolatedX(0), .001);
+        assertEquals(w.player().x(), w.player().interpolatedX(1), .001);
+        assertEquals((start + w.player().x()) / 2, w.player().interpolatedX(.5), .001);
+        w.player().health = 0;
+        w.update(STEP, PlayerInput.NONE);
+        w.respawn();
+        assertEquals(w.player().x(), w.player().interpolatedX(0), .001);
+        assertEquals(w.player().y(), w.player().interpolatedY(0), .001);
+    }
+
+    @Test
     void jumpFromGroundReturnsToGround() {
         GameWorld w = world();
         w.update(STEP, PlayerInput.NONE);
@@ -65,6 +80,7 @@ class GameWorldTest {
     @Test
     void relicRouteIsReachableThroughJumpsAndReturnsToRoad() {
         GameWorld w = world();
+        w.player().health = 3;
         w.player().x = 390;
         w.update(STEP, PlayerInput.NONE);
         w.update(STEP, new PlayerInput(1, true, false, false, false, false));
@@ -72,7 +88,7 @@ class GameWorldTest {
         assertEquals(160, w.player().y(), .001);
         w.update(STEP, new PlayerInput(1, true, false, false, false, false));
         advance(w, 100, new PlayerInput(1, false, false, false, false, false));
-        assertTrue(w.relic(), "Relic must be reachable through the platform route");
+        assertTrue(w.collectedBreadCount() > 0, "Relic must be reachable through the platform route");
         assertEquals(224, w.player().y(), .001);
         w.update(STEP, new PlayerInput(1, true, false, false, false, false));
         advance(w, 110, new PlayerInput(1, false, false, false, false, false));
@@ -94,7 +110,7 @@ class GameWorldTest {
                                 base.height(),
                                 base.spawn(),
                                 base.checkpoint(),
-                                base.relic(),
+                                base.breads(),
                                 base.gate(),
                                 base.exit(),
                                 solids,
@@ -110,7 +126,7 @@ class GameWorldTest {
     @Test
     void windupRecoveryAndActiveWindowControlDamage() {
         Player p = new Player(new LevelData.Point(100, 64));
-        Enemy e = new Enemy(new LevelData.Spawn(145, 64, false));
+        Enemy e = new Enemy(new LevelData.Spawn(145, 64, LevelData.EnemyKind.SENTINEL));
         var events = new ArrayList<GameEvent>();
         CombatSystem combat = new CombatSystem();
         p.attack.start();
@@ -150,7 +166,7 @@ class GameWorldTest {
         e.x = p.x + 45;
         e.facing = -1;
         e.attack.start();
-        e.attack.update(.43);
+        e.attack.update(.60);
         w.update(STEP, new PlayerInput(0, false, false, true, false, false));
         assertEquals(5, p.health());
         assertTrue(p.dodging());
@@ -160,9 +176,9 @@ class GameWorldTest {
     @Test
     void enemyStrikeDealsDamageOnlyOnce() {
         Player p = new Player(new LevelData.Point(100, 64));
-        Enemy e = new Enemy(new LevelData.Spawn(145, 64, false));
+        Enemy e = new Enemy(new LevelData.Spawn(145, 64, LevelData.EnemyKind.SENTINEL));
         e.attack.start();
-        e.attack.update(.43);
+        e.attack.update(.60);
         var events = new ArrayList<GameEvent>();
         CombatSystem combat = new CombatSystem();
         combat.resolve(p, List.of(e), events);
@@ -214,24 +230,24 @@ class GameWorldTest {
     @Test
     void relicHealsOnceAndPersistsAcrossDeath() {
         GameWorld w = world();
-        w.player().x = w.level().relic().x();
-        w.player().y = w.level().relic().y();
+        w.player().x = w.level().breads().getFirst().x();
+        w.player().y = w.level().breads().getFirst().y();
         w.player().health = 1;
         w.update(STEP, PlayerInput.NONE);
-        assertTrue(w.relic());
+        assertTrue(w.collectedBreadCount() > 0);
         assertEquals(3, w.player().health());
         w.update(STEP, PlayerInput.NONE);
         assertEquals(3, w.player().health());
         w.player().health = 0;
         w.update(STEP, PlayerInput.NONE);
         w.respawn();
-        assertTrue(w.relic());
+        assertTrue(w.collectedBreadCount() > 0);
     }
 
     @Test
     void gatePhysicallyBlocksExitUntilGuardianDies() {
         GameWorld w = world();
-        w.player().x = 2900;
+        w.player().x = w.level().gate().x() - 50;
         advance(w, 100, new PlayerInput(1, false, false, false, false, false));
         assertTrue(w.player().bounds().right() <= w.level().gate().x());
         assertEquals(GameWorld.State.PLAYING, w.state());
@@ -283,32 +299,33 @@ class GameWorldTest {
     @Test
     void completeLevelUsingOnlyPlayerCommands() {
         GameWorld w = world();
-        for (int tick = 0; tick < 120 * 120 && w.state() == GameWorld.State.PLAYING; tick++) {
+        for (int tick = 0; tick < 180 * 120 && w.state() == GameWorld.State.PLAYING; tick++) {
             Player p = w.player();
             Enemy target =
                     w.enemies().stream()
-                            .filter(e -> e.health() > 0)
+                            .filter(e -> e.health() > 0 && Math.abs(e.y() - p.y()) < 80)
                             .min(java.util.Comparator.comparingDouble(e -> Math.abs(e.x() - p.x())))
                             .orElse(null);
             int direction = 1;
-            boolean attack = false, dodge = false;
+            boolean attack = false, block = false;
             if (target != null && Math.abs(target.x() - p.x()) < 180) {
                 double distance = target.x() - p.x();
                 direction = distance >= 0 ? 1 : -1;
-                if (target.state() == Enemy.State.WINDUP) {
-                    direction = -target.facing();
-                    dodge = !p.attack().running();
+                if (target.state() == Enemy.State.WINDUP || target.state() == Enemy.State.ATTACK
+                        || target.state() == Enemy.State.DASH_WINDUP || target.state() == Enemy.State.DASH
+                        || target.state() == Enemy.State.JUMP_WINDUP || target.state() == Enemy.State.JUMP) {
+                    block = true;
                 } else {
-                    attack = Math.abs(distance) < 80;
-                    if (p.attack().running()) direction = 0;
+                    attack = target.state() == Enemy.State.RECOVER && Math.abs(distance) < 80;
+                    if (p.attack().running() || Math.abs(distance) < 50) direction = 0;
                 }
             }
             boolean jump = p.grounded() && direction > 0 && w.level().solids().stream()
-                    .anyMatch(solid -> solid.x() >= 2208 && solid.x() < 2560
+                    .anyMatch(solid -> solid.y() == 64 && solid.top() > 64
                             && solid.x() >= p.x() + Player.WIDTH
                             && solid.x() - (p.x() + Player.WIDTH) < 85
                             && solid.top() > p.y() && solid.top() - p.y() < 160);
-            w.update(STEP, new PlayerInput(direction, jump, attack, dodge, false, false));
+            w.update(STEP, new PlayerInput(direction, jump, attack, false, false, block));
         }
         assertEquals(
                 GameWorld.State.WON,

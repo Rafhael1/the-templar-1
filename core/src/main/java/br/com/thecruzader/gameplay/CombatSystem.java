@@ -14,26 +14,37 @@ final class CombatSystem {
                     && enemy.lastPlayerAttack != player.attack.sequence()
                     && sword.overlaps(enemy.bounds())) {
                 enemy.lastPlayerAttack = player.attack.sequence();
+                boolean front = (player.x + Player.WIDTH / 2
+                        - (enemy.x + enemy.bounds().width() / 2)) * enemy.facing > 0;
+                if (enemy.blocking() && front && player.attackDirection != Player.AttackDirection.DOWN) {
+                    enemy.flash = 0.12;
+                    events.add(GameEvent.BLOCK);
+                    continue;
+                }
                 enemy.health--;
                 enemy.flash = 0.14;
                 if (enemy.health == 0) enemy.state = Enemy.State.DEAD;
                 events.add(GameEvent.HIT);
             }
-            if (enemy.health <= 0 || enemy.attack.phase() != Attack.Phase.ACTIVE || enemy.hitPlayer)
+            boolean bodyAttack = enemy.state == Enemy.State.DASH || enemy.state == Enemy.State.JUMP;
+            if (enemy.health <= 0 || enemy.archer() || enemy.hitPlayer
+                    || (!bodyAttack && enemy.attack.phase() != Attack.Phase.ACTIVE))
                 continue;
-            if (enemy.weaponBounds().overlaps(player.bounds())) {
+            if ((bodyAttack ? enemy.bounds() : enemy.weaponBounds()).overlaps(player.bounds())) {
                 enemy.hitPlayer = true;
-                double enemyCenter = enemy.x + enemy.bounds().width() / 2;
-                double playerCenter = player.x + Player.WIDTH / 2;
-                if (player.blocking && (enemyCenter - playerCenter) * player.facing > 0) {
-                    player.blockFlash = 0.16;
-                    events.add(GameEvent.BLOCK);
-                } else if (player.invulnerable == 0) {
-                    player.health--;
-                    player.invulnerable = 0.85;
-                    events.add(GameEvent.HURT);
-                }
+                hitPlayer(player, enemy.x + enemy.bounds().width() / 2, events);
             }
+        }
+    }
+    static void hitPlayer(Player player, double sourceX, List<GameEvent> events) {
+        if (player.invulnerable > 0) return;
+        if (player.blocking && (sourceX - (player.x + Player.WIDTH / 2)) * player.facing > 0) {
+            player.blockFlash = 0.16;
+            events.add(GameEvent.BLOCK);
+        } else {
+            player.health--;
+            player.invulnerable = 0.85;
+            events.add(GameEvent.HURT);
         }
     }
 }

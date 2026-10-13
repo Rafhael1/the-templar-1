@@ -2,6 +2,7 @@ package br.com.thecruzader;
 
 import br.com.thecruzader.presentation.AudioPlayer;
 import br.com.thecruzader.presentation.GameAssets;
+import br.com.thecruzader.presentation.DisplaySettings;
 import br.com.thecruzader.screen.MenuScreen;
 import br.com.thecruzader.screen.PlayScreen;
 
@@ -14,9 +15,19 @@ public final class CrusaderGame extends Game {
 
     @Override
     public void create() {
+        DisplaySettings.apply(true);
         assets = new GameAssets();
         audio = new AudioPlayer(assets);
-        setScreen(new MenuScreen(this, assets));
+        showMenu();
+    }
+
+    public void showMenu() {
+        audio.setPaused(false);
+        replaceScreen(new MenuScreen(this, assets, audio));
+    }
+
+    public void startJourney() {
+        replaceScreen(new br.com.thecruzader.screen.IntroScreen(this, assets));
     }
 
     public void startGame() {

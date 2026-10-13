@@ -73,3 +73,8 @@ O teste desktop usa OpenGL real e captura o framebuffer. O pacote `appImage` é 
 O próximo investimento deve ser na sensação do combate: animações próprias para cada golpe, efeitos de impacto e balanceamento com jogadores. Novas fases podem reutilizar o formato TMX. Persistência e gamepad devem entrar somente quando se tornarem requisitos concretos.
 
 Os inimigos produzem uma velocidade horizontal na IA; `CollisionWorld` aplica essa intenção ao terreno e ao portão, além de gravidade durante movimento e ataque. Degraus de até 32 pixels são transpostos somente quando o inimigo está no chão e há espaço livre para o corpo na posição elevada. Paredes maiores bloqueiam a passagem.
+
+`LevelData` contém uma lista de unidades de Pão da Vida e spawns tipados de sentinela, arqueiro e guardião. `GameWorld` mantém a coleta por índice entre respawns. `EnemySystem` produz os disparos do arqueiro e delega os movimentos do guardião a `BossSystem`; `ProjectileSystem` resolve flechas contra terreno, portão e jogador na ordem do impacto ao longo do deslocamento.
+
+
+A apresentação interpola posições anteriores/atuais da simulação e arredonda a câmera para preservar a grade de pixels. `WorldRenderer` controla somente o tempo e poses visuais de morte; os estados terminais da simulação permanecem congelados. Antes do tilemap, o batch compartilhado volta à cor branca opaca. Cores e regiões de armas são reutilizadas, objetos fora da câmera não são desenhados e colisões consultam coordenadas diretamente sem criar retângulos em cada comparação. `DisplaySettings` expressa os presets em pixels do framebuffer e compensa Retina.

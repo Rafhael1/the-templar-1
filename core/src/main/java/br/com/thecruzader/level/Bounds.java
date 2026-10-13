@@ -21,6 +21,11 @@ public record Bounds(double x, double y, double width, double height) {
         return y + height;
     }
 
+    public boolean overlaps(double otherX, double otherY, double otherWidth, double otherHeight) {
+        return x < otherX + otherWidth && right() > otherX
+                && y < otherY + otherHeight && top() > otherY;
+    }
+
     public boolean overlaps(Bounds other) {
         return x < other.right() && right() > other.x && y < other.top() && top() > other.y;
     }

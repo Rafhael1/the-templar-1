@@ -19,11 +19,27 @@ class LevelLoaderTest {
     @Test
     void loadsCommittedMapAndConvertsTiledCoordinates() {
         LevelData map = LevelLoader.load(actualMap());
-        assertEquals(3200, map.width());
+        assertEquals(8960, map.width());
         assertEquals(64, map.spawn().y());
-        assertEquals(5, map.enemies().size());
-        assertEquals(12, map.solids().size());
+        assertEquals(17, map.enemies().size());
+        assertEquals(34, map.solids().size());
+        assertEquals(10, map.breads().size());
+        assertEquals(5, map.enemies().stream()
+                .filter(enemy -> enemy.kind() == LevelData.EnemyKind.ARCHER).count());
         assertEquals(160, map.solids().get(1).top());
+    }
+
+    @Test
+    void encounterSpawnsAndHealingAreClearOfSolidTerrain() {
+        LevelData map = LevelLoader.load(actualMap());
+        for (Bounds bread : map.breads())
+            for (Bounds solid : map.solids())
+                assertFalse(bread.overlaps(solid), "Bread inside terrain at " + bread.x());
+        for (LevelData.Spawn spawn : map.enemies()) {
+            Bounds feet = new Bounds(spawn.x(), spawn.y(), 30, 60);
+            for (Bounds solid : map.solids())
+                assertFalse(feet.overlaps(solid), "Enemy inside terrain at " + spawn.x());
+        }
     }
 
     @Test
@@ -54,5 +70,22 @@ class LevelLoaderTest {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> LevelLoader.load(file));
         assertTrue(error.getMessage().contains("unrotated rectangles"));
+    }
+    @Test
+    void expandedHalfContainsTerrainEncountersAndFinalObjectives() {
+        LevelData map = LevelLoader.load(actualMap());
+        assertTrue(map.solids().stream().filter(solid -> solid.x() >= 3200).count() >= 10);
+        assertEquals(12, map.enemies().stream().filter(enemy -> enemy.x() >= 3200).count());
+        assertTrue(map.checkpoint().x() >= 4200 && map.checkpoint().x() <= 4700);
+        assertTrue(map.gate().x() >= 6000);
+        assertTrue(map.exit().x() > map.gate().right());
+        assertTrue(map.exit().right() <= map.width());
+        for (Bounds solid : map.solids()) {
+            assertTrue(solid.x() >= 0 && solid.right() <= map.width());
+            assertEquals(0, solid.x() % 32, .001);
+            assertEquals(0, solid.width() % 32, .001);
+            assertEquals(0, solid.y() % 32, .001);
+            assertEquals(0, solid.height() % 32, .001);
+        }
     }
 }
