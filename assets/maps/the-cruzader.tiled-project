@@ -93,6 +93,17 @@
       "useAs": [
         "object"
       ]
+    },
+    {
+      "color": "#ff973f4e",
+      "drawFill": true,
+      "id": 9,
+      "members": [],
+      "name": "arena",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
     }
   ]
 }

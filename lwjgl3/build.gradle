@@ -5,9 +5,11 @@ dependencies {
     runtimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 }
 def mac = System.getProperty('os.name').toLowerCase().contains('mac')
+def windows = System.getProperty('os.name').toLowerCase().contains('windows')
+def appIcon = rootProject.file('assets/branding/' + (mac ? 'o-templario.icns' : windows ? 'o-templario.ico' : 'icon-1024.png'))
 application {
     mainClass = 'br.com.thecruzader.desktop.DesktopLauncher'
-    applicationName = 'the-cruzader'
+    applicationName = 'o-templario'
     applicationDefaultJvmArgs = mac ? ['-XstartOnFirstThread'] : []
 }
 tasks.named('run') { workingDir = rootProject.projectDir }
@@ -29,10 +31,12 @@ tasks.register('appImage', Exec) {
     dependsOn installDist, cleanAppImage
     def destination = layout.buildDirectory.dir('app-image')
     outputs.dir(destination)
+    inputs.file(appIcon)
     def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }.get()
     commandLine launcher.metadata.installationPath.file('bin/jpackage').asFile,
-        '--type', 'app-image', '--name', 'The Cruzader', '--app-version', project.version,
-        '--vendor', 'The Cruzader', '--input', layout.buildDirectory.dir('install/the-cruzader/lib').get().asFile,
+        '--type', 'app-image', '--name', 'O Templário', '--app-version', project.version,
+        '--vendor', 'O Templário', '--input', layout.buildDirectory.dir('install/o-templario/lib').get().asFile,
+        '--icon', appIcon,
         '--main-jar', tasks.jar.archiveFileName.get(), '--main-class', application.mainClass.get(),
         '--dest', destination.get().asFile
     if (mac) args '--java-options', '-XstartOnFirstThread'

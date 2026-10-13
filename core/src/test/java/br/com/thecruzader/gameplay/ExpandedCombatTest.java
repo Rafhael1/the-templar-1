@@ -16,7 +16,7 @@ class ExpandedCombatTest {
         solids.addAll(List.of(obstacles));
         return new LevelData(6400, 544, new LevelData.Point(100, 64), new LevelData.Point(3008, 64),
                 List.of(new Bounds(742, 232, 28, 28)), new Bounds(6176, 64, 40, 176),
-                new Bounds(6240, 64, 128, 100), solids,
+                new Bounds(6240, 64, 128, 100), new Bounds(64, 64, 6112, 256), solids,
                 List.of(new LevelData.Spawn(5900, 64, LevelData.EnemyKind.GUARDIAN)));
     }
 
@@ -110,7 +110,7 @@ class ExpandedCombatTest {
         Player player = new Player(new LevelData.Point(240, 64));
         var arrows = new ArrayList<>(List.of(new Arrow(100, 90, 400, 90)));
         var events = new ArrayList<GameEvent>();
-        new ProjectileSystem().update(arrows, player, level(new Bounds(200, 64, 1, 120)),
+        new ProjectileSystem().update(arrows, player, new CollisionWorld(level(new Bounds(200, 64, 1, 120))),
                 false, .5, events);
         assertTrue(arrows.isEmpty());
         assertEquals(5, player.health());
@@ -125,7 +125,7 @@ class ExpandedCombatTest {
             player.facing = facing;
             var arrows = new ArrayList<>(List.of(new Arrow(100, 90, 400, 90)));
             var events = new ArrayList<GameEvent>();
-            new ProjectileSystem().update(arrows, player, level(), false, .5, events);
+            new ProjectileSystem().update(arrows, player, new CollisionWorld(level()), false, .5, events);
             assertTrue(arrows.isEmpty());
             assertEquals(facing < 0 ? 5 : 4, player.health());
             assertEquals(List.of(facing < 0 ? GameEvent.BLOCK : GameEvent.HURT), events);
@@ -137,7 +137,7 @@ class ExpandedCombatTest {
         Player player = new Player(new LevelData.Point(1000, 64));
         var arrows = new ArrayList<>(List.of(new Arrow(100, 300, 500, 300)));
         arrows.getFirst().life = .01;
-        new ProjectileSystem().update(arrows, player, level(), false, .02, new ArrayList<>());
+        new ProjectileSystem().update(arrows, player, new CollisionWorld(level()), false, .02, new ArrayList<>());
         assertTrue(arrows.isEmpty());
     }
 

@@ -29,9 +29,9 @@ public final class GameWorld {
     private final List<GameEvent> events = new ArrayList<>();
     private Player player;
     private Enemy guardian;
-    private final Bounds shrine;
+    private final Bounds shrine, arenaEntrance;
     private State state = State.PLAYING;
-    private boolean checkpoint, paused;
+    private boolean checkpoint, paused, arenaEntered, bossDefeated;
     private final boolean[] collectedBreads;
     private final List<Arrow> arrows = new ArrayList<>();
     private final List<Arrow> arrowView = java.util.Collections.unmodifiableList(arrows);
@@ -42,6 +42,7 @@ public final class GameWorld {
         this.level = Objects.requireNonNull(level);
         collectedBreads = new boolean[level.breads().size()];
         collision = new CollisionWorld(level);
+        arenaEntrance = level.arenaEntrance();
         shrine = new Bounds(level.checkpoint().x() - 20, level.checkpoint().y(), 60, 80);
         player = new Player(level.spawn());
         populate();
@@ -73,15 +74,22 @@ public final class GameWorld {
             events.add(GameEvent.SWING);
         }
         movement.move(player, input, dt, collision, locked);
+        enterArena();
         for (Enemy enemy : enemies) {
             enemy.previousX = enemy.x;
             enemy.previousY = enemy.y;
-            enemySystem.update(enemy, player, dt, arrows);
+            if (!enemy.boss || arenaEntered) enemySystem.update(enemy, player, dt, arrows);
+            else enemy.vx = 0;
             collision.move(enemy, dt, locked);
         }
         combat.resolve(player, enemies, events);
+        if (arenaEntered && !bossDefeated && guardian.health <= 0) {
+            bossDefeated = true;
+            collision.setArenaClosed(false);
+            events.add(GameEvent.BOSS_DEFEATED);
+        }
         bodies.resolve(player, enemies, collision, gateLocked());
-        projectiles.update(arrows, player, level, gateLocked(), dt, events);
+        projectiles.update(arrows, player, collision, gateLocked(), dt, events);
         if (player.y < -100) player.health = 0;
         if (player.health <= 0) {
             state = State.DEAD;
@@ -107,10 +115,33 @@ public final class GameWorld {
         }
     }
 
+    private void enterArena() {
+        if (arenaEntered || guardian.health <= 0 || player.x < level.arena().x()
+                || player.x >= level.arena().right()) return;
+        arenaEntered = true;
+        collision.setArenaClosed(true);
+        arrows.clear();
+        Bounds entrance = arenaEntrance;
+        for (Enemy enemy : enemies)
+            if (!enemy.boss && enemy.bounds().overlaps(entrance)) {
+                enemy.x = entrance.x() - enemy.width();
+                enemy.previousX = enemy.x;
+            }
+        events.add(GameEvent.ARENA_START);
+    }
+
+    public Bounds arenaEntrance() { return arenaEntrance; }
+    public boolean arenaEntered() { return arenaEntered; }
+    public boolean arenaLocked() { return arenaEntered && gateLocked(); }
+    public Enemy guardian() { return guardian; }
+
     public void respawn() {
         if (state != State.DEAD) throw new IllegalStateException("Respawn requires a dead player");
         player = new Player(checkpoint ? level.checkpoint() : level.spawn());
         populate();
+        arenaEntered = false;
+        bossDefeated = false;
+        collision.setArenaClosed(false);
         arrows.clear();
         events.clear();
         paused = false;

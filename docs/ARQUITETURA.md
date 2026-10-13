@@ -1,4 +1,4 @@
-# Arquitetura — The Cruzader
+# Arquitetura — O Templário
 
 ## Decisão central
 
@@ -78,3 +78,9 @@ Os inimigos produzem uma velocidade horizontal na IA; `CollisionWorld` aplica es
 
 
 A apresentação interpola posições anteriores/atuais da simulação e arredonda a câmera para preservar a grade de pixels. `WorldRenderer` controla somente o tempo e poses visuais de morte; os estados terminais da simulação permanecem congelados. Antes do tilemap, o batch compartilhado volta à cor branca opaca. Cores e regiões de armas são reutilizadas, objetos fora da câmera não são desenhados e colisões consultam coordenadas diretamente sem criar retângulos em cada comparação. `DisplaySettings` expressa os presets em pixels do framebuffer e compensa Retina.
+
+
+`i18n/GameText` carrega os dois catálogos UTF-8 uma única vez e rejeita traduções incompletas. `Language` define PT e EN. `GameAssets` compartilha a consulta entre as telas; `CrusaderGame` persiste a escolha, e o menu reconstrói apenas a página de opções ao mudar o idioma. Textos de interface ficam em `assets/i18n/`, sem carregar arquivos a cada frame ou duplicar traduções nas classes das telas.
+
+
+A arena é um retângulo obrigatório em `LevelData`/Tiled. `GameWorld` ativa o encontro ao entrar, mantém o chefe inativo antes disso e reinicia a arena no respawn. `CollisionWorld` compartilha as listas de sólidos estáticas e dos portões com movimento, separação de corpos e flechas. `WorldRenderer` centraliza e trava a câmera, animando os portões; `Hud` apresenta a vida do chefe. A morte do guardião libera as barreiras e o enquadramento.

@@ -43,8 +43,10 @@ public final class WorldRenderer implements Disposable {
     private GameWorld displayedWorld;
     private Player displayedPlayer;
     private float[] enemyDeaths;
-    private float playerDeath;
+    private float playerDeath, cameraX, entranceClosure, exitClosure;
+    private boolean cameraInitialized;
 
+    public float cameraX() { return camera.position.x; }
     public float deathElapsed() { return playerDeath; }
 
     private final Texture[] scenery = new Texture[SceneryTransition.REGIONS];
@@ -71,13 +73,20 @@ public final class WorldRenderer implements Disposable {
         updateDeaths(world, delta);
         ScreenUtils.clear(0.035f, 0.05f, 0.08f, 1);
         viewport.apply();
-        camera.position.set(
-                (float)
-                        Math.max(
-                                480,
-                                Math.min(world.level().width() - 480, Math.round(world.player().interpolatedX(alpha) + 140))),
-                270,
-                0);
+        double target = world.arenaLocked() ? world.level().arena().x() + world.level().arena().width() / 2
+                : world.player().interpolatedX(alpha) + 140;
+        target = Math.max(480, Math.min(world.level().width() - 480, target));
+        if (!cameraInitialized || !world.arenaEntered()) cameraX = (float) target;
+        else {
+            cameraX += ((float) target - cameraX) * Math.min(1, delta * 7);
+            if (Math.abs(cameraX - target) < .25) cameraX = (float) target;
+        }
+        cameraInitialized = true;
+        camera.position.set(Math.round(cameraX), 270, 0);
+        if (!world.paused()) {
+            entranceClosure = approach(entranceClosure, world.arenaLocked() ? 1 : 0, delta * 4);
+            exitClosure = approach(exitClosure, world.gateLocked() ? 1 : 0, delta * 4);
+        }
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         float left = camera.position.x - 480;
@@ -145,6 +154,9 @@ public final class WorldRenderer implements Disposable {
             displayedPlayer = world.player();
             enemyDeaths = new float[world.enemies().size()];
             playerDeath = 0;
+            cameraInitialized = false;
+            entranceClosure = 0;
+            exitClosure = world.gateLocked() ? 1 : 0;
         }
         if (world.paused()) return;
         float step = Math.min(delta, .1f);
@@ -183,17 +195,8 @@ public final class WorldRenderer implements Disposable {
                     (float) Math.round(r.y() + r.height() / 2 - 16
                             + Math.sin(world.time() * 3) * 2), 32, 32);
         }
-        Bounds gate = world.level().gate();
-        rect(gate.x() - 18, gate.y(), 16, gate.height() + 20, STONE);
-        rect(gate.right() + 3, gate.y(), 16, gate.height() + 20, STONE);
-        rect(gate.x() - 18, gate.top() + 10, gate.width() + 37, 13, GameAssets.GOLD);
-        for (int i = 0; i < 4; i++)
-            rect(
-                    gate.x() + i * 12,
-                    world.gateLocked() ? gate.y() : gate.top() - 25,
-                    4,
-                    world.gateLocked() ? gate.height() + 10 : 35,
-                    IRON);
+        drawGate(world.arenaEntrance(), entranceClosure);
+        drawGate(world.level().gate(), exitClosure);
         for (int torch = 230; torch < world.level().width(); torch += 560) {
             if (torch < left - 32 || torch > left + 992) continue;
             rect(torch, 72, 5, 27, WOOD_SHADOW);
@@ -201,9 +204,21 @@ public final class WorldRenderer implements Disposable {
         }
     }
 
+    private static float approach(float current, float target, float step) {
+        return current < target ? Math.min(target, current + step) : Math.max(target, current - step);
+    }
+
+    private void drawGate(Bounds gate, float closure) {
+        rect(gate.x() - 18, gate.y(), 16, gate.height() + 20, STONE);
+        rect(gate.right() + 3, gate.y(), 16, gate.height() + 20, STONE);
+        rect(gate.x() - 18, gate.top() + 10, gate.width() + 37, 13, GameAssets.GOLD);
+        for (double x = gate.x(); x < gate.right(); x += 12)
+            rect(x, gate.y() + (1 - closure) * gate.height(), 4, closure * gate.height() + 10, IRON);
+    }
+
     private void drawScenery(GameWorld world, float left) {
         for (int x = 160; x < world.level().width(); x += 320) {
-            if (x < left - 160 || x > left + 1000) continue;
+            if (x < left - 160 || x > left + 1000 || x >= world.level().arena().x()) continue;
             int kind = (x / 320) % 4;
             if (kind == 0) {
                 // Supply crates and barrels beside the marching road.

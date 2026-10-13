@@ -84,8 +84,8 @@ public final class MenuScreen extends ScreenAdapter {
         select(0);
     }
 
-    private Label label(String text, float scale, Color color) {
-        Label label = new Label(text, assets.skin);
+    private Label label(String key, float scale, Color color) {
+        Label label = new Label(assets.texts.text(key), assets.skin);
         label.setFontScale(scale * GameAssets.UI_FONT_SCALE);
         label.setColor(color);
         return label;
@@ -123,77 +123,68 @@ public final class MenuScreen extends ScreenAdapter {
 
     private void buildMain() {
         Table introduction = new Table();
-        introduction.add(label("CRÔNICAS DAS CRUZADAS / CAPÍTULO I", .8f, GameAssets.GOLD))
+        introduction.add(label("menu.chapter", .8f, GameAssets.GOLD))
                 .left().padBottom(20);
         introduction.row();
-        introduction.add(label("THE\nCRUZADER", 3.8f, GameAssets.PAPER)).left().padBottom(22);
+        introduction.add(label("menu.title", 3.8f, GameAssets.PAPER)).left().padBottom(22);
         introduction.row();
         introduction.add(new Image(assets.panel(GameAssets.GOLD)))
                 .left().width(80).height(2).padBottom(22);
         introduction.row();
         Table story = new Table();
         story.add(new Image(assets.characters[0][0])).size(112, 140).padRight(20);
-        Label description = label("Um cavaleiro templário.\nUm juramento entre ruínas.\n\n"
-                + "Abra a passagem e proteja\nos peregrinos da estrada.", .95f, GameAssets.PAPER);
+        Label description = label("menu.story", .95f, GameAssets.PAPER);
         story.add(description).left();
         introduction.add(story).left();
         introduction.row();
-        introduction.add(label("ARTE ORIGINAL", .65f, GameAssets.GOLD))
+        introduction.add(label("menu.art", .65f, GameAssets.GOLD))
                 .left().padTop(20);
         root.add(introduction).width(450).left();
         root.add().width(42);
         Table menu = card();
-        menu.add(label("A PRIMEIRA CRUZADA", .85f, GameAssets.GOLD)).padBottom(12);
+        menu.add(label("menu.level", .85f, GameAssets.GOLD)).padBottom(12);
         menu.row();
-        menu.add(label("O voto permanece.", .9f, GameAssets.PAPER)).padBottom(24);
+        menu.add(label("menu.motto", .9f, GameAssets.PAPER)).padBottom(24);
         menu.row();
-        menu.add(button("NOVA JORNADA", () -> startRequested = true)).width(244).height(46);
+        menu.add(button(assets.texts.text("menu.newGame"), () -> startRequested = true)).width(244).height(46);
         menu.row();
-        menu.add(button("INSTRUÇÕES", () -> open(Page.INSTRUCTIONS))).width(244).height(46).padTop(8);
+        menu.add(button(assets.texts.text("menu.instructions"), () -> open(Page.INSTRUCTIONS))).width(244).height(46).padTop(8);
         menu.row();
-        menu.add(button("OPÇÕES", () -> open(Page.OPTIONS))).width(244).height(46).padTop(8);
+        menu.add(button(assets.texts.text("menu.options"), () -> open(Page.OPTIONS))).width(244).height(46).padTop(8);
         menu.row();
-        menu.add(button("SAIR", () -> quitRequested = true)).width(244).height(46).padTop(8);
+        menu.add(button(assets.texts.text("menu.quit"), () -> quitRequested = true)).width(244).height(46).padTop(8);
         menu.row();
-        menu.add(label("W / S selecionar / ENTER confirmar", .65f, GameAssets.GOLD)).padTop(22);
+        menu.add(label("menu.navigation", .65f, GameAssets.GOLD)).padTop(22);
         root.add(menu).width(300);
     }
 
     private void buildInstructions() {
         Table instructions = card();
-        instructions.add(label("INSTRUÇÕES", 2f, GameAssets.PAPER)).colspan(2).padBottom(10);
+        instructions.add(label("menu.instructions", 2f, GameAssets.PAPER)).colspan(2).padBottom(10);
         instructions.row();
-        instructions.add(label("Abra o portão, derrote o guardião e proteja os peregrinos.",
+        instructions.add(label("instructions.goal",
                 .85f, GameAssets.GOLD)).colspan(2).padBottom(20);
-        String[][] controls = {
-            {"A / D ou setas", "Mover"},
-            {"ESPAÇO / W / CIMA", "Saltar"},
-            {"J / Z", "Atacar com a espada"},
-            {"S / BAIXO + J / Z no ar", "Golpear para baixo"},
-            {"L / X (segurar)", "Bloquear pela frente com o escudo"},
-            {"SHIFT / K", "Esquivar"},
-            {"ESC / M", "Pausar / ativar ou desativar o som"},
-            {"R / ENTER após morrer", "Retornar ao início ou ao santuário"}
-        };
-        for (String[] control : controls) {
+        String[] controls = {"move", "jump", "attack", "downAttack", "block", "dodge", "pause", "respawn"};
+        for (String control : controls) {
             instructions.row();
-            instructions.add(label(control[0], .85f, GameAssets.GOLD)).width(245).left().pad(4);
-            instructions.add(label(control[1], .85f, GameAssets.PAPER)).width(410).left().pad(4);
+            instructions.add(label("instructions." + control + ".keys", .85f, GameAssets.GOLD))
+                    .width(245).left().pad(4);
+            instructions.add(label("instructions." + control + ".action", .85f, GameAssets.PAPER))
+                    .width(410).left().pad(4);
         }
         instructions.row();
-        instructions.add(label("Pão da Vida restaura até dois corações. O santuário restaura a vida.\n"
-                + "Ataque o guardião por trás ou por cima para atravessar sua guarda.",
+        instructions.add(label("instructions.tips",
                 .8f, GameAssets.PAPER)).colspan(2).padTop(18).padBottom(18);
         instructions.row();
-        instructions.add(button("VOLTAR / ESC", () -> open(Page.MAIN))).colspan(2).width(240).height(42);
+        instructions.add(button(assets.texts.text("menu.back"), () -> open(Page.MAIN))).colspan(2).width(240).height(42);
         root.add(instructions).width(800);
     }
 
     private void buildOptions() {
         Table options = card();
-        options.add(label("OPÇÕES", 2f, GameAssets.PAPER)).padBottom(12);
+        options.add(label("menu.options", 2f, GameAssets.PAPER)).padBottom(12);
         options.row();
-        options.add(label("Prepare sua jornada.", .85f, GameAssets.GOLD)).padBottom(26);
+        options.add(label("options.subtitle", .85f, GameAssets.GOLD)).padBottom(26);
         options.row();
         TextButton sound = button(soundText(), () -> {
             audio.toggleMute();
@@ -206,15 +197,22 @@ public final class MenuScreen extends ScreenAdapter {
             buttons.get(1).setText(displayText());
         })).width(300).height(48).padTop(10);
         options.row();
-        options.add(button("VOLTAR / ESC", () -> open(Page.MAIN))).width(300).height(48).padTop(24);
+        options.add(button(assets.texts.text("options.language"), () -> {
+            int selection = selected;
+            game.setLanguage(game.language().next());
+            open(Page.OPTIONS);
+            select(selection);
+        })).width(300).height(48).padTop(10);
         options.row();
-        options.add(label("W / S selecionar / ENTER confirmar", .65f, GameAssets.GOLD)).padTop(20);
+        options.add(button(assets.texts.text("menu.back"), () -> open(Page.MAIN))).width(300).height(48).padTop(24);
+        options.row();
+        options.add(label("menu.navigation", .65f, GameAssets.GOLD)).padTop(20);
         root.add(options).width(430);
     }
 
-    private String soundText() { return "SOM: " + (audio.muted() ? "DESLIGADO" : "LIGADO"); }
-    private String displayText() { return "RESOLUÇÃO: " + Gdx.graphics.getBackBufferWidth()
-            + " x " + Gdx.graphics.getBackBufferHeight(); }
+    private String soundText() { return assets.texts.text(audio.muted() ? "options.soundOff" : "options.soundOn"); }
+    private String displayText() { return assets.texts.format("options.resolution",
+            Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight()); }
 
 
     @Override

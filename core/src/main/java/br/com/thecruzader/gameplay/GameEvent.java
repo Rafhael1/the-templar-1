@@ -9,5 +9,7 @@ public enum GameEvent {
     CHECKPOINT,
     RELIC,
     DEATH,
+    ARENA_START,
+    BOSS_DEFEATED,
     VICTORY
 }

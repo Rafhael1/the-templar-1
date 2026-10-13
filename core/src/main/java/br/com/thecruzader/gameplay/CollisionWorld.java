@@ -12,17 +12,25 @@ import java.util.List;
  */
 public final class CollisionWorld {
     private final LevelData level;
-    private final List<Bounds> lockedSolids;
+    private final List<Bounds> lockedSolids, arenaSolids;
+    private boolean arenaClosed;
 
     public CollisionWorld(LevelData level) {
         this.level = level;
         var withGate = new ArrayList<>(level.solids());
         withGate.add(level.gate());
         lockedSolids = List.copyOf(withGate);
+        withGate.add(level.arenaEntrance());
+        arenaSolids = List.copyOf(withGate);
+    }
+
+    void setArenaClosed(boolean closed) { arenaClosed = closed; }
+    List<Bounds> solids(boolean gateLocked) {
+        return gateLocked ? (arenaClosed ? arenaSolids : lockedSolids) : level.solids();
     }
 
     double constrainX(double fromX, double targetX, double y, double width, double height, boolean locked) {
-        List<Bounds> solids = locked ? lockedSolids : level.solids();
+        List<Bounds> solids = solids(locked);
         double x = Math.max(0, Math.min(level.width() - width, targetX));
         for (Bounds solid : solids) {
             if (!solid.overlaps(x, y, width, height)) continue;
@@ -33,7 +41,7 @@ public final class CollisionWorld {
     }
 
     void move(Player p, double dt, boolean gateLocked) {
-        List<Bounds> solids = gateLocked ? lockedSolids : level.solids();
+        List<Bounds> solids = solids(gateLocked);
         p.x += p.vx * dt;
         for (Bounds solid : solids)
             if (solid.overlaps(p.x, p.y, Player.WIDTH, Player.HEIGHT)) {
@@ -54,7 +62,7 @@ public final class CollisionWorld {
     }
     void move(Enemy enemy, double dt, boolean gateLocked) {
         if (enemy.health <= 0) return;
-        List<Bounds> solids = gateLocked ? lockedSolids : level.solids();
+        List<Bounds> solids = solids(gateLocked);
         double previousX = enemy.x;
         enemy.x = Math.max(0, Math.min(level.width() - enemy.width(),
                 enemy.x + enemy.vx * dt));

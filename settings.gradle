@@ -1,2 +1,2 @@
-rootProject.name = 'the-cruzader'
+rootProject.name = 'o-templario'
 include 'core', 'lwjgl3'

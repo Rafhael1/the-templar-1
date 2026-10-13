@@ -1,4 +1,4 @@
-# The Cruzader
+# O Templário
 
 Jogo simples de ação e plataforma 2D em **Java 21 + libGDX**, com um cavaleiro templário como protagonista. Esta é a versão 1.0 do protótipo, com uma fase completa, arte própria e ambientação fictícia nas Cruzadas.
 
@@ -7,7 +7,7 @@ Jogo simples de ação e plataforma 2D em **Java 21 + libGDX**, com um cavaleiro
 Abra **`Jogar.command`** na raiz do projeto. Ele abre o aplicativo já construído em:
 
 ```text
-lwjgl3/build/app-image/The Cruzader.app
+lwjgl3/build/app-image/O Templário.app
 ```
 
 O aplicativo contém seu próprio runtime Java. Não precisa de Gradle, rede ou de Java instalado para jogar. O pacote presente foi construído e testado em macOS ARM64 (Apple Silicon).
@@ -25,7 +25,7 @@ O aplicativo contém seu próprio runtime Java. Não precisa de Gradle, rede ou 
 | M | Ativar / desativar som |
 | R ou Enter após morrer | Retornar ao início ou ao santuário |
 
-O menu inicial oferece **Nova jornada**, **Instruções**, **Opções** (som e resolução Full HD/720p) e **Sair**. Navegue com W/S ou cima/baixo e confirme com Enter; Esc volta das instruções e opções. Os controles ficam na página de instruções. Durante a partida, o HUD mostra cinco corações, escudo, recarga da esquiva e contagem de Pão da Vida; não há barra inferior.
+O menu inicial oferece **Nova jornada**, **Instruções**, **Opções** (som, resolução Full HD/720p e idioma PT/EN) e **Sair**. Navegue com W/S ou cima/baixo e confirme com Enter; Esc volta das instruções e opções. Os controles ficam na página de instruções. Durante a partida, o HUD mostra cinco corações, escudo, recarga da esquiva e contagem de Pão da Vida; não há barra inferior.
 
 Cada golpe exige um novo pressionamento. O golpe aéreo para baixo mantém sua direção até terminar e deixa de causar dano ao aterrissar. O escudo bloqueia golpes pela frente, inclusive no ar, e reduz a velocidade; não permite atacar ou esquivar enquanto estiver levantado. Golpes pelas costas causam dano. O aviso sobre o inimigo indica a preparação do ataque. A esquiva oferece invulnerabilidade breve e tem recarga. Perder o foco da janela pausa a partida; pressione Esc para continuar.
 
@@ -112,7 +112,7 @@ O guardião tem 12 pontos de vida, armadura própria e escudo. Alterna bloqueio 
 
 `test` roda sem janela. `smokeTest` precisa de uma sessão desktop e abre uma janela real por alguns segundos. Usa o mesmo renderizador, telas, assets e mapeamento de entrada do jogo. Capturas ficam em `lwjgl3/build/screenshots/`.
 
-Verificação: **76 testes JUnit passaram** usando o mapa atual, incluindo a escada com subida, patamar e descida. Objetos de colisão poligonais ou rotacionados são rejeitados com uma mensagem explícita. As entidades usam o atributo `type` exportado pelo Tiled. O teste gráfico captura a rota do Pão da Vida, o santuário, a escada, a arena e a vitória; um teste de simulação coleta o Pão da Vida por saltos e retorna ao piso.
+Verificação: **91 testes JUnit passaram** usando o mapa atual, incluindo a escada com subida, patamar e descida. Objetos de colisão poligonais ou rotacionados são rejeitados com uma mensagem explícita. As entidades usam o atributo `type` exportado pelo Tiled. O teste gráfico captura a rota do Pão da Vida, o santuário, a escada, a arena e a vitória; um teste de simulação coleta o Pão da Vida por saltos e retorna ao piso.
 
 ## Estrutura
 
@@ -153,3 +153,27 @@ Templário e inimigos vivos colidem pelos dois lados ao caminhar. Durante a esqu
 
 
 As regiões misturam seus cenários ao longo de 640 pixels de estrada, com entrada e saída suaves. O fundo não troca inteiro ao cruzar um limite; o paralaxe permanece contínuo. Anúncios de capítulo aparecem uma vez por região e entram/saem gradualmente. As capturas `20-transition-*` registram as três passagens, verificando que o chão continua opaco durante a mistura.
+
+
+## Idiomas PT / EN
+
+Em **Opções → Idioma**, alterne português e inglês. A página muda imediatamente e a preferência fica salva para as próximas aberturas. O nome **O Templário** permanece nos dois idiomas. Menus, instruções, cutscene, objetivos, avisos e telas de pausa/morte/vitória consultam os mesmos catálogos.
+
+- `assets/i18n/messages_pt.properties`: textos em português.
+- `assets/i18n/messages_en.properties`: textos em inglês.
+- `core/src/main/java/br/com/thecruzader/i18n/GameText.java`: carregamento e consulta.
+- `core/src/main/java/br/com/thecruzader/i18n/Language.java`: idiomas disponíveis.
+
+Os arquivos usam UTF-8 e chaves agrupadas em `game`, `menu`, `instructions`, `options`, `intro`, `hud`, `notice` e `overlay`. Para adicionar um texto, crie a mesma chave nos dois catálogos e consulte `assets.texts.text("grupo.chave")`; use `format` com `%s` para valores dinâmicos e `\n` para quebras de linha. Os 63 textos de cada catálogo são carregados uma vez; trocar o idioma apenas seleciona o catálogo em memória. Chaves diferentes entre idiomas, textos vazios e consultas a chaves inexistentes geram erro, sem tradução substituta.
+
+Os testes verificam acentos, formatação, cobertura da fonte, ausência de traduções e troca sem releitura dos arquivos. O teste desktop muda PT → EN → PT nas opções, confirma a preferência salva e captura as telas em ambos os idiomas, incluindo avisos de pausa, morte e vitória.
+
+
+## Arena do chefe
+
+A área final tem 736 pixels de piso livre e cabe inteira na câmera de 960 × 540. Ao atravessar a entrada em x=8032, o portão de trás desce, a câmera se posiciona suavemente no centro e permanece fixa durante a luta. O guardião só começa a agir após a entrada. A barra de vida e os avisos acompanham o idioma escolhido.
+
+O portão de entrada e a saída bloqueiam tanto o templário quanto as investidas/saltos do chefe; a esquiva continua atravessando inimigos, mas não as barreiras da arena. Flechas vindas da estrada são bloqueadas. Derrotar o guardião levanta os dois portões e libera a câmera. Morrer e retornar ao santuário reinicia o encontro e reabre a entrada.
+
+No Tiled, o retângulo obrigatório `arena` na camada `entities` define a área: sua borda direita coincide com o portão de saída. O portão de entrada é derivado da borda esquerda. As escadas finais ficam antes da arena, sem sentinelas ou arqueiros no espaço de combate. As capturas `24-sealed-arena.png` e `24-english-arena.png` mostram a área fechada em PT/EN.
+O ícone do aplicativo e da janela usa o elmo e o escudo do templário, em pixel art. No macOS, `MacDockIcon` aplica a imagem diretamente ao Dock durante a criação da janela, inclusive ao executar pelo Gradle ou pela IDE. Os arquivos PNG, ICNS (macOS) e ICO (Windows) ficam em `assets/branding/`. Para reproduzir somente o ícone, execute `tools/generate_icon.py` com Pillow instalado.

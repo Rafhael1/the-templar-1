@@ -112,7 +112,7 @@ class GameWorldTest {
                                 base.checkpoint(),
                                 base.breads(),
                                 base.gate(),
-                                base.exit(),
+                                base.exit(), base.arena(),
                                 solids,
                                 base.enemies()));
         w.update(STEP, PlayerInput.NONE);

@@ -15,7 +15,7 @@ class EnemySystemTest {
     private final CollisionWorld collision = new CollisionWorld(new LevelData(3200, 544,
             new LevelData.Point(96, 64), new LevelData.Point(1450, 64),
             List.of(new Bounds(742, 232, 22, 30)), new Bounds(2950, 64, 40, 176),
-            new Bounds(3010, 64, 110, 100), List.of(new Bounds(0, 0, 3200, 64)),
+            new Bounds(3010, 64, 110, 100), new Bounds(64, 64, 2886, 256), List.of(new Bounds(0, 0, 3200, 64)),
             List.of(new LevelData.Spawn(2700, 64, LevelData.EnemyKind.GUARDIAN))));
 
     private void advance(int ticks) {

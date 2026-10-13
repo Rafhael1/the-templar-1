@@ -22,7 +22,8 @@ public final class Hud implements Disposable {
     private final Image shield;
     private final ProgressBar dodge;
     private final Label objective, breadCount, sound, message, overlayTitle, overlayText;
-    private final Table overlay;
+    private final Table overlay, bossPanel;
+    private final ProgressBar bossHealth;
     private double messageTime;
 
     public Hud(GameAssets assets) {
@@ -44,7 +45,7 @@ public final class Hud implements Disposable {
         shield = new Image(new TextureRegion(assets.texture("shields"), 0, 0, 24, 36));
         vitals.add(shield).size(16, 24).padLeft(10);
         Table cooldown = new Table();
-        Label dodgeLabel = new Label("ESQUIVA", assets.skin);
+        Label dodgeLabel = new Label(assets.texts.text("hud.dodge"), assets.skin);
         dodgeLabel.setFontScale(.65f * GameAssets.UI_FONT_SCALE);
         dodgeLabel.setColor(GameAssets.GOLD);
         cooldown.add(dodgeLabel).left();
@@ -82,13 +83,34 @@ public final class Hud implements Disposable {
         message.setFontScale(.9f * GameAssets.UI_FONT_SCALE);
         root.add(message).width(760).height(48).padTop(8);
 
+        bossPanel = new Table();
+        bossPanel.setFillParent(true);
+        bossPanel.top().padTop(145);
+        Table bossCard = new Table();
+        bossCard.setBackground(assets.frame);
+        bossCard.pad(9);
+        Label bossName = new Label(assets.texts.text("hud.bossName"), assets.skin);
+        bossName.setFontScale(.75f * GameAssets.UI_FONT_SCALE);
+        bossName.setColor(GameAssets.GOLD);
+        bossCard.add(bossName).padBottom(5).row();
+        ProgressBar.ProgressBarStyle bossStyle = new ProgressBar.ProgressBarStyle();
+        bossStyle.background = assets.panel(Color.valueOf("342e3c"));
+        bossStyle.background.setMinHeight(8);
+        bossStyle.knobBefore = assets.panel(Color.valueOf("973f4e"));
+        bossStyle.knobBefore.setMinHeight(8);
+        bossHealth = new ProgressBar(0, 1, .001f, false, bossStyle);
+        bossCard.add(bossHealth).width(324).height(10);
+        bossPanel.add(bossCard).width(344);
+        bossPanel.setVisible(false);
+        stage.addActor(bossPanel);
+
         overlay = new Table();
         overlay.setFillParent(true);
         overlay.setBackground(assets.panel(new Color(.03f, .04f, .08f, .88f)));
         Table card = new Table();
         card.setBackground(assets.frame);
         card.pad(36);
-        Label chapter = new Label("THE CRUZADER", assets.skin);
+        Label chapter = new Label(assets.texts.text("game.name"), assets.skin);
         chapter.setFontScale(.8f * GameAssets.UI_FONT_SCALE);
         chapter.setColor(GameAssets.GOLD);
         card.add(chapter).padBottom(24);
@@ -108,8 +130,8 @@ public final class Hud implements Disposable {
         stage.addActor(overlay);
     }
 
-    public void announce(String text) {
-        message.setText(text);
+    public void announce(String key) {
+        message.setText(assets.texts.text(key));
         messageTime = 4;
     }
 
@@ -119,32 +141,25 @@ public final class Hud implements Disposable {
             hearts[i].setDrawable(assets.hearts[i < player.health() ? 0 : 1]);
         shield.setColor(player.blocking() ? GameAssets.GOLD : SHIELD_IDLE);
         dodge.setValue((float) (1 - player.dodgeCooldown() / Player.DODGE_COOLDOWN));
-        sound.setText(muted ? "SOM OFF" : "");
-        objective.setText(player.x() > world.level().gate().x() - 600 && world.gateLocked()
-                ? "DERROTE O GUARDIÃO" : "ALCANCE O PORTÃO");
+        sound.setText(muted ? assets.texts.text("hud.muted") : "");
+        objective.setText(assets.texts.text(world.arenaLocked()
+                ? "hud.guardian" : "hud.gate"));
+        bossPanel.setVisible(world.arenaLocked());
+        bossHealth.setValue((float) world.guardian().health() / world.guardian().maxHealth());
         int count = world.collectedBreadCount();
         if (count != lastBreadCount) {
             lastBreadCount = count;
-            breadCount.setText(count + "/" + world.level().breads().size());
+            breadCount.setText(assets.texts.format("hud.breadCount", count, world.level().breads().size()));
         }
         if (!world.paused()) messageTime = Math.max(0, messageTime - delta);
         message.setVisible(messageTime > 0);
         message.getColor().a = (float) Math.min(1, Math.min((4 - messageTime) / .35, messageTime / .6));
         overlay.setVisible(world.paused() || world.state() == GameWorld.State.WON
                 || (world.state() == GameWorld.State.DEAD && deathElapsed >= 1));
-        if (world.state() == GameWorld.State.DEAD) {
-            overlayTitle.setText("O VOTO PERMANECE");
-            overlayText.setText("A cinza guarda os passos de quem caiu.\n\n"
-                    + "R / ENTER  -  Retornar ao santuário");
-        } else if (world.state() == GameWorld.State.WON) {
-            overlayTitle.setText("ALÉM DAS MURALHAS");
-            overlayText.setText("A passagem dos peregrinos está livre.\n"
-                    + "Seu juramento foi cumprido.\n\nENTER  -  Nova jornada");
-        } else {
-            overlayTitle.setText("EM VIGÍLIA");
-            overlayText.setText("ESC  -  Continuar     |     M  -  Som\n\n"
-                    + "O jogo pausa ao perder o foco da janela.");
-        }
+        String overlayKey = world.state() == GameWorld.State.DEAD ? "death"
+                : world.state() == GameWorld.State.WON ? "victory" : "pause";
+        overlayTitle.setText(assets.texts.text("overlay." + overlayKey + ".title"));
+        overlayText.setText(assets.texts.text("overlay." + overlayKey + ".text"));
         stage.getViewport().apply();
         stage.act(Math.min(delta, .1f));
         stage.draw();

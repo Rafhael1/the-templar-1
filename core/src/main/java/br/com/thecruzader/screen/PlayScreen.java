@@ -32,7 +32,6 @@ public final class PlayScreen extends ScreenAdapter {
         world = new GameWorld(LevelLoader.load(Gdx.files.internal(GameAssets.MAP)));
         renderer = new WorldRenderer(assets);
         hud = new Hud(assets);
-        hud.announce("A ESTRADA DOS EXILADOS  -  Encontre o santuario e liberte a passagem.");
     }
 
     public GameWorld world() {
@@ -81,17 +80,16 @@ public final class PlayScreen extends ScreenAdapter {
         audio.play(events);
         for (GameEvent event : events) {
             if (event == GameEvent.CHECKPOINT)
-                hud.announce("SANTUARIO ACESO  -  Vida restaurada. Ponto de retorno ativado.");
+                hud.announce("notice.checkpoint");
+            if (event == GameEvent.ARENA_START) hud.announce("notice.arena");
+            if (event == GameEvent.BOSS_DEFEATED) hud.announce("notice.bossDefeated");
             if (event == GameEvent.RELIC)
-                hud.announce("PÃO DA VIDA  -  Até dois pontos de vida restaurados.");
+                hud.announce("notice.bread");
         }
         int nextRegion = SceneryTransition.regionAt(world.player().x());
         if ((visitedRegions & (1 << nextRegion)) == 0) {
             visitedRegions |= 1 << nextRegion;
-            hud.announce(new String[] {"I / O ACAMPAMENTO - A marcha começa",
-                    "II / ANATÓLIA - Pelas estradas do Oriente",
-                    "III / ANTIOQUIA - Entre ruínas e emboscadas",
-                    "IV / JERUSALÉM - À sombra das muralhas"}[nextRegion]);
+            hud.announce("notice.region." + nextRegion);
         }
         renderer.render(world, delta, world.paused() || world.state() != GameWorld.State.PLAYING
                 ? 1 : (float) (accumulator / GameWorld.STEP));

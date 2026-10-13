@@ -43,6 +43,24 @@ class LevelLoaderTest {
     }
 
     @Test
+    void arenaIsOneScreenWideWithClearFloorAndOnlyTheGuardian() {
+        LevelData map = LevelLoader.load(actualMap());
+        assertEquals(map.gate().x(), map.arena().right(), .001);
+        assertTrue(map.arena().width() <= 960);
+        assertTrue(map.enemies().stream().filter(enemy -> enemy.x() >= map.arena().x())
+                .allMatch(enemy -> enemy.kind() == LevelData.EnemyKind.GUARDIAN));
+        assertTrue(map.solids().stream().filter(solid -> solid.top() > 64)
+                .noneMatch(solid -> solid.overlaps(map.arena())));
+    }
+
+    @Test
+    void missingArenaFailsAtLoadTime() {
+        FileHandle file = new FileHandle(temporary.resolve("missing-arena.tmx").toFile());
+        file.writeString(actualMap().readString().replace("type=\"arena\"", "type=\"relic\""), false);
+        assertThrows(IllegalArgumentException.class, () -> LevelLoader.load(file));
+    }
+
+    @Test
     void unknownEntityFailsAtLoadTime() {
         FileHandle file = new FileHandle(temporary.resolve("bad.tmx").toFile());
         file.writeString(

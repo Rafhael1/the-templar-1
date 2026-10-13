@@ -6,10 +6,13 @@ import br.com.thecruzader.presentation.DisplaySettings;
 import br.com.thecruzader.screen.MenuScreen;
 import br.com.thecruzader.screen.PlayScreen;
 
+import br.com.thecruzader.i18n.Language;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Screen;
 
 public final class CrusaderGame extends Game {
+    public static final String TITLE = "O Templário";
     private GameAssets assets;
     private AudioPlayer audio;
 
@@ -19,6 +22,12 @@ public final class CrusaderGame extends Game {
         assets = new GameAssets();
         audio = new AudioPlayer(assets);
         showMenu();
+    }
+
+    public Language language() { return assets.texts.language(); }
+    public void setLanguage(Language language) {
+        assets.texts.setLanguage(language);
+        Gdx.app.getPreferences("o-templario").putString("language", language.name()).flush();
     }
 
     public void showMenu() {

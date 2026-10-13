@@ -11,6 +11,7 @@ public record LevelData(
         List<Bounds> breads,
         Bounds gate,
         Bounds exit,
+        Bounds arena,
         List<Bounds> solids,
         List<Spawn> enemies) {
     public record Point(double x, double y) {}
@@ -21,6 +22,8 @@ public record LevelData(
         public Spawn { Objects.requireNonNull(kind); }
     }
 
+    public Bounds arenaEntrance() { return new Bounds(arena.x() - 32, arena.y(), 32, arena.height()); }
+
     public LevelData {
         if (width <= 0 || height <= 0)
             throw new IllegalArgumentException("Level dimensions must be positive");
@@ -30,6 +33,10 @@ public record LevelData(
         if (breads.isEmpty()) throw new IllegalArgumentException("Level requires bread pickups");
         Objects.requireNonNull(gate);
         Objects.requireNonNull(exit);
+        Objects.requireNonNull(arena);
+        if (arena.x() < 32 || arena.y() < 0 || arena.right() > width
+                || arena.right() != gate.x() || arena.top() > height)
+            throw new IllegalArgumentException("Arena must be inside the map and end at the locked gate");
         solids = List.copyOf(solids);
         enemies = List.copyOf(enemies);
         if (solids.isEmpty())

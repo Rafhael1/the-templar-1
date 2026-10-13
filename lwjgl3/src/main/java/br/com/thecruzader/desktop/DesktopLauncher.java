@@ -6,6 +6,8 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Window;
+import org.lwjgl.system.Platform;
 
 public final class DesktopLauncher {
     private DesktopLauncher() {}
@@ -17,9 +19,11 @@ public final class DesktopLauncher {
         else if (args.length == 1 && args[0].equals("--profile")) app = new PerformanceTest();
         else
             throw new IllegalArgumentException(
-                    "Usage: The Cruzader [--smoke screenshot-directory | --profile]");
+                    "Usage: O Templário [--smoke screenshot-directory | --profile]");
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-        config.setTitle("The Cruzader");
+        config.setTitle(CrusaderGame.TITLE);
+        config.setWindowIcon("branding/icon-128.png", "branding/icon-64.png",
+                "branding/icon-32.png", "branding/icon-16.png");
         config.setWindowedMode(960, 540);
         config.setWindowSizeLimits(640, 360, -1, -1);
         config.useVsync(true);
@@ -31,6 +35,11 @@ public final class DesktopLauncher {
         }
         config.setWindowListener(
                 new Lwjgl3WindowAdapter() {
+                    @Override
+                    public void created(Lwjgl3Window window) {
+                        if (Platform.get() == Platform.MACOSX) MacDockIcon.apply();
+                    }
+
                     @Override
                     public void focusLost() {
                         app.pause();

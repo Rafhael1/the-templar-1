@@ -15,7 +15,7 @@ class BodyCollisionTest {
         solids.addAll(extra);
         return new LevelData(3200, 544, new LevelData.Point(100, 64),
                 new LevelData.Point(1450, 64), List.of(new Bounds(742, 232, 28, 28)),
-                new Bounds(2950, 64, 40, 176), new Bounds(3010, 64, 110, 100), solids,
+                new Bounds(2950, 64, 40, 176), new Bounds(3010, 64, 110, 100), new Bounds(64, 64, 2886, 256), solids,
                 List.of(new LevelData.Spawn(guardianX, 64, LevelData.EnemyKind.GUARDIAN)));
     }
     private CollisionWorld terrain(Bounds... walls) { return new CollisionWorld(level(List.of(walls), 2700)); }
@@ -103,7 +103,7 @@ class BodyCollisionTest {
     @Test void walkingStopsAtLivingBodiesInTheSimulation() {
         LevelData base = level(List.of(), 2700);
         GameWorld world = new GameWorld(new LevelData(base.width(), base.height(), base.spawn(),
-                base.checkpoint(), base.breads(), base.gate(), base.exit(), base.solids(),
+                base.checkpoint(), base.breads(), base.gate(), base.exit(), base.arena(), base.solids(),
                 List.of(new LevelData.Spawn(180, 64, LevelData.EnemyKind.SENTINEL), base.enemies().getFirst())));
         Enemy enemy = world.enemies().getFirst();
         for (int tick = 0; tick < 150; tick++) {
@@ -121,7 +121,7 @@ class BodyCollisionTest {
                 if (kind != LevelData.EnemyKind.GUARDIAN) enemies.add(new LevelData.Spawn(180, 64, kind));
                 GameWorld world = new GameWorld(new LevelData(base.width(), base.height(),
                         new LevelData.Point(playerX, 64), base.checkpoint(), base.breads(), base.gate(),
-                        base.exit(), base.solids(), enemies));
+                        base.exit(), base.arena(), base.solids(), enemies));
                 Enemy target = world.enemies().stream().filter(e -> e.kind == kind).findFirst().orElseThrow();
                 double before = target.x();
                 for (int tick = 0; tick < 24; tick++)

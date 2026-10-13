@@ -24,7 +24,7 @@ public final class AudioPlayer {
                         case SWING -> "sword";
                         case HIT, BLOCK -> "hit";
                         case HURT, DEATH -> "hurt";
-                        case CHECKPOINT, RELIC, VICTORY -> "chime";
+                        case CHECKPOINT, RELIC, ARENA_START, BOSS_DEFEATED, VICTORY -> "chime";
                     };
             assets.sound(sound).play(0.28f);
         }

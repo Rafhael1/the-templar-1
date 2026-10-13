@@ -1,20 +1,18 @@
 package br.com.thecruzader.gameplay;
 
 import br.com.thecruzader.level.Bounds;
-import br.com.thecruzader.level.LevelData;
 import java.util.List;
 
 final class ProjectileSystem {
-    void update(List<Arrow> arrows, Player player, LevelData level, boolean gateLocked,
+    void update(List<Arrow> arrows, Player player, CollisionWorld collision, boolean gateLocked,
             double dt, List<GameEvent> events) {
         var iterator = arrows.iterator();
         while (iterator.hasNext()) {
             Arrow arrow = iterator.next();
             double dx = arrow.vx * dt, dy = arrow.vy * dt;
             double terrainHit = Double.POSITIVE_INFINITY;
-            for (Bounds solid : level.solids())
+            for (Bounds solid : collision.solids(gateLocked))
                 terrainHit = Math.min(terrainHit, hitFraction(arrow, dx, dy, solid));
-            if (gateLocked) terrainHit = Math.min(terrainHit, hitFraction(arrow, dx, dy, level.gate()));
             double playerHit = hitFraction(arrow, dx, dy, player.bounds());
             if (playerHit < terrainHit) {
                 CombatSystem.hitPlayer(player, player.x + Player.WIDTH / 2

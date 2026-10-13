@@ -1,5 +1,8 @@
 package br.com.thecruzader.presentation;
 
+import br.com.thecruzader.i18n.GameText;
+import br.com.thecruzader.i18n.Language;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
 import com.badlogic.gdx.audio.Music;
@@ -26,6 +29,7 @@ public final class GameAssets implements Disposable {
     public static final Color PAPER = Color.valueOf("e5dbc0"), GOLD = Color.valueOf("c8a773");
     private final AssetManager manager = new AssetManager();
     public final Skin skin = new Skin();
+    public final GameText texts;
     public final Texture white;
     public final TextureRegion[][] characters, deaths;
     public final TextureRegion bow, guardianShield;
@@ -35,6 +39,8 @@ public final class GameAssets implements Disposable {
     public final NinePatchDrawable frame;
 
     public GameAssets() {
+        Language language = Language.valueOf(Gdx.app.getPreferences("o-templario").getString("language", "PT"));
+        texts = new GameText(Gdx.files.internal("i18n"), language);
         manager.setLoader(TiledMap.class, new TmxMapLoader(new InternalFileHandleResolver()));
         TmxMapLoader.Parameters mapParameters = new TmxMapLoader.Parameters();
         mapParameters.projectFilePath = "maps/the-cruzader.tiled-project";

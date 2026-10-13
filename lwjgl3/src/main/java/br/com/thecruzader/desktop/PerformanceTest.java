@@ -28,7 +28,7 @@ final class PerformanceTest extends ApplicationAdapter {
         for (int i = 0; i < worlds.length; i++)
             worlds[i] = new GameWorld(new LevelData(level.width(), level.height(),
                     new LevelData.Point(480 + i * 2240, 64), level.checkpoint(), level.breads(),
-                    level.gate(), level.exit(), level.solids(), level.enemies()));
+                    level.gate(), level.exit(), level.arena(), level.solids(), level.enemies()));
     }
     @Override public void resize(int width, int height) {
         renderer.resize(width, height); hud.resize(width, height);

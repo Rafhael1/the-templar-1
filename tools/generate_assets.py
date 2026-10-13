@@ -286,9 +286,9 @@ platforms=[(448,160,160),(672,224,160),(896,160,128),(1152,160,192),
            (3392,160,160),(3616,224,192),(3872,160,160),(4288,160,192),
            (4576,224,160),(4832,160,160),(5184,192,192),
            (5952,160,192),(6208,224,160),(6464,288,160),(6720,224,192),
-           (7072,160,160),(7360,224,192),(7648,160,192),(7968,192,192)]
+           (7072,160,160),(7360,224,192),(6912,288,192),(7520,256,192)]
 stairs=[(2208,96,64),(2272,128,64),(2336,160,96),(2432,128,64),(2496,96,64),
-        (8192,96,64),(8256,128,64),(8320,160,96),(8416,128,64),(8480,96,64)]
+        (7488,96,64),(7552,128,64),(7616,160,96),(7712,128,64),(7776,96,64)]
 for x,top,width in platforms:
     row=H-top//T
     for col in range(x//T,(x+width)//T): grid[row][col]=3
@@ -312,12 +312,13 @@ def point(name,x,y,typ):
     global i
     obj=ET.SubElement(entities,'object',id=str(i),name=name,x=str(x),y=str(H*T-y),**{'type':typ});i+=1;ET.SubElement(obj,'point')
 point('templar',96,64,'spawn');point('sanctuary',4480,64,'checkpoint')
-for n,x in enumerate((620,1080,1856,2160,3328,4032,4960,5728,6560,7296,7936)): point(f'sentinel-{n}',x,64,'sentinel')
-for n,(x,y) in enumerate(((1440,64),(3680,224),(5280,64),(6240,224),(7616,64))): point(f'archer-{n}',x,y,'archer')
+for n,x in enumerate((620,1080,1856,2160,3328,4032,4960,5728,6560,7296,7904)): point(f'sentinel-{n}',x,64,'sentinel')
+for n,(x,y) in enumerate(((1440,64),(3680,224),(5280,64),(6240,224),(7136,64))): point(f'archer-{n}',x,y,'archer')
 point('gate-guardian',8576,64,'guardian')
 for n,(x,y) in enumerate(((742,232),(1632,72),(2944,72),(3776,232),(4320,72),
-                            (5536,72),(6320,232),(6912,72),(7808,72),(8080,72))):
+                            (5536,72),(6320,232),(6912,72),(7872,72),(8080,72))):
     rectangle(entities,f'bread-of-life-{n}',x,y,28,28,'relic')
+rectangle(entities,'boss-arena',8032,64,736,256,'arena')
 rectangle(entities,'locked-gate',8768,64,40,176,'gate');rectangle(entities,'pilgrims-exit',8832,64,96,100,'exit')
 map_el.set('nextobjectid',str(i))
 ET.indent(map_el);ET.ElementTree(map_el).write(ASSETS/'maps/exiles-road.tmx',encoding='UTF-8',xml_declaration=True)
@@ -341,4 +342,5 @@ import runpy
 runpy.run_path(str(ROOT / 'tools/generate_atmosphere.py'))
 runpy.run_path(str(ROOT / 'tools/generate_deaths.py'))
 runpy.run_path(str(ROOT / 'tools/generate_font.py'))
+runpy.run_path(str(ROOT / 'tools/generate_icon.py'))
 print('Generated sprites, layered backgrounds, Tiled map and six original audio files.')

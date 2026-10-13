@@ -2,6 +2,7 @@ package br.com.thecruzader.desktop;
 
 import br.com.thecruzader.CrusaderGame;
 import br.com.thecruzader.screen.PlayScreen;
+import br.com.thecruzader.i18n.Language;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -15,6 +16,8 @@ final class SmokeTest extends ApplicationAdapter {
     private final CrusaderGame game = new CrusaderGame();
     private final String output;
     private int frame;
+    private Language originalLanguage;
+    private boolean rendering;
 
     SmokeTest(String output) {
         this.output = output;
@@ -24,6 +27,9 @@ final class SmokeTest extends ApplicationAdapter {
     public void create() {
         Gdx.files.absolute(output).mkdirs();
         game.create();
+        originalLanguage = game.language();
+        game.setLanguage(Language.PT);
+        game.showMenu();
     }
 
     @Override
@@ -33,6 +39,15 @@ final class SmokeTest extends ApplicationAdapter {
 
     @Override
     public void render() {
+        // GLFW resize callbacks can request a nested render; repaint without replaying scripted input.
+        if (rendering) { game.getScreen().render(0); return; }
+        rendering = true;
+        try { runFrame(); }
+        catch (RuntimeException error) { game.setLanguage(originalLanguage); throw error; }
+        finally { rendering = false; }
+    }
+
+    private void runFrame() {
         // The frame-scripted inputs need a fixed clock, independent of GPU speed and vsync.
         game.getScreen().render(1f / 120);
         frame++;
@@ -72,22 +87,51 @@ final class SmokeTest extends ApplicationAdapter {
         if (frame == 23) {
             if (Gdx.graphics.getBackBufferWidth() != 1920 || Gdx.graphics.getBackBufferHeight() != 1080)
                 throw new IllegalStateException("Standard window option failed");
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.DOWN);
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
+        }
+        if (frame == 24) {
+            if (game.language() != Language.EN) throw new IllegalStateException("Language option did not select EN");
+            if (((br.com.thecruzader.screen.MenuScreen) game.getScreen()).page()
+                    != br.com.thecruzader.screen.MenuScreen.Page.OPTIONS)
+                throw new IllegalStateException("Changing language left the options page");
+            game.getScreen().render(1f / 120);
+            capture("21-english-options.png");
             Gdx.input.getInputProcessor().keyDown(Input.Keys.ESCAPE);
         }
-        if (frame == 24) Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
         if (frame == 25) {
+            capture("21-english-menu.png");
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.I);
+        }
+        if (frame == 26) {
+            capture("21-english-instructions.png");
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.ESCAPE);
+        }
+        if (frame == 27) Gdx.input.getInputProcessor().keyDown(Input.Keys.O);
+        if (frame == 28) {
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.DOWN);
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.DOWN);
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
+            if (game.language() != Language.PT) throw new IllegalStateException("Language option did not restore PT");
+        }
+        if (frame == 29) {
+            capture("01-options-pt.png");
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.ESCAPE);
+        }
+        if (frame == 30) Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
+        if (frame == 31) {
             if (!(game.getScreen() instanceof br.com.thecruzader.screen.IntroScreen))
                 throw new IllegalStateException("New journey must open the cutscene");
             for (int fade = 0; fade < 6; fade++) game.getScreen().render(.1f);
             capture("01-opening-council.png");
             Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
         }
-        if (frame == 26) {
+        if (frame == 32) {
             if (((br.com.thecruzader.screen.IntroScreen) game.getScreen()).scene() != 1)
                 throw new IllegalStateException("Cutscene advance failed");
             Gdx.input.getInputProcessor().keyDown(Input.Keys.ESCAPE);
         }
-        if (frame == 30) Gdx.input.getInputProcessor().keyDown(Input.Keys.D);
+        if (frame == 35) Gdx.input.getInputProcessor().keyDown(Input.Keys.D);
         if (frame == 100) {
             Gdx.input.getInputProcessor().keyUp(Input.Keys.D);
             capture("02-gameplay.png");
@@ -126,6 +170,7 @@ final class SmokeTest extends ApplicationAdapter {
                     "DESKTOP_SMOKE_PASS: menu, gameplay, downward attack, shield, pause, resize, textures and audio"
                         + " initialized");
             captureLevelTour();
+            game.setLanguage(Language.EN);
             checkTerrainAndDeaths();
             game.startJourney();
             for (int scene = 0; scene < 3; scene++) {
@@ -137,6 +182,12 @@ final class SmokeTest extends ApplicationAdapter {
             if (!(game.getScreen() instanceof PlayScreen))
                 throw new IllegalStateException("Completing cutscene must start gameplay");
             System.out.println("INTRO_SMOKE_PASS: all scenes, advance, skip and gameplay transition");
+            capture("21-english-gameplay.png");
+            game.pause();
+            game.getScreen().render(.016f);
+            capture("21-english-pause.png");
+            System.out.println("LANGUAGE_SMOKE_PASS: PT/EN options, menus, instructions, cutscene, HUD and saved preference");
+            game.setLanguage(originalLanguage);
             game.showMenu();
             Gdx.input.getInputProcessor().keyDown(Input.Keys.UP);
             Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
@@ -149,11 +200,11 @@ final class SmokeTest extends ApplicationAdapter {
         Gdx.input.getInputProcessor().keyUp(Input.Keys.L);
         game.startGame();
         var world = ((PlayScreen) game.getScreen()).world();
-        double[] landmarks = {850, 2370, 4480, 6400, 8350, 8600};
+        double[] landmarks = {850, 2370, 4480, 6400, 7670, 8400};
         String[] names = {"06-bread-of-life.png", "07-first-stairs.png", "08-sanctuary.png",
                 "09-extended-road.png", "10-final-stairs.png", "11-arena.png"};
         int landmark = 0;
-        boolean archerCaptured = false, arrowCaptured = false;
+        boolean archerCaptured = false, arrowCaptured = false, arenaCaptured = false;
         java.util.Set<br.com.thecruzader.gameplay.Enemy.State> bossCaptures =
                 java.util.EnumSet.noneOf(br.com.thecruzader.gameplay.Enemy.State.class);
         for (int tick = 0; tick < 180 * 120
@@ -185,6 +236,13 @@ final class SmokeTest extends ApplicationAdapter {
                             && solid.top() > player.y() && solid.top() - player.y() < 160);
             world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
                     new br.com.thecruzader.input.PlayerInput(direction, jump, attack, false, false, block));
+            if (!arenaCaptured && world.arenaLocked()) {
+                Gdx.input.getInputProcessor().keyDown(Input.Keys.L);
+                for (int settle = 0; settle < 12; settle++) game.getScreen().render(.05f);
+                Gdx.input.getInputProcessor().keyUp(Input.Keys.L);
+                capture("24-sealed-arena.png");
+                arenaCaptured = true;
+            }
             if (target != null && target.archer() && !archerCaptured
                     && target.state() == br.com.thecruzader.gameplay.Enemy.State.WINDUP
                     && Math.abs(target.x() - player.x()) < 300) {
@@ -224,6 +282,8 @@ final class SmokeTest extends ApplicationAdapter {
 
     private void checkTerrainAndDeaths() {
         var assets = new br.com.thecruzader.presentation.GameAssets();
+        if (assets.texts.language() != Language.EN)
+            throw new IllegalStateException("Saved language was not loaded by new assets");
         var renderer = new br.com.thecruzader.presentation.WorldRenderer(assets);
         var level = br.com.thecruzader.level.LevelLoader.load(Gdx.files.internal(
                 br.com.thecruzader.presentation.GameAssets.MAP));
@@ -248,6 +308,25 @@ final class SmokeTest extends ApplicationAdapter {
                     }
                 }
             } finally { tile.dispose(); }
+            var arenaWorld = visualWorld(level, level.arena().x() + 8,
+                    java.util.List.of(level.enemies().stream().filter(e ->
+                            e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.GUARDIAN).findFirst().orElseThrow()));
+            arenaWorld.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+                    br.com.thecruzader.input.PlayerInput.NONE);
+            for (int settle = 0; settle < 12; settle++) renderer.render(arenaWorld, .1f, 1);
+            float lockedCamera = renderer.cameraX();
+            arenaWorld.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+                    new br.com.thecruzader.input.PlayerInput(1, true, false, true, false, false));
+            renderer.render(arenaWorld, .1f, 1);
+            if (renderer.cameraX() != lockedCamera)
+                throw new IllegalStateException("Arena camera followed the player");
+            var arenaHud = new br.com.thecruzader.presentation.Hud(assets);
+            try {
+                arenaHud.announce("notice.arena");
+                arenaHud.render(arenaWorld, .35f, false, 0);
+                capture("24-english-arena.png");
+            } finally { arenaHud.dispose(); }
+            System.out.println("ARENA_SMOKE_PASS: locked camera, sealed gates, boss health bar and localized announcement");
             var sentinel = new br.com.thecruzader.level.LevelData.Spawn(142, 64,
                     br.com.thecruzader.level.LevelData.EnemyKind.SENTINEL);
             var guardian = level.enemies().stream().filter(e ->
@@ -272,6 +351,17 @@ final class SmokeTest extends ApplicationAdapter {
                 renderer.render(playerWorld, .1f, 1);
                 if (phase == 0 || phase == 4 || phase == 11) capture("19-templar-death-" + phase + ".png");
             }
+            var translatedHud = new br.com.thecruzader.presentation.Hud(assets);
+            try {
+                translatedHud.render(playerWorld, .1f, false, renderer.deathElapsed());
+                capture("21-english-death.png");
+                var victoryWorld = ((PlayScreen) game.getScreen()).world();
+                renderer.render(victoryWorld, .016f, 1);
+                translatedHud.render(victoryWorld, .016f, false, 0);
+                capture("21-english-victory.png");
+                renderer.render(playerWorld, 0, 1);
+                for (int frame = 0; frame < 12; frame++) renderer.render(playerWorld, .1f, 1);
+            } finally { translatedHud.dispose(); }
             if (renderer.deathElapsed() < 1) throw new IllegalStateException("Player animation did not advance");
             playerWorld.setPaused(true);
             float frozen = renderer.deathElapsed();
@@ -289,7 +379,7 @@ final class SmokeTest extends ApplicationAdapter {
             java.util.List<br.com.thecruzader.level.LevelData.Spawn> enemies) {
         return new br.com.thecruzader.gameplay.GameWorld(new br.com.thecruzader.level.LevelData(
                 level.width(), level.height(), new br.com.thecruzader.level.LevelData.Point(spawnX, 64),
-                level.checkpoint(), level.breads(), level.gate(), level.exit(), level.solids(), enemies));
+                level.checkpoint(), level.breads(), level.gate(), level.exit(), level.arena(), level.solids(), enemies));
     }
 
     private void assertGroundPixel(br.com.thecruzader.gameplay.GameWorld world, Pixmap tile) {
@@ -329,6 +419,7 @@ final class SmokeTest extends ApplicationAdapter {
 
     @Override
     public void dispose() {
+        game.setLanguage(originalLanguage);
         game.dispose();
     }
 }

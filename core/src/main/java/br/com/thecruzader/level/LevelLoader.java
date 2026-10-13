@@ -20,7 +20,7 @@ public final class LevelLoader {
         List<LevelData.Spawn> enemies = new ArrayList<>();
         LevelData.Point spawn = null, checkpoint = null;
         List<Bounds> breads = new ArrayList<>();
-        Bounds gate = null, exit = null;
+        Bounds gate = null, exit = null, arena = null;
         for (XmlReader.Element group : map.getChildrenByName("objectgroup")) {
             String layer = group.getAttribute("name");
             if (!layer.equals("collisions") && !layer.equals("entities")) continue;
@@ -48,6 +48,10 @@ public final class LevelLoader {
                         requireUnique(gate, type);
                         gate = rectangle(object, x, y);
                     }
+                    case "arena" -> {
+                        requireUnique(arena, type);
+                        arena = rectangle(object, x, y);
+                    }
                     case "exit" -> {
                         requireUnique(exit, type);
                         exit = rectangle(object, x, y);
@@ -59,10 +63,10 @@ public final class LevelLoader {
                 }
             }
         }
-        if (spawn == null || checkpoint == null || breads.isEmpty() || gate == null || exit == null)
+        if (spawn == null || checkpoint == null || breads.isEmpty() || gate == null || exit == null || arena == null)
             throw new IllegalArgumentException(
-                    "Map requires spawn, checkpoint, relic, gate and exit");
-        return new LevelData(width, height, spawn, checkpoint, breads, gate, exit, solids, enemies);
+                    "Map requires spawn, checkpoint, relic, gate, exit and arena");
+        return new LevelData(width, height, spawn, checkpoint, breads, gate, exit, arena, solids, enemies);
     }
 
     private static Bounds rectangle(XmlReader.Element object, double x, double top) {

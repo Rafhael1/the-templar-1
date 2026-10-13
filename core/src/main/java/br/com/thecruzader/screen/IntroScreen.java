@@ -15,12 +15,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 
 /** Three illustrated, player-paced scenes. Dialogue is original historical fiction. */
 public final class IntroScreen extends ScreenAdapter {
-    private static final String[] TITLES = {"CLERMONT / 1095", "O CHAMADO", "A LONGA MARCHA / 1096 - 1099"};
-    private static final String[] TEXT = {
-        "O papa Urbano II reúne os cavaleiros em Clermont.\nUma expedição ao Oriente está prestes a mudar suas vidas.",
-        "URBANO II\nCavaleiros, tomai a cruz e marchai ao Oriente.\nRespondei ao chamado de guerra. Protegei os peregrinos na estrada.",
-        "Do acampamento às estradas da Anatólia, de Antioquia a Jerusalém.\nEncontre abrigo, preserve suas forças e atravesse as muralhas."
-    };
+    private static final String[] SCENES = {"council", "call", "march"};
     private final CrusaderGame game;
     private final GameAssets assets;
     private final Stage stage = new Stage(new FitViewport(960, 540));
@@ -46,13 +41,13 @@ public final class IntroScreen extends ScreenAdapter {
     public int scene() { return scene; }
     private void advance() {
         if (finished) return;
-        if (++scene == TITLES.length) finished = true;
+        if (++scene == SCENES.length) finished = true;
         else { elapsed = 0; build(); }
     }
     private void build() {
         root.clearChildren();
         root.pad(24);
-        Label title = new Label(TITLES[scene], assets.skin);
+        Label title = new Label(assets.texts.text("intro." + SCENES[scene] + ".title"), assets.skin);
         title.setColor(GameAssets.GOLD);
         root.add(title).padBottom(12).row();
         Image illustration = new Image(assets.texture(scene == 2 ? "march" : "council"));
@@ -61,10 +56,10 @@ public final class IntroScreen extends ScreenAdapter {
                         com.badlogic.gdx.scenes.scene2d.actions.Actions.moveBy(4, 0, 3),
                         com.badlogic.gdx.scenes.scene2d.actions.Actions.moveBy(-4, 0, 3))));
         root.add(illustration).size(816, 340).row();
-        Label story = new Label(TEXT[scene], assets.skin);
+        Label story = new Label(assets.texts.text("intro." + SCENES[scene] + ".text"), assets.skin);
         story.setAlignment(com.badlogic.gdx.utils.Align.center);
         root.add(story).padTop(12).row();
-        Label controls = new Label("ENTER / ESPAÇO / CLIQUE continuar     ESC pular", assets.skin);
+        Label controls = new Label(assets.texts.text("intro.navigation"), assets.skin);
         controls.setFontScale(.75f * GameAssets.UI_FONT_SCALE);
         root.add(controls).padTop(10);
     }
