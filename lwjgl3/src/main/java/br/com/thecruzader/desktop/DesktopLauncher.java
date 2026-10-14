@@ -14,7 +14,7 @@ public final class DesktopLauncher {
 
     public static void main(String[] args) {
         ApplicationListener app;
-        if (args.length == 0) app = new CrusaderGame();
+        if (args.length == 0) app = new CrusaderGame(br.com.thecruzader.level.CampaignLoader.PATH);
         else if (args.length == 2 && args[0].equals("--smoke")) app = new SmokeTest(args[1]);
         else if (args.length == 1 && args[0].equals("--profile")) app = new PerformanceTest();
         else
@@ -43,6 +43,11 @@ public final class DesktopLauncher {
                     @Override
                     public void focusLost() {
                         app.pause();
+                    }
+
+                    @Override
+                    public void focusGained() {
+                        app.resume();
                     }
                 });
         new Lwjgl3Application(app, config);

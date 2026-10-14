@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 class BossArenaTest {
     private LevelData level() { return LevelLoader.load(new FileHandle(
-            System.getProperty("assets.path") + "/maps/exiles-road.tmx")); }
+            System.getProperty("assets.path") + "/levels/exiles-road/maps/exiles-road.tmx")); }
     private GameWorld entered() {
         GameWorld world = new GameWorld(level());
         world.player().x = world.level().arena().x() + 8;
@@ -89,13 +89,25 @@ class BossArenaTest {
         world.drainEvents();
         world.guardian().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertTrue(world.arenaLocked());
+        assertTrue(world.gateLocked());
+        assertEquals(1, world.drainEvents().stream().filter(e -> e == GameEvent.BOSS_DEFEATED).count());
+        for (int tick = 0; tick < 560; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
         assertFalse(world.arenaLocked());
         assertFalse(world.gateLocked());
-        assertEquals(1, world.drainEvents().stream().filter(e -> e == GameEvent.BOSS_DEFEATED).count());
+        assertFalse(world.bossReleaseActive());
+        assertEquals(1, world.drainEvents().stream().filter(e -> e == GameEvent.GATES_OPEN).count());
         for (int tick = 0; tick < 60; tick++) world.update(GameWorld.STEP,
                 new PlayerInput(-1, false, false, true, false, false));
         assertTrue(world.player().x() < world.arenaEntrance().x());
+        assertFalse(world.insideArena());
+        world.player().x = world.level().arena().x() + 8;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertTrue(world.insideArena());
+        assertFalse(world.arenaLocked());
+        assertFalse(world.drainEvents().contains(GameEvent.ARENA_START));
         world.player().x = world.level().gate().right() + 2;
+        assertFalse(world.insideArena());
         for (int tick = 0; tick < 120; tick++) world.update(GameWorld.STEP,
                 new PlayerInput(1, false, false, false, false, false));
         assertEquals(GameWorld.State.WON, world.state());
@@ -111,6 +123,7 @@ class BossArenaTest {
         world.update(GameWorld.STEP, PlayerInput.NONE);
         world.respawn();
         assertFalse(world.arenaEntered());
+        assertFalse(world.insideArena());
         assertTrue(world.gateLocked());
         assertEquals(world.level().checkpoint().x(), world.player().x(), .001);
         world.player().x = world.arenaEntrance().right() - 12;
@@ -125,6 +138,61 @@ class BossArenaTest {
         world.setPaused(true);
         world.update(GameWorld.STEP, PlayerInput.NONE);
         assertFalse(world.arenaEntered());
+        assertTrue(world.drainEvents().isEmpty());
+    }
+
+    @Test void angelsKeepBothGatesClosedUntilOpeningFinishesAndHoldCombatUntilTheyAscend() {
+        GameWorld world = entered();
+        world.guardian().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        double x = world.player().x();
+        var input = new PlayerInput(1, true, true, true, false, false);
+        for (int tick = 0; tick < 360; tick++) world.update(GameWorld.STEP, input);
+        assertTrue(world.gateLocked());
+        assertTrue(world.arenaLocked());
+        assertEquals(x, world.player().x());
+        assertFalse(world.player().attack().running());
+        for (int tick = 0; tick < 60; tick++) world.update(GameWorld.STEP, input);
+        assertFalse(world.gateLocked());
+        assertTrue(world.bossReleaseActive());
+        assertEquals(x, world.player().x());
+        for (int tick = 0; tick < 150; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertFalse(world.bossReleaseActive());
+        world.update(GameWorld.STEP, new PlayerInput(1, false, false, false, false, false));
+        assertTrue(world.player().x() > x);
+    }
+
+    @Test void pausingStopsTheReleaseClockAndGateOpeningEventsOccurOnce() {
+        GameWorld world = entered();
+        world.guardian().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        for (int tick = 0; tick < 120; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
+        double elapsed = world.bossReleaseElapsed();
+        world.setPaused(true);
+        for (int tick = 0; tick < 600; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertEquals(elapsed, world.bossReleaseElapsed());
+        assertTrue(world.gateLocked());
+        world.setPaused(false);
+        for (int tick = 0; tick < 600; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
+        var events = world.drainEvents();
+        assertEquals(1, events.stream().filter(e -> e == GameEvent.BOSS_DEFEATED).count());
+        assertEquals(1, events.stream().filter(e -> e == GameEvent.GATES_OPEN).count());
+        for (int tick = 0; tick < 600; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertFalse(world.drainEvents().contains(GameEvent.GATES_OPEN));
+    }
+
+    @Test void respawnClearsAnInterruptedAngelSequence() {
+        GameWorld world = entered();
+        world.guardian().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        world.player().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertEquals(GameWorld.State.DEAD, world.state());
+        world.respawn();
+        assertFalse(world.bossDefeated());
+        assertFalse(world.bossReleaseActive());
+        assertEquals(0, world.bossReleaseElapsed());
+        assertTrue(world.gateLocked());
         assertTrue(world.drainEvents().isEmpty());
     }
 }

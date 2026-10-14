@@ -4,12 +4,13 @@ import br.com.thecruzader.CrusaderGame;
 import br.com.thecruzader.gameplay.GameEvent;
 import br.com.thecruzader.gameplay.GameWorld;
 import br.com.thecruzader.input.InputMapper;
-import br.com.thecruzader.level.LevelLoader;
+import br.com.thecruzader.presentation.LevelResources;
 import br.com.thecruzader.presentation.AudioPlayer;
 import br.com.thecruzader.presentation.GameAssets;
 import br.com.thecruzader.presentation.Hud;
 import br.com.thecruzader.presentation.WorldRenderer;
 import br.com.thecruzader.presentation.SceneryTransition;
+import br.com.thecruzader.presentation.TemplarDeathAnimation;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
@@ -24,14 +25,19 @@ public final class PlayScreen extends ScreenAdapter {
     private final Hud hud;
     private final AudioPlayer audio;
     private double accumulator;
-    private int visitedRegions;
+    private final LevelResources level;
+    private final SceneryTransition scenery;
+    private final boolean[] visitedRegions;
 
     public PlayScreen(CrusaderGame game, GameAssets assets, AudioPlayer audio) {
         this.game = game;
         this.audio = audio;
-        world = new GameWorld(LevelLoader.load(Gdx.files.internal(GameAssets.MAP)));
-        renderer = new WorldRenderer(assets);
-        hud = new Hud(assets);
+        level = new LevelResources(game.journey().currentLevel(), assets);
+        world = game.journey().enterLevel(level.data());
+        scenery = new SceneryTransition(level.definition());
+        visitedRegions = new boolean[level.definition().regions().size()];
+        renderer = new WorldRenderer(assets, level);
+        hud = new Hud(assets, level.definition(), game.journey().hasNextLevel());
     }
 
     public GameWorld world() {
@@ -41,7 +47,7 @@ public final class PlayScreen extends ScreenAdapter {
     @Override
     public void show() {
         Gdx.input.setInputProcessor(input);
-        audio.setPaused(false);
+        audio.endDeath();
     }
 
     @Override
@@ -50,27 +56,34 @@ public final class PlayScreen extends ScreenAdapter {
             audio.toggleMute();
             audio.setPaused(world.paused());
         }
-        if (input.takePause() && world.state() == GameWorld.State.PLAYING) {
+        if (input.takePause() && world.state() != GameWorld.State.WON) {
             world.setPaused(!world.paused());
             input.clear();
             accumulator = 0;
             audio.setPaused(world.paused());
         }
         if (input.takeRestart()) {
-            if (world.state() == GameWorld.State.DEAD && renderer.deathElapsed() >= 1) {
+            if (world.state() == GameWorld.State.DEAD && renderer.deathElapsed() >= TemplarDeathAnimation.DURATION) {
                 world.respawn();
+                audio.endDeath();
                 input.clear();
                 accumulator = 0;
             } else if (world.state() == GameWorld.State.WON) {
-                game.startGame();
+                game.continueAfterVictory();
                 return;
             }
         }
-        if (!world.paused() && world.state() == GameWorld.State.PLAYING) {
+        if (!world.paused() && world.state() == GameWorld.State.PLAYING && renderer.transitionOpacity() == 0) {
             accumulator += Math.min(delta, .10f);
             while (accumulator >= GameWorld.STEP) {
+                boolean inside = world.insideArena();
                 world.update(GameWorld.STEP, input.consume());
                 accumulator -= GameWorld.STEP;
+                if (inside != world.insideArena()) {
+                    accumulator = 0;
+                    input.clear();
+                    break;
+                }
             }
         } else {
             accumulator = 0;
@@ -83,13 +96,14 @@ public final class PlayScreen extends ScreenAdapter {
                 hud.announce("notice.checkpoint");
             if (event == GameEvent.ARENA_START) hud.announce("notice.arena");
             if (event == GameEvent.BOSS_DEFEATED) hud.announce("notice.bossDefeated");
-            if (event == GameEvent.RELIC)
-                hud.announce("notice.bread");
+            if (event == GameEvent.GATES_OPEN) hud.announce("notice.gatesOpen");
+            if (event == GameEvent.BANDAGE)
+                hud.announce("notice.bandage");
         }
-        int nextRegion = SceneryTransition.regionAt(world.player().x());
-        if ((visitedRegions & (1 << nextRegion)) == 0) {
-            visitedRegions |= 1 << nextRegion;
-            hud.announce("notice.region." + nextRegion);
+        int nextRegion = scenery.regionAt(world.player().x());
+        if (!visitedRegions[nextRegion]) {
+            visitedRegions[nextRegion] = true;
+            hud.announce(level.definition().regions().get(nextRegion).announcementKey());
         }
         renderer.render(world, delta, world.paused() || world.state() != GameWorld.State.PLAYING
                 ? 1 : (float) (accumulator / GameWorld.STEP));
@@ -120,5 +134,6 @@ public final class PlayScreen extends ScreenAdapter {
     public void dispose() {
         renderer.dispose();
         hud.dispose();
+        level.dispose();
     }
 }

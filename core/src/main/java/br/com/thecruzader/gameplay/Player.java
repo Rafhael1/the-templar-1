@@ -4,7 +4,7 @@ import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
 
 public final class Player {
-    public static final double WIDTH = 28, HEIGHT = 52, DODGE_COOLDOWN = 0.8;
+    public static final double WIDTH = LevelData.PLAYER_WIDTH, HEIGHT = LevelData.PLAYER_HEIGHT, DODGE_COOLDOWN = 1.4;
     public static final int MAX_HEALTH = 5;
     double previousX, previousY;
     double x, y, vx, vy, invulnerable, dodge, dodgeCooldown, coyote, jumpBuffer;

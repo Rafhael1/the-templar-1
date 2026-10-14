@@ -24,6 +24,31 @@ public final class CollisionWorld {
         arenaSolids = List.copyOf(withGate);
     }
 
+    LevelData level() { return level; }
+
+    boolean clearShot(double fromX, double fromY, double toX, double toY, boolean gateLocked) {
+        for (Bounds solid : solids(gateLocked)) {
+            double near = 0, far = 1;
+            double dx = toX - fromX, dy = toY - fromY;
+            if (dx == 0) {
+                if (fromX <= solid.x() || fromX >= solid.right()) continue;
+            } else {
+                double a = (solid.x() - fromX) / dx, b = (solid.right() - fromX) / dx;
+                near = Math.max(near, Math.min(a, b));
+                far = Math.min(far, Math.max(a, b));
+            }
+            if (dy == 0) {
+                if (fromY <= solid.y() || fromY >= solid.top()) continue;
+            } else {
+                double a = (solid.y() - fromY) / dy, b = (solid.top() - fromY) / dy;
+                near = Math.max(near, Math.min(a, b));
+                far = Math.min(far, Math.max(a, b));
+            }
+            if (near < far && far > 0 && near < 1) return false;
+        }
+        return true;
+    }
+
     void setArenaClosed(boolean closed) { arenaClosed = closed; }
     List<Bounds> solids(boolean gateLocked) {
         return gateLocked ? (arenaClosed ? arenaSolids : lockedSolids) : level.solids();

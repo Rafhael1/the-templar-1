@@ -13,7 +13,7 @@ class LevelLoaderTest {
     @TempDir Path temporary;
 
     private FileHandle actualMap() {
-        return new FileHandle(System.getProperty("assets.path") + "/maps/exiles-road.tmx");
+        return new FileHandle(System.getProperty("assets.path") + "/levels/exiles-road/maps/exiles-road.tmx");
     }
 
     @Test
@@ -22,8 +22,8 @@ class LevelLoaderTest {
         assertEquals(8960, map.width());
         assertEquals(64, map.spawn().y());
         assertEquals(17, map.enemies().size());
-        assertEquals(34, map.solids().size());
-        assertEquals(10, map.breads().size());
+        assertEquals(33, map.solids().size());
+        assertEquals(10, map.bandages().size());
         assertEquals(5, map.enemies().stream()
                 .filter(enemy -> enemy.kind() == LevelData.EnemyKind.ARCHER).count());
         assertEquals(160, map.solids().get(1).top());
@@ -32,9 +32,9 @@ class LevelLoaderTest {
     @Test
     void encounterSpawnsAndHealingAreClearOfSolidTerrain() {
         LevelData map = LevelLoader.load(actualMap());
-        for (Bounds bread : map.breads())
+        for (Bounds bandage : map.bandages())
             for (Bounds solid : map.solids())
-                assertFalse(bread.overlaps(solid), "Bread inside terrain at " + bread.x());
+                assertFalse(bandage.overlaps(solid), "Bandage inside terrain at " + bandage.x());
         for (LevelData.Spawn spawn : map.enemies()) {
             Bounds feet = new Bounds(spawn.x(), spawn.y(), 30, 60);
             for (Bounds solid : map.solids())
@@ -56,7 +56,7 @@ class LevelLoaderTest {
     @Test
     void missingArenaFailsAtLoadTime() {
         FileHandle file = new FileHandle(temporary.resolve("missing-arena.tmx").toFile());
-        file.writeString(actualMap().readString().replace("type=\"arena\"", "type=\"relic\""), false);
+        file.writeString(actualMap().readString().replace("type=\"arena\"", "type=\"bandage\""), false);
         assertThrows(IllegalArgumentException.class, () -> LevelLoader.load(file));
     }
 
@@ -93,7 +93,7 @@ class LevelLoaderTest {
     void expandedHalfContainsTerrainEncountersAndFinalObjectives() {
         LevelData map = LevelLoader.load(actualMap());
         assertTrue(map.solids().stream().filter(solid -> solid.x() >= 3200).count() >= 10);
-        assertEquals(12, map.enemies().stream().filter(enemy -> enemy.x() >= 3200).count());
+        assertEquals(11, map.enemies().stream().filter(enemy -> enemy.x() >= 3200).count());
         assertTrue(map.checkpoint().x() >= 4200 && map.checkpoint().x() <= 4700);
         assertTrue(map.gate().x() >= 6000);
         assertTrue(map.exit().x() > map.gate().right());
@@ -105,5 +105,57 @@ class LevelLoaderTest {
             assertEquals(0, solid.y() % 32, .001);
             assertEquals(0, solid.height() % 32, .001);
         }
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"infinite", "offset", "parallax", "group", "duplicate",
+            "rotatedPoint", "rectangleSpawn", "outsideSpawn", "outsideGuardian", "wideArena", "shortGate", "earlyExit", "zeroTiles", "tileCollider", "blockedExit", "blockedGate"})
+    void rejectsUnsupportedOrUnplayableAuthoredMaps(String change) {
+        String original = actualMap().readString();
+        String modified = switch (change) {
+            case "infinite" -> original.replace("infinite=\"0\"", "infinite=\"1\"");
+            case "offset" -> original.replace("name=\"collisions\"", "name=\"collisions\" offsetx=\"128\"");
+            case "parallax" -> original.replace("name=\"terrain\"", "name=\"terrain\" parallaxx=\"0.5\"");
+            case "group" -> original.replace("</map>", "<group name=\"nested\" /></map>");
+            case "duplicate" -> original.replace("</map>", "<objectgroup name=\"collisions\" /></map>");
+            case "rotatedPoint" -> original.replace("name=\"templar\"", "name=\"templar\" rotation=\"15\"");
+            case "rectangleSpawn" -> original.replace("type=\"spawn\"", "type=\"spawn\" width=\"28\"");
+            case "outsideSpawn" -> original.replace("name=\"templar\" x=\"96\"", "name=\"templar\" x=\"-500\"");
+            case "outsideGuardian" -> original.replace("name=\"gate-guardian\" x=\"8576\"", "name=\"gate-guardian\" x=\"600\"");
+            case "wideArena" -> original.replace("name=\"boss-arena\" x=\"8032\" y=\"224\" width=\"736\"", "name=\"boss-arena\" x=\"7008\" y=\"224\" width=\"1760\"");
+            case "shortGate" -> original.replace("width=\"40\" height=\"176\"", "width=\"40\" height=\"32\"");
+            case "earlyExit" -> original.replace("name=\"pilgrims-exit\" x=\"8832\"", "name=\"pilgrims-exit\" x=\"7000\"");
+            case "tileCollider" -> original.replace("name=\"stair-0\"", "name=\"stair-0\" gid=\"1\"");
+            case "blockedExit" -> original.replaceFirst("</objectgroup>", "<object name=\"blocking-exit\" x=\"8832\" y=\"380\" width=\"96\" height=\"100\" /></objectgroup>");
+            case "blockedGate" -> original.replaceFirst("</objectgroup>", "<object name=\"blocking-gate\" x=\"8768\" y=\"304\" width=\"40\" height=\"176\" /></objectgroup>");
+            case "zeroTiles" -> original.replace("tilewidth=\"32\"", "tilewidth=\"0\"");
+            default -> throw new IllegalArgumentException(change);
+        };
+        assertNotEquals(original, modified, "Probe must actually change the map");
+        FileHandle file = new FileHandle(temporary.resolve(change + ".tmx").toFile());
+        file.writeString(modified, false);
+        assertThrows(IllegalArgumentException.class, () -> LevelLoader.load(file), change);
+    }
+    @Test
+    void roadEncountersAreSpreadAcrossRegionsAndMostlySupportedByPlatforms() {
+        LevelData level = LevelLoader.load(actualMap());
+        int[] regions = new int[4];
+        int elevated = 0;
+        for (var spawn : level.enemies()) {
+            if (spawn.kind() == LevelData.EnemyKind.GUARDIAN) continue;
+            regions[(int) (spawn.x() / 2240)]++;
+            if (spawn.y() > 64) elevated++;
+            assertTrue(level.solids().stream().anyMatch(solid -> solid.top() == spawn.y()
+                    && solid.x() <= spawn.x() && solid.right() >= spawn.x() + spawn.kind().width),
+                    "Spawn must be supported by its authored surface");
+        }
+        assertEquals(11, elevated);
+        assertArrayEquals(new int[] {5, 4, 4, 3}, regions);
+    }
+    @Test void partiallyUnsupportedPlatformSpawnFailsBeforeGameplay() {
+        FileHandle file = new FileHandle(temporary.resolve("off-platform.tmx").toFile());
+        file.writeString(actualMap().readString().replace("name=\"sentinel-9\" x=\"6550\"",
+                "name=\"sentinel-9\" x=\"6600\""), false);
+        var error = assertThrows(IllegalArgumentException.class, () -> LevelLoader.load(file));
+        assertTrue(error.getMessage().contains("stand fully"));
     }
 }

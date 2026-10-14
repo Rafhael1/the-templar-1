@@ -14,9 +14,10 @@ application {
 }
 tasks.named('run') { workingDir = rootProject.projectDir }
 tasks.register('smokeTest', JavaExec) {
+    dependsOn ':core:processTestResources'
     group = 'verification'
     description = 'Runs the real OpenGL renderer and writes screenshots; needs a desktop session.'
-    classpath = sourceSets.main.runtimeClasspath
+    classpath = sourceSets.main.runtimeClasspath + files(project(':core').layout.buildDirectory.dir('resources/test'))
     mainClass = application.mainClass
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
     jvmArgs application.applicationDefaultJvmArgs

@@ -6,6 +6,7 @@ import br.com.thecruzader.level.LevelData;
 public final class Enemy {
     public enum State {
         PATROL,
+        NOTICE,
         CHASE,
         WINDUP,
         ATTACK,
@@ -15,9 +16,9 @@ public final class Enemy {
     }
 
     double previousX, previousY;
-    double x, y, vx, vy, flash, alertTime;
+    double x, y, vx, vy, flash, alertTime, noticeTime;
     boolean grounded;
-    final double home;
+    double patrolCenter, targetX, targetY, chaseTime, calmTime, blockedTime, lastChaseX, lastChaseY, jumpVx;
     final boolean boss;
     final LevelData.EnemyKind kind;
     double actionTime, aimX, aimY;
@@ -32,7 +33,8 @@ public final class Enemy {
     Enemy(LevelData.Spawn spawn) {
         previousX = x = spawn.x();
         previousY = y = spawn.y();
-        home = x;
+        patrolCenter = lastChaseX = x;
+        lastChaseY = y;
         kind = spawn.kind();
         boss = kind == LevelData.EnemyKind.GUARDIAN;
         health = maxHealth();
@@ -81,8 +83,8 @@ public final class Enemy {
         return state;
     }
 
-    public double width() { return boss ? 42 : 30; }
-    public double height() { return boss ? 68 : 48; }
+    public double width() { return kind.width; }
+    public double height() { return kind.height; }
 
     public Bounds bounds() {
         return new Bounds(x, y, width(), height());

@@ -26,7 +26,7 @@ class GameTextTest {
         assertEquals("DEFEAT THE GUARDIAN", texts.text("hud.guardian"));
         assertEquals("O Templário", texts.text("game.name"));
         texts.setLanguage(Language.PT);
-        assertEquals("PÃO DA VIDA - Até dois corações restaurados.", texts.text("notice.bread"));
+        assertEquals("BANDAGENS - Até dois corações restaurados.", texts.text("notice.bandage"));
     }
     @Test void changingLanguageUsesTheAlreadyLoadedCatalogs() {
         FileHandle directory = copyCatalogs();
@@ -57,7 +57,7 @@ class GameTextTest {
         assertTrue(texts.text("intro.council.text").contains("\n"));
         texts.setLanguage(Language.EN);
         assertEquals("RESOLUTION: 1920 x 1080", texts.format("options.resolution", 1920, 1080));
-        assertEquals("2/10", texts.format("hud.breadCount", 2, 10));
+        assertEquals("2/10", texts.format("hud.bandageCount", 2, 10));
     }
     @Test void fontCoversAllCharactersInBothCatalogs() {
         Set<Integer> glyphs = new HashSet<>();

@@ -3,7 +3,8 @@
   "commands": [],
   "extensionsPath": "extensions",
   "folders": [
-    "."
+    ".",
+    "../levels"
   ],
   "propertyTypes": [
     {
@@ -55,7 +56,7 @@
       "drawFill": true,
       "id": 5,
       "members": [],
-      "name": "relic",
+      "name": "bandage",
       "type": "class",
       "useAs": [
         "object"

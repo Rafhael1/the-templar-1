@@ -29,17 +29,22 @@ class EnemyCollisionTest {
     @Test
     void climbsStairsInActualWorldWithoutEnteringTerrain() {
         GameWorld world = new GameWorld(LevelLoader.load(new FileHandle(
-                System.getProperty("assets.path") + "/maps/exiles-road.tmx")));
+                System.getProperty("assets.path") + "/levels/exiles-road/maps/exiles-road.tmx")));
         Enemy enemy = world.enemies().get(3);
         world.player().x = 2500;
         world.player().y = 160;
+        EnemyPerception.alert(enemy, world.player());
+        double highest = enemy.y();
         for (int tick = 0; tick < 300; tick++) {
             world.update(GameWorld.STEP, PlayerInput.NONE);
+            highest = Math.max(highest, enemy.y());
             for (Bounds solid : world.level().solids())
                 assertFalse(enemy.bounds().overlaps(solid), "Enemy penetrated stair terrain");
         }
         assertTrue(enemy.x() >= 2336);
-        assertEquals(160, enemy.y(), .001);
+        assertTrue(highest >= 160);
+        assertTrue(enemy.y() >= 96 && enemy.y() <= 160);
+        assertTrue(Math.abs(enemy.x() - world.player().x()) < 100);
     }
 
     @Test
@@ -81,7 +86,7 @@ class EnemyCollisionTest {
         Enemy enemy = enemy(200, 180);
         Player player = new Player(new LevelData.Point(240, 64));
         enemy.attack.start();
-        new EnemySystem().update(enemy, player, GameWorld.STEP, new java.util.ArrayList<>());
+        new EnemySystem(collision).update(enemy, player, GameWorld.STEP, new java.util.ArrayList<>(), true);
         collision.move(enemy, GameWorld.STEP, false);
         assertTrue(enemy.y() < 180);
         assertEquals(0, enemy.vx);

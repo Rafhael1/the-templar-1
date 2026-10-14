@@ -21,7 +21,7 @@ public final class GameWorld {
     private final LevelData level;
     private final CollisionWorld collision;
     private final MovementSystem movement = new MovementSystem();
-    private final EnemySystem enemySystem = new EnemySystem();
+    private final EnemySystem enemySystem;
     private final CombatSystem combat = new CombatSystem();
     private final BodyCollisionSystem bodies = new BodyCollisionSystem();
     private final List<Enemy> enemies = new ArrayList<>();
@@ -32,16 +32,18 @@ public final class GameWorld {
     private final Bounds shrine, arenaEntrance;
     private State state = State.PLAYING;
     private boolean checkpoint, paused, arenaEntered, bossDefeated;
-    private final boolean[] collectedBreads;
+    private final boolean[] collectedBandages;
     private final List<Arrow> arrows = new ArrayList<>();
     private final List<Arrow> arrowView = java.util.Collections.unmodifiableList(arrows);
     private final ProjectileSystem projectiles = new ProjectileSystem();
     private double time;
+    private double bossReleaseElapsed;
 
     public GameWorld(LevelData level) {
         this.level = Objects.requireNonNull(level);
-        collectedBreads = new boolean[level.breads().size()];
+        collectedBandages = new boolean[level.bandages().size()];
         collision = new CollisionWorld(level);
+        enemySystem = new EnemySystem(collision);
         arenaEntrance = level.arenaEntrance();
         shrine = new Bounds(level.checkpoint().x() - 20, level.checkpoint().y(), 60, 80);
         player = new Player(level.spawn());
@@ -62,6 +64,25 @@ public final class GameWorld {
         time += dt;
         player.previousX = player.x;
         player.previousY = player.y;
+        if (bossReleaseActive()) {
+            double previous = bossReleaseElapsed;
+            bossReleaseElapsed = Math.min(BossRelease.DURATION, bossReleaseElapsed + dt);
+            if (previous < BossRelease.OPEN_END && bossReleaseElapsed >= BossRelease.OPEN_END) {
+                collision.setArenaClosed(false);
+                events.add(GameEvent.GATES_OPEN);
+            }
+            player.vx = 0;
+            player.dodge = 0;
+            player.blocking = false;
+            player.attack.update(dt);
+            movement.prepare(player, PlayerInput.NONE, dt, events);
+            movement.move(player, PlayerInput.NONE, dt, collision, gateLocked());
+            if (player.health <= 0) {
+                state = State.DEAD;
+                events.add(GameEvent.DEATH);
+            }
+            return;
+        }
         boolean locked = gateLocked();
         player.attack.update(dt);
         movement.prepare(player, input, dt, events);
@@ -78,14 +99,14 @@ public final class GameWorld {
         for (Enemy enemy : enemies) {
             enemy.previousX = enemy.x;
             enemy.previousY = enemy.y;
-            if (!enemy.boss || arenaEntered) enemySystem.update(enemy, player, dt, arrows);
+            if (!enemy.boss || arenaEntered) enemySystem.update(enemy, player, dt, arrows, locked);
             else enemy.vx = 0;
             collision.move(enemy, dt, locked);
         }
         combat.resolve(player, enemies, events);
         if (arenaEntered && !bossDefeated && guardian.health <= 0) {
             bossDefeated = true;
-            collision.setArenaClosed(false);
+            arrows.clear();
             events.add(GameEvent.BOSS_DEFEATED);
         }
         bodies.resolve(player, enemies, collision, gateLocked());
@@ -101,12 +122,12 @@ public final class GameWorld {
             player.health = Player.MAX_HEALTH;
             events.add(GameEvent.CHECKPOINT);
         }
-        for (int i = 0; i < collectedBreads.length; i++) {
-            if (!collectedBreads[i] && player.health < Player.MAX_HEALTH
-                    && level.breads().get(i).overlaps(player.bounds())) {
-                collectedBreads[i] = true;
+        for (int i = 0; i < collectedBandages.length; i++) {
+            if (!collectedBandages[i] && player.health < Player.MAX_HEALTH
+                    && level.bandages().get(i).overlaps(player.bounds())) {
+                collectedBandages[i] = true;
                 player.health = Math.min(Player.MAX_HEALTH, player.health + 2);
-                events.add(GameEvent.RELIC);
+                events.add(GameEvent.BANDAGE);
             }
         }
         if (!gateLocked() && level.exit().overlaps(player.bounds())) {
@@ -131,9 +152,13 @@ public final class GameWorld {
     }
 
     public Bounds arenaEntrance() { return arenaEntrance; }
+    public boolean insideArena() { return level.insideArena(player.x()); }
     public boolean arenaEntered() { return arenaEntered; }
     public boolean arenaLocked() { return arenaEntered && gateLocked(); }
     public Enemy guardian() { return guardian; }
+    public boolean bossDefeated() { return bossDefeated; }
+    public double bossReleaseElapsed() { return bossReleaseElapsed; }
+    public boolean bossReleaseActive() { return bossDefeated && bossReleaseElapsed < BossRelease.DURATION; }
 
     public void respawn() {
         if (state != State.DEAD) throw new IllegalStateException("Respawn requires a dead player");
@@ -141,6 +166,7 @@ public final class GameWorld {
         populate();
         arenaEntered = false;
         bossDefeated = false;
+        bossReleaseElapsed = 0;
         collision.setArenaClosed(false);
         arrows.clear();
         events.clear();
@@ -155,7 +181,7 @@ public final class GameWorld {
     }
 
     public boolean gateLocked() {
-        return guardian.health > 0;
+        return !bossDefeated || bossReleaseElapsed < BossRelease.OPEN_END;
     }
 
     public Player player() {
@@ -182,11 +208,11 @@ public final class GameWorld {
         return checkpoint;
     }
 
-    public boolean breadCollected(int index) { return collectedBreads[index]; }
+    public boolean bandageCollected(int index) { return collectedBandages[index]; }
 
-    public int collectedBreadCount() {
+    public int collectedBandageCount() {
         int count = 0;
-        for (boolean collected : collectedBreads) if (collected) count++;
+        for (boolean collected : collectedBandages) if (collected) count++;
         return count;
     }
 

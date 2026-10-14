@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<campaign>
+  <level id="exiles-road" map="levels/exiles-road/maps/exiles-road.tmx" blendWidth="640" chapter="menu.chapter" title="menu.level" story="menu.story" travelObjective="hud.gate" bossObjective="hud.guardian" bossName="hud.bossName" completionTitle="overlay.victory.title" completionText="overlay.victory.text">
+    <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
+      <light x="184" y="176" />
+      <light x="356" y="176" />
+      <light x="604" y="176" />
+      <light x="776" y="176" />
+    </interior>
+    <region start="0" texture="levels/exiles-road/scenery/region-0.png" announcement="notice.region.0" />
+    <region start="2240" texture="levels/exiles-road/scenery/region-1.png" announcement="notice.region.1" />
+    <region start="4480" texture="levels/exiles-road/scenery/region-2.png" announcement="notice.region.2" />
+    <region start="6720" texture="levels/exiles-road/scenery/region-3.png" announcement="notice.region.3" />
+    <decoration kind="CRATES" x="160" y="64" />
+    <decoration kind="CRATES" x="216" y="64" />
+    <decoration kind="FLAG" x="312" y="64" color="743844" />
+    <decoration kind="SIGN" x="392" y="64" />
+    <decoration kind="TORCH" x="480" y="160" />
+    <decoration kind="CRATES" x="1184" y="160" />
+    <decoration kind="BRAZIER" x="1408" y="64" />
+    <decoration kind="SIGN" x="2080" y="64" />
+    <decoration kind="FLAG" x="2320" y="160" color="743844" />
+    <decoration kind="CRATES" x="2500" y="128" />
+    <decoration kind="TORCH" x="2860" y="160" />
+    <decoration kind="FLAG" x="3152" y="256" color="743844" />
+    <decoration kind="BRAZIER" x="3500" y="160" />
+    <decoration kind="TORCH" x="3750" y="224" />
+    <decoration kind="SIGN" x="4160" y="64" />
+    <decoration kind="TORCH" x="4368" y="64" />
+    <decoration kind="TORCH" x="4608" y="64" />
+    <decoration kind="CRATES" x="4960" y="160" />
+    <decoration kind="CRATES" x="5024" y="160" />
+    <decoration kind="BRAZIER" x="5350" y="192" />
+    <decoration kind="SIGN" x="5552" y="64" />
+    <decoration kind="FLAG" x="5960" y="128" color="365c69" />
+    <decoration kind="TORCH" x="6260" y="224" />
+    <decoration kind="BRAZIER" x="6790" y="352" />
+    <decoration kind="CRATES" x="6960" y="64" />
+    <decoration kind="FLAG" x="7168" y="160" color="365c69" />
+    <decoration kind="TORCH" x="7480" y="160" />
+    <decoration kind="FLAG" x="7620" y="256" color="365c69" />
+    <decoration kind="BRAZIER" x="7864" y="64" />
+    <decoration kind="TORCH" x="7976" y="64" />
+  </level>
+</campaign>

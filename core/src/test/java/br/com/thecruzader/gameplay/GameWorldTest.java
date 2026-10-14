@@ -21,7 +21,14 @@ class GameWorldTest {
         return new GameWorld(
                 LevelLoader.load(
                         new FileHandle(
-                                System.getProperty("assets.path") + "/maps/exiles-road.tmx")));
+                                System.getProperty("assets.path") + "/levels/exiles-road/maps/exiles-road.tmx")));
+    }
+
+    private static GameWorld terrainWorld() {
+        LevelData level = world().level();
+        return new GameWorld(new LevelData(level.width(), level.height(), level.spawn(), level.checkpoint(),
+                level.bandages(), level.gate(), level.exit(), level.arena(), level.solids(),
+                level.enemies().stream().filter(e -> e.kind() == LevelData.EnemyKind.GUARDIAN).toList()));
     }
 
     private static void advance(GameWorld world, int count, PlayerInput input) {
@@ -67,7 +74,7 @@ class GameWorldTest {
 
     @Test
     void firstPlatformIsReachableFromItsLeftEdge() {
-        GameWorld w = world();
+        GameWorld w = terrainWorld();
         w.player().x = 390;
         w.update(STEP, PlayerInput.NONE);
         w.update(STEP, new PlayerInput(1, true, false, false, false, false));
@@ -78,8 +85,8 @@ class GameWorldTest {
     }
 
     @Test
-    void relicRouteIsReachableThroughJumpsAndReturnsToRoad() {
-        GameWorld w = world();
+    void bandageRouteIsReachableThroughJumpsAndReturnsToRoad() {
+        GameWorld w = terrainWorld();
         w.player().health = 3;
         w.player().x = 390;
         w.update(STEP, PlayerInput.NONE);
@@ -88,7 +95,7 @@ class GameWorldTest {
         assertEquals(160, w.player().y(), .001);
         w.update(STEP, new PlayerInput(1, true, false, false, false, false));
         advance(w, 100, new PlayerInput(1, false, false, false, false, false));
-        assertTrue(w.collectedBreadCount() > 0, "Relic must be reachable through the platform route");
+        assertTrue(w.collectedBandageCount() > 0, "Bandage must be reachable through the platform route");
         assertEquals(224, w.player().y(), .001);
         w.update(STEP, new PlayerInput(1, true, false, false, false, false));
         advance(w, 110, new PlayerInput(1, false, false, false, false, false));
@@ -110,7 +117,7 @@ class GameWorldTest {
                                 base.height(),
                                 base.spawn(),
                                 base.checkpoint(),
-                                base.breads(),
+                                base.bandages(),
                                 base.gate(),
                                 base.exit(), base.arena(),
                                 solids,
@@ -228,20 +235,20 @@ class GameWorldTest {
     }
 
     @Test
-    void relicHealsOnceAndPersistsAcrossDeath() {
+    void bandageHealsOnceAndPersistsAcrossDeath() {
         GameWorld w = world();
-        w.player().x = w.level().breads().getFirst().x();
-        w.player().y = w.level().breads().getFirst().y();
+        w.player().x = w.level().bandages().getFirst().x();
+        w.player().y = w.level().bandages().getFirst().y();
         w.player().health = 1;
         w.update(STEP, PlayerInput.NONE);
-        assertTrue(w.collectedBreadCount() > 0);
+        assertTrue(w.collectedBandageCount() > 0);
         assertEquals(3, w.player().health());
         w.update(STEP, PlayerInput.NONE);
         assertEquals(3, w.player().health());
         w.player().health = 0;
         w.update(STEP, PlayerInput.NONE);
         w.respawn();
-        assertTrue(w.collectedBreadCount() > 0);
+        assertTrue(w.collectedBandageCount() > 0);
     }
 
     @Test
@@ -252,7 +259,7 @@ class GameWorldTest {
         assertTrue(w.player().bounds().right() <= w.level().gate().x());
         assertEquals(GameWorld.State.PLAYING, w.state());
         w.enemies().stream().filter(Enemy::boss).findFirst().orElseThrow().health = 0;
-        advance(w, 100, new PlayerInput(1, false, false, false, false, false));
+        advance(w, 700, new PlayerInput(1, false, false, false, false, false));
         assertEquals(GameWorld.State.WON, w.state());
     }
 

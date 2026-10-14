@@ -8,29 +8,43 @@ public record LevelData(
         double height,
         Point spawn,
         Point checkpoint,
-        List<Bounds> breads,
+        List<Bounds> bandages,
         Bounds gate,
         Bounds exit,
         Bounds arena,
         List<Bounds> solids,
         List<Spawn> enemies) {
-    public record Point(double x, double y) {}
+    public static final double PLAYER_WIDTH = 28, PLAYER_HEIGHT = 52;
+    public record Point(double x, double y) {
+        public Point { requireFinitePoint(x, y); }
+    }
 
-    public enum EnemyKind { SENTINEL, ARCHER, GUARDIAN }
+    public enum EnemyKind {
+        SENTINEL(30, 48), ARCHER(30, 48), GUARDIAN(42, 68);
+        public final double width, height;
+        EnemyKind(double width, double height) { this.width = width; this.height = height; }
+    }
 
     public record Spawn(double x, double y, EnemyKind kind) {
-        public Spawn { Objects.requireNonNull(kind); }
+        public Spawn { Objects.requireNonNull(kind); requireFinitePoint(x, y); }
     }
+
+    public boolean insideArena(double x) { return x >= arena.x() && x < gate.right(); }
 
     public Bounds arenaEntrance() { return new Bounds(arena.x() - 32, arena.y(), 32, arena.height()); }
 
+    private static void requireFinitePoint(double x, double y) {
+        if (!Double.isFinite(x) || !Double.isFinite(y))
+            throw new IllegalArgumentException("Point coordinates must be finite");
+    }
+
     public LevelData {
-        if (width <= 0 || height <= 0)
-            throw new IllegalArgumentException("Level dimensions must be positive");
+        if (!Double.isFinite(width) || !Double.isFinite(height) || width <= 0 || height <= 0)
+            throw new IllegalArgumentException("Level dimensions must be finite and positive");
         Objects.requireNonNull(spawn);
         Objects.requireNonNull(checkpoint);
-        breads = List.copyOf(breads);
-        if (breads.isEmpty()) throw new IllegalArgumentException("Level requires bread pickups");
+        bandages = List.copyOf(bandages);
+        if (bandages.isEmpty()) throw new IllegalArgumentException("Level requires bandage pickups");
         Objects.requireNonNull(gate);
         Objects.requireNonNull(exit);
         Objects.requireNonNull(arena);

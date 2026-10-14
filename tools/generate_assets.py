@@ -7,10 +7,16 @@ import math
 import random
 import struct
 import wave
-import xml.etree.ElementTree as ET
+import argparse
+
+parser = argparse.ArgumentParser(description="Regenerate shared and exiles-road assets; optionally write the original map to an explicit path.")
+parser.add_argument('--map-output', type=Path, help='Explicit destination for the original TMX map; its shared tileset path is relative to that destination.')
+args = parser.parse_args()
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / 'assets'
+SCENERY = ASSETS / 'levels/exiles-road/scenery'
+SCENERY.mkdir(parents=True, exist_ok=True)
 for name in ('sprites', 'maps', 'audio', 'ui'):
     (ASSETS / name).mkdir(parents=True, exist_ok=True)
 rng = random.Random(1099)
@@ -271,57 +277,14 @@ for x in (40,195,360):
     d.line((x+13,120,x+50,120),fill='#a78e67',width=2)
     d.polygon([(x+20,123),(x+47,123),(x+47,175),(x+33,167),(x+20,178)],fill='#743844')
     d.rectangle((x+31,131,x+35,157),fill='#b99569');d.rectangle((x+25,138,x+41,142),fill='#b99569')
-ruins.resize((960,540),Image.Resampling.NEAREST).save(ASSETS/'sprites/ruins.png')
+ruins.resize((960,540),Image.Resampling.NEAREST).save(SCENERY/'ruins.png')
 
-# Orthogonal map. Pixel coordinates in the XML use Tiled's top-left origin.
-W,H,T=280,17,32
-map_el=ET.Element('map',version='1.10',tiledversion='1.11.2',orientation='orthogonal',renderorder='right-down',width=str(W),height=str(H),tilewidth='32',tileheight='32',infinite='0',nextlayerid='4',nextobjectid='30')
-ts=ET.SubElement(map_el,'tileset',firstgid='1',name='stone',tilewidth='32',tileheight='32',tilecount='4',columns='4')
-ET.SubElement(ts,'image',source='stone.png',width='128',height='32')
-layer=ET.SubElement(map_el,'layer',id='1',name='terrain',width=str(W),height=str(H)); data=ET.SubElement(layer,'data',encoding='csv')
-grid=[[0]*W for _ in range(H)]
-for x in range(W): grid[15][x]=1;grid[16][x]=2
-platforms=[(448,160,160),(672,224,160),(896,160,128),(1152,160,192),
-           (1632,192,160),(1920,160,160),(2816,160,128),(3040,224,192),
-           (3392,160,160),(3616,224,192),(3872,160,160),(4288,160,192),
-           (4576,224,160),(4832,160,160),(5184,192,192),
-           (5952,160,192),(6208,224,160),(6464,288,160),(6720,224,192),
-           (7072,160,160),(7360,224,192),(6912,288,192),(7520,256,192)]
-stairs=[(2208,96,64),(2272,128,64),(2336,160,96),(2432,128,64),(2496,96,64),
-        (7488,96,64),(7552,128,64),(7616,160,96),(7712,128,64),(7776,96,64)]
-for x,top,width in platforms:
-    row=H-top//T
-    for col in range(x//T,(x+width)//T): grid[row][col]=3
-# Wide stair treads lead up to a landing, then descend into the guardian arena.
-for x,top,width in stairs:
-    for y in range(64,top,32):
-        for col in range(x//T,(x+width)//T):
-            grid[H-1-y//T][col]=3 if y==top-32 else 2
-# Top of tile row is H*32-row*32; requested top matches this.
-data.text='\n'+',\n'.join(','.join(map(str,row)) for row in grid)+'\n'
-coll=ET.SubElement(map_el,'objectgroup',id='2',name='collisions',visible='0')
-i=1
-def rectangle(parent,name,x,y,w,h,typ=None):
-    global i
-    obj=ET.SubElement(parent,'object',id=str(i),name=name,x=str(x),y=str(H*T-y-h),width=str(w),height=str(h),**({'type':typ} if typ else {}));i+=1;return obj
-rectangle(coll,'ground',0,0,W*T,64)
-for n,(x,top,width) in enumerate(platforms): rectangle(coll,f'platform-{n}',x,top-32,width,32)
-for n,(x,top,width) in enumerate(stairs): rectangle(coll,f'stair-{n}',x,64,width,top-64)
-entities=ET.SubElement(map_el,'objectgroup',id='3',name='entities',visible='0')
-def point(name,x,y,typ):
-    global i
-    obj=ET.SubElement(entities,'object',id=str(i),name=name,x=str(x),y=str(H*T-y),**{'type':typ});i+=1;ET.SubElement(obj,'point')
-point('templar',96,64,'spawn');point('sanctuary',4480,64,'checkpoint')
-for n,x in enumerate((620,1080,1856,2160,3328,4032,4960,5728,6560,7296,7904)): point(f'sentinel-{n}',x,64,'sentinel')
-for n,(x,y) in enumerate(((1440,64),(3680,224),(5280,64),(6240,224),(7136,64))): point(f'archer-{n}',x,y,'archer')
-point('gate-guardian',8576,64,'guardian')
-for n,(x,y) in enumerate(((742,232),(1632,72),(2944,72),(3776,232),(4320,72),
-                            (5536,72),(6320,232),(6912,72),(7872,72),(8080,72))):
-    rectangle(entities,f'bread-of-life-{n}',x,y,28,28,'relic')
-rectangle(entities,'boss-arena',8032,64,736,256,'arena')
-rectangle(entities,'locked-gate',8768,64,40,176,'gate');rectangle(entities,'pilgrims-exit',8832,64,96,100,'exit')
-map_el.set('nextobjectid',str(i))
-ET.indent(map_el);ET.ElementTree(map_el).write(ASSETS/'maps/exiles-road.tmx',encoding='UTF-8',xml_declaration=True)
+# Keep map generation independent from shared art/audio generation.
+if args.map_output is not None:
+    import subprocess
+    import sys
+    subprocess.run([sys.executable, str(ROOT / 'tools/generate_first_level.py'),
+                    '--map-output', str(args.map_output)], check=True)
 
 # Synthesized original sound cues and a quiet looping drone.
 RATE=22050
@@ -339,8 +302,14 @@ sound('jump.wav',.15,lambda t,d:math.sin(2*math.pi*(190*t+500*t*t))*.12*(1-t/d))
 sound('hurt.wav',.25,lambda t,d:math.sin(2*math.pi*(160*t-180*t*t))*.22*math.exp(-t*10))
 sound('chime.wav',1.1,lambda t,d:sum(math.sin(2*math.pi*f*t) for f in (440,660,880))*.09*math.exp(-t*3))
 import runpy
+runpy.run_path(str(ROOT / 'tools/generate_bandages.py'), run_name='__main__')
+runpy.run_path(str(ROOT / 'tools/generate_sanctuary.py'), run_name='__main__')
+runpy.run_path(str(ROOT / 'tools/generate_chapel.py'), run_name='__main__')
 runpy.run_path(str(ROOT / 'tools/generate_atmosphere.py'))
+runpy.run_path(str(ROOT / 'tools/generate_intro.py'), run_name='__main__')
 runpy.run_path(str(ROOT / 'tools/generate_deaths.py'))
+runpy.run_path(str(ROOT / 'tools/generate_templar_death.py'), run_name='__main__')
+runpy.run_path(str(ROOT / 'tools/generate_angels.py'), run_name='__main__')
 runpy.run_path(str(ROOT / 'tools/generate_font.py'))
 runpy.run_path(str(ROOT / 'tools/generate_icon.py'))
-print('Generated sprites, layered backgrounds, Tiled map and six original audio files.')
+print('Generated shared sprites, backgrounds and audio.' + (' Wrote map to ' + str(args.map_output) if args.map_output is not None else ' No map was written.'))

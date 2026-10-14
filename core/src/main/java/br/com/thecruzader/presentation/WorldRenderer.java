@@ -1,10 +1,12 @@
 package br.com.thecruzader.presentation;
 
 import br.com.thecruzader.gameplay.Attack;
+import br.com.thecruzader.gameplay.BossRelease;
 import br.com.thecruzader.gameplay.Enemy;
 import br.com.thecruzader.gameplay.GameWorld;
 import br.com.thecruzader.gameplay.Player;
 import br.com.thecruzader.level.Bounds;
+import br.com.thecruzader.level.LevelDefinition;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -19,15 +21,12 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 public final class WorldRenderer implements Disposable {
     private static final Color STONE_SHADOW = Color.valueOf("655864");
     private static final Color STONE = Color.valueOf("807167");
-    private static final Color IRON = Color.valueOf("a29b88");
     private static final Color WOOD_SHADOW = Color.valueOf("54444b");
     private static final Color WOOD_DARK = Color.valueOf("594333");
     private static final Color WOOD = Color.valueOf("8e7356");
     private static final Color STEEL_DARK = Color.valueOf("46525c");
     private static final Color LEATHER = Color.valueOf("655346");
     private static final Color SAND = Color.valueOf("8e7b68");
-    private static final Color BURGUNDY = Color.valueOf("743844");
-    private static final Color BLUE = Color.valueOf("365c69");
     private static final Color FLAME = Color.valueOf("d08a51");
     private static final Color FLAME_LIGHT = Color.valueOf("f6d59b");
     private static final Color HEALTH_BACK = Color.valueOf("342e3c");
@@ -44,25 +43,38 @@ public final class WorldRenderer implements Disposable {
     private Player displayedPlayer;
     private float[] enemyDeaths;
     private float playerDeath, cameraX, entranceClosure, exitClosure;
-    private boolean cameraInitialized;
+    private final RoomTransition room = new RoomTransition();
+    private final EnclosedAreaRenderer enclosed;
+    private final TemplarDeathAnimation templarDeath;
+    private final AngelReleaseAnimation angels;
 
     public float cameraX() { return camera.position.x; }
     public float deathElapsed() { return playerDeath; }
+    public boolean interiorVisible() { return room.interior(); }
+    public float transitionOpacity() { return room.opacity(); }
 
-    private final Texture[] scenery = new Texture[SceneryTransition.REGIONS];
+    private final Texture[] scenery;
+    private final SceneryTransition transition;
+    private final LevelResources level;
     private final GameAssets assets;
     private final SpriteBatch batch = new SpriteBatch();
     private final OrthographicCamera camera = new OrthographicCamera();
     private final FitViewport viewport = new FitViewport(960, 540, camera);
     private final OrthogonalTiledMapRenderer mapRenderer;
 
-    public WorldRenderer(GameAssets assets) {
+    public WorldRenderer(GameAssets assets, LevelResources level) {
         this.assets = assets;
+        this.level = level;
+        transition = new SceneryTransition(level.definition());
+        enclosed = new EnclosedAreaRenderer(assets, level);
+        templarDeath = new TemplarDeathAnimation(assets);
+        angels = new AngelReleaseAnimation(assets);
+        scenery = new Texture[level.definition().regions().size()];
         for (int region = 0; region < scenery.length; region++) {
-            scenery[region] = assets.texture("region-" + region);
+            scenery[region] = level.scenery(region);
             scenery[region].setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.ClampToEdge);
         }
-        mapRenderer = new OrthogonalTiledMapRenderer(assets.map(), 1, batch);
+        mapRenderer = new OrthogonalTiledMapRenderer(level.map(), 1, batch);
     }
 
     public void resize(int width, int height) {
@@ -73,43 +85,50 @@ public final class WorldRenderer implements Disposable {
         updateDeaths(world, delta);
         ScreenUtils.clear(0.035f, 0.05f, 0.08f, 1);
         viewport.apply();
-        double target = world.arenaLocked() ? world.level().arena().x() + world.level().arena().width() / 2
+        room.update(world.insideArena(), delta, world.paused());
+        boolean interior = room.interior();
+        double target = interior ? world.level().arena().x() + world.level().arena().width() / 2
                 : world.player().interpolatedX(alpha) + 140;
-        target = Math.max(480, Math.min(world.level().width() - 480, target));
-        if (!cameraInitialized || !world.arenaEntered()) cameraX = (float) target;
-        else {
-            cameraX += ((float) target - cameraX) * Math.min(1, delta * 7);
-            if (Math.abs(cameraX - target) < .25) cameraX = (float) target;
-        }
-        cameraInitialized = true;
-        camera.position.set(Math.round(cameraX), 270, 0);
+        if (!interior) target = Math.max(480, Math.min(world.level().width() - 480, target));
+        cameraX = (float) target;
+        // The scene switch covers the camera cut; each interior has a stable one-screen view.
+        camera.position.set(Math.round(cameraX), interior ? (float) enclosed.bottom(world) + 270 : 270, 0);
         if (!world.paused()) {
-            entranceClosure = approach(entranceClosure, world.arenaLocked() ? 1 : 0, delta * 4);
-            exitClosure = approach(exitClosure, world.gateLocked() ? 1 : 0, delta * 4);
+            if (world.bossDefeated()) {
+                entranceClosure = exitClosure = 1 - BossRelease.opening(world.bossReleaseElapsed());
+            } else {
+                entranceClosure = approach(entranceClosure, world.arenaLocked() ? 1 : 0, delta * 4);
+                exitClosure = approach(exitClosure, world.gateLocked() ? 1 : 0, delta * 4);
+            }
         }
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         float left = camera.position.x - 480;
         batch.begin();
         batch.setColor(Color.WHITE);
-        batch.draw(assets.texture("sky"), left, 0, 960, 540);
-        drawSceneryBackground(left);
-        // Clouds drift independently of the camera, at a slower parallax depth.
-        for (int i = 0; i < 6; i++) {
-            float cx = left + (float) ((i * 211 + world.time() * 4 - left * .12) % 1150) - 95;
-            rect(cx, 380 + i % 3 * 36, 116, 8, CLOUD);
-            rect(cx + 24, 388 + i % 3 * 36, 66, 6, CLOUD_LIGHT);
+        if (interior) enclosed.drawInterior(batch, world);
+        else {
+            batch.draw(assets.texture("sky"), left, 0, 960, 540);
+            drawSceneryBackground(left);
+            for (int i = 0; i < 6; i++) {
+                float cx = left + (float) ((i * 211 + world.time() * 4 - left * .12) % 1150) - 95;
+                rect(cx, 380 + i % 3 * 36, 116, 8, CLOUD);
+                rect(cx + 24, 388 + i % 3 * 36, 66, 6, CLOUD_LIGHT);
+            }
+            drawScenery(world, left);
+            enclosed.drawExterior(batch, world);
         }
-        drawScenery(world, left);
         batch.end();
-        // Scenery changes this shared batch's tint; tiles must always start opaque.
-        batch.setColor(Color.WHITE);
-        mapRenderer.setView(camera);
-        mapRenderer.render();
+        if (!interior) {
+            batch.setColor(Color.WHITE);
+            mapRenderer.setView(camera);
+            mapRenderer.render();
+        }
         batch.begin();
-        drawObjects(world, left);
+        drawObjects(world, left, interior);
         for (int i = 0; i < world.enemies().size(); i++) {
             Enemy enemy = world.enemies().get(i);
+            if (world.level().insideArena(enemy.x()) != interior) continue;
             if (enemy.x() < left - 140 || enemy.x() > left + 1100) continue;
             if (enemy.health() > 0) drawEnemy(enemy, world.time(), alpha);
             else if (enemyDeaths[i] < 2.2f)
@@ -117,17 +136,27 @@ public final class WorldRenderer implements Disposable {
                         enemy.archer() ? 3 : enemy.boss() ? 2 : 1, enemyDeaths[i], true);
         }
         for (var arrow : world.arrows()) {
+            if (world.level().insideArena(arrow.x()) != interior) continue;
             batch.setColor(Color.WHITE);
             batch.draw(assets.texture("arrow"), (float) arrow.x() - 8, (float) arrow.y() - 3,
                     8, 3, 16, 6, 1, 1, (float) arrow.angle(), 0, 0, 16, 6, false, false);
         }
         if (world.player().health() > 0) drawPlayer(world.player(), world.time(), alpha);
-        else drawDeath(world, world.player().x(), world.player().y(), world.player().facing(),
-                1, 0, playerDeath, false);
         for (int i = 0; i < 30; i++) {
             float x = left + (float) ((i * 173 + world.time() * (8 + i % 7)) % 960);
             float y = 110 + (float) ((i * 67 + world.time() * 8) % 320);
             rect(x, y, 2, 2, DUST);
+        }
+        if (interior) enclosed.drawForeground(batch, world);
+        if (interior) angels.draw(batch, world);
+        if (world.player().health() <= 0) {
+            Player player = world.player();
+            double y = Math.max(floorBelow(world, player.x(), player.y()), player.y() - 725 * playerDeath * playerDeath);
+            templarDeath.draw(batch, player.x(), y, player.facing(), playerDeath, left, camera.position.y - 270);
+        }
+        if (room.opacity() > 0) {
+            float bottom = camera.position.y - 270;
+            rect(left, bottom, 960, 540, smoke.set(0, 0, 0, room.opacity()));
         }
         batch.setColor(Color.WHITE);
         batch.end();
@@ -138,7 +167,7 @@ public final class WorldRenderer implements Disposable {
         // Group strips by texture so the blend adds quads without repeatedly flushing the batch.
         for (int region = 0; region < scenery.length; region++) {
             for (float x = (float) Math.floor(left / 8) * 8; x < left + 960; x += 8) {
-                float opacity = SceneryTransition.weight(region, x + 4);
+                float opacity = transition.weight(region, x + 4);
                 if (opacity == 0) continue;
                 float u = (x - left + offset) / 960;
                 batch.setColor(1, 1, 1, opacity);
@@ -154,7 +183,7 @@ public final class WorldRenderer implements Disposable {
             displayedPlayer = world.player();
             enemyDeaths = new float[world.enemies().size()];
             playerDeath = 0;
-            cameraInitialized = false;
+            room.reset(world.insideArena());
             entranceClosure = 0;
             exitClosure = world.gateLocked() ? 1 : 0;
         }
@@ -167,11 +196,7 @@ public final class WorldRenderer implements Disposable {
 
     private void drawDeath(GameWorld world, double x, double y, int facing, float scale,
             int kind, float elapsed, boolean fade) {
-        double floor = 64;
-        for (Bounds solid : world.level().solids())
-            if (x + 15 >= solid.x() && x + 15 < solid.right() && solid.top() <= y + .01)
-                floor = Math.max(floor, solid.top());
-        double fallingY = Math.max(floor, y - 725 * elapsed * elapsed);
+        double fallingY = Math.max(floorBelow(world, x, y), y - 725 * elapsed * elapsed);
         int frame = Math.min(7, (int) (elapsed * 9));
         batch.setColor(1, 1, 1, fade ? Math.max(0, Math.min(1, 2.2f - elapsed)) : 1);
         sprite(assets.deaths[kind][frame], x - 33 * scale, fallingY - 10 * scale,
@@ -179,82 +204,84 @@ public final class WorldRenderer implements Disposable {
         batch.setColor(Color.WHITE);
     }
 
-    private void drawObjects(GameWorld world, float left) {
+    private static double floorBelow(GameWorld world, double x, double y) {
+        double floor = Double.NEGATIVE_INFINITY;
+        for (Bounds solid : world.level().solids())
+            if (x + 15 >= solid.x() && x + 15 < solid.right() && solid.top() <= y + .01)
+                floor = Math.max(floor, solid.top());
+        return floor;
+    }
+
+    private void drawObjects(GameWorld world, float left, boolean interior) {
         double x = world.level().checkpoint().x(), y = world.level().checkpoint().y();
-        rect(x - 14, y, 54, 24, STONE_SHADOW);
-        rect(x - 20, y + 24, 66, 7, GameAssets.GOLD);
-        cross(x + 8, y + 33, 32, GameAssets.PAPER);
-        if (world.checkpoint()) flame(x + 12, y + 77, world.time());
-        for (int i = 0; i < world.level().breads().size(); i++) {
-            if (world.breadCollected(i)) continue;
-            Bounds r = world.level().breads().get(i);
+        if (!interior) {
+            batch.setColor(Color.WHITE);
+            batch.draw(assets.texture("sanctuary"), (float) Math.round(x - 32), (float) Math.round(y), 96, 128);
+            if (world.checkpoint()) {
+                flame(x - 10, y + 40, world.time());
+                flame(x + 52, y + 40, world.time() + .7);
+            }
+        }
+        for (int i = 0; i < world.level().bandages().size(); i++) {
+            if (world.bandageCollected(i)) continue;
+            Bounds r = world.level().bandages().get(i);
+            if (world.level().insideArena(r.x() + r.width() / 2) != interior) continue;
             if (r.right() < left - 32 || r.x() > left + 992) continue;
             batch.setColor(Color.WHITE);
-            batch.draw(assets.texture("bread-of-life"),
+            batch.draw(assets.texture("bandages"),
                     (float) Math.round(r.x() + r.width() / 2 - 16),
                     (float) Math.round(r.y() + r.height() / 2 - 16
                             + Math.sin(world.time() * 3) * 2), 32, 32);
         }
-        drawGate(world.arenaEntrance(), entranceClosure);
-        drawGate(world.level().gate(), exitClosure);
-        for (int torch = 230; torch < world.level().width(); torch += 560) {
-            if (torch < left - 32 || torch > left + 992) continue;
-            rect(torch, 72, 5, 27, WOOD_SHADOW);
-            flame(torch + 2, 103, world.time());
-        }
+        enclosed.drawDoors(batch, world, interior, entranceClosure, exitClosure);
     }
 
     private static float approach(float current, float target, float step) {
         return current < target ? Math.min(target, current + step) : Math.max(target, current - step);
     }
 
-    private void drawGate(Bounds gate, float closure) {
-        rect(gate.x() - 18, gate.y(), 16, gate.height() + 20, STONE);
-        rect(gate.right() + 3, gate.y(), 16, gate.height() + 20, STONE);
-        rect(gate.x() - 18, gate.top() + 10, gate.width() + 37, 13, GameAssets.GOLD);
-        for (double x = gate.x(); x < gate.right(); x += 12)
-            rect(x, gate.y() + (1 - closure) * gate.height(), 4, closure * gate.height() + 10, IRON);
-    }
-
     private void drawScenery(GameWorld world, float left) {
-        for (int x = 160; x < world.level().width(); x += 320) {
-            if (x < left - 160 || x > left + 1000 || x >= world.level().arena().x()) continue;
-            int kind = (x / 320) % 4;
-            if (kind == 0) {
-                // Supply crates and barrels beside the marching road.
-                rect(x, 64, 30, 27, WOOD_DARK);
-                rect(x + 3, 67, 24, 21, WOOD);
-                rect(x + 12, 64, 4, 27, STEEL_DARK);
-                rect(x + 38, 64, 22, 33, LEATHER);
-                rect(x + 38, 70, 22, 3, GameAssets.GOLD);
-                rect(x + 38, 89, 22, 3, GameAssets.GOLD);
-            } else if (kind == 1) {
-                rect(x, 64, 4, 115, SAND);
-                for (int strip = 0; strip < 8; strip++) {
-                    int sway = (int) (Math.sin(world.time() * 3 + strip * .4) * 3);
-                    rect(x + 4 + strip * 4, 132 + sway, 4, 44 - strip,
-                            Color.valueOf(x < 4480 ? "743844" : "365c69"));
+        for (LevelDefinition.Decoration decoration : level.definition().decorations()) {
+            double x = decoration.x(), y = decoration.y();
+            if (x < left - 160 || x > left + 1000) continue;
+            switch (decoration.kind()) {
+                case CRATES -> {
+                    rect(x, y, 30, 27, WOOD_DARK);
+                    rect(x + 3, y + 3, 24, 21, WOOD);
+                    rect(x + 12, y, 4, 27, STEEL_DARK);
+                    rect(x + 38, y, 22, 33, LEATHER);
+                    rect(x + 38, y + 6, 22, 3, GameAssets.GOLD);
+                    rect(x + 38, y + 25, 22, 3, GameAssets.GOLD);
                 }
-            } else if (kind == 2) {
-                rect(x, 64, 8, 62, WOOD_SHADOW);
-                rect(x - 13, 111, 40, 18, WOOD);
-                rect(x - 7, 118, 25, 3, GameAssets.PAPER);
-                rect(x + 14, 114, 4, 11, GameAssets.PAPER);
-            } else {
-                rect(x, 64, 53, 8, STONE_SHADOW);
-                rect(x + 9, 72, 31, 10, STONE);
-                for (int i = 0; i < 3; i++) {
-                    double drift = (world.time() * 14 + i * 17) % 56;
-                    rect(x + 15 + Math.sin(drift * .1) * 7, 82 + drift, 8, 8,
-                            smoke.set(.55f, .50f, .48f, (float) ((1 - drift / 56) * .24)));
+                case FLAG -> {
+                    rect(x, y, 4, 115, SAND);
+                    Color color = smoke.set((decoration.flagRgb() << 8) | 0xff);
+                    for (int strip = 0; strip < 8; strip++) {
+                        int sway = (int) (Math.sin(world.time() * 3 + strip * .4) * 3);
+                        rect(x + 4 + strip * 4, y + 68 + sway, 4, 44 - strip, color);
+                    }
+                }
+                case SIGN -> {
+                    rect(x, y, 8, 62, WOOD_SHADOW);
+                    rect(x - 13, y + 47, 40, 18, WOOD);
+                    rect(x - 7, y + 54, 25, 3, GameAssets.PAPER);
+                    rect(x + 14, y + 50, 4, 11, GameAssets.PAPER);
+                }
+                case BRAZIER -> {
+                    rect(x, y, 53, 8, STONE_SHADOW);
+                    rect(x + 9, y + 8, 31, 10, STONE);
+                    for (int i = 0; i < 3; i++) {
+                        double drift = (world.time() * 14 + i * 17) % 56;
+                        rect(x + 15 + Math.sin(drift * .1) * 7, y + 18 + drift, 8, 8,
+                                smoke.set(.55f, .50f, .48f, (float) ((1 - drift / 56) * .24)));
+                    }
+                }
+                case TORCH -> {
+                    rect(x, y + 8, 5, 27, WOOD_SHADOW);
+                    flame(x + 2, y + 39, world.time());
                 }
             }
         }
-    }
-
-    private void cross(double x, double y, double height, Color color) {
-        rect(x, y, 5, height, color);
-        rect(x - 7, y + height * .6, 19, 5, color);
     }
 
     private void flame(double x, double y, double time) {
@@ -334,6 +361,12 @@ public final class WorldRenderer implements Disposable {
         if (warning) {
             rect(x + 12, y + (e.boss() ? 102 : 82), 4, 12, WARNING);
             rect(x + 12, y + (e.boss() ? 97 : 77), 4, 3, WARNING);
+        }
+        if (e.state() == Enemy.State.NOTICE) {
+            rect(x + 10, y + 88, 8, 2, GameAssets.GOLD);
+            rect(x + 16, y + 82, 2, 6, GameAssets.GOLD);
+            rect(x + 12, y + 80, 6, 2, GameAssets.GOLD);
+            rect(x + 12, y + 76, 2, 2, GameAssets.GOLD);
         }
         float angle = switch (e.state()) {
             case WINDUP, DASH_WINDUP, JUMP_WINDUP -> 90;

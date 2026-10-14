@@ -8,7 +8,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class EnemySystemTest {
-    private final EnemySystem system = new EnemySystem();
     private final Enemy enemy = new Enemy(new LevelData.Spawn(500, 64, LevelData.EnemyKind.SENTINEL));
     private final Player player = new Player(new LevelData.Point(850, 64));
 
@@ -18,23 +17,27 @@ class EnemySystemTest {
             new Bounds(3010, 64, 110, 100), new Bounds(64, 64, 2886, 256), List.of(new Bounds(0, 0, 3200, 64)),
             List.of(new LevelData.Spawn(2700, 64, LevelData.EnemyKind.GUARDIAN))));
 
+    private final EnemySystem system = new EnemySystem(collision);
+
     private void advance(int ticks) {
         for (int i = 0; i < ticks; i++) {
-            system.update(enemy, player, GameWorld.STEP, new java.util.ArrayList<>());
+            system.update(enemy, player, GameWorld.STEP, new java.util.ArrayList<>(), true);
             collision.move(enemy, GameWorld.STEP, true);
         }
     }
 
     @Test
-    void detectsDistantTargetsAndClosesQuickly() {
+    void distantEnemiesKeepPatrollingWhenThePlayerIsOnScreen() {
         advance(60);
-        assertEquals(Enemy.State.CHASE, enemy.state());
-        assertEquals(562.5, enemy.x(), .001);
+        assertEquals(Enemy.State.PATROL, enemy.state());
+        assertEquals(0, enemy.alertTime);
+        assertTrue(enemy.x() < 500);
     }
 
     @Test
     void followsJumpWithoutWastingAttacks() {
         player.x = 600;
+        EnemyPerception.alert(enemy, player);
         player.y = 220;
         advance(120);
         assertEquals(Enemy.State.CHASE, enemy.state());
@@ -44,13 +47,15 @@ class EnemySystemTest {
 
     @Test
     void remembersTargetBrieflyThenReturnsToPatrol() {
-        advance(1);
+        player.x = 700;
+        enemy.facing = 1;
+        advance(60);
         player.x = 1400;
         advance(120);
         assertEquals(Enemy.State.CHASE, enemy.state());
         advance(121);
         assertEquals(Enemy.State.PATROL, enemy.state());
-        assertTrue(enemy.x() <= enemy.home + 230);
+        assertTrue(enemy.calmTime > 0);
     }
 
     @Test
@@ -60,7 +65,7 @@ class EnemySystemTest {
         assertEquals(Enemy.State.WINDUP, enemy.state());
         Enemy left = new Enemy(new LevelData.Spawn(500, 64, LevelData.EnemyKind.SENTINEL));
         player.x = 427;
-        system.update(left, player, GameWorld.STEP, new java.util.ArrayList<>());
+        system.update(left, player, GameWorld.STEP, new java.util.ArrayList<>(), true);
         assertEquals(Enemy.State.WINDUP, left.state());
         assertEquals(-1, left.facing());
     }

@@ -3,6 +3,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 import math, wave, array, random
 ROOT = Path(__file__).resolve().parents[1] / 'assets'
+SCENERY = ROOT / 'levels/exiles-road/scenery'
+SCENERY.mkdir(parents=True, exist_ok=True)
 # Four distinct silhouettes: camp, road, ruins, siege.
 for kind in range(4):
     im=Image.new('RGBA',(480,270));d=ImageDraw.Draw(im)
@@ -24,7 +26,7 @@ for kind in range(4):
             for k in range(0,96,24):d.rectangle((x+k,151,x+k+12,162),fill='#76695e')
             d.rectangle((x+35,182,x+46,205),fill='#34303b')
             for y in range(169,238,16):d.line((x,y,x+95,y),fill='#5d5352')
-    im.resize((960,540),Image.Resampling.NEAREST).save(ROOT/f'sprites/region-{kind}.png')
+    im.resize((960,540),Image.Resampling.NEAREST).save(SCENERY/f'region-{kind}.png')
 # Council chamber: proportioned figure, one blessing hand and a pastoral staff.
 im=Image.new('RGBA',(480,200),'#202735');d=ImageDraw.Draw(im)
 for y in range(12,169,14):
@@ -88,7 +90,7 @@ for x in (190,285):
     d.rectangle((x,122,x+3,131),fill='#ddd8c1');d.polygon([(x+1,115),(x-1,121),(x+3,121)],fill='#f6d59b')
 im.resize((960,400),Image.Resampling.NEAREST).save(ROOT/'sprites/council.png')
 march=Image.open(ROOT/'sprites/sky.png').convert('RGBA').resize((480,270),Image.Resampling.NEAREST)
-march.alpha_composite(Image.open(ROOT/'sprites/region-3.png').resize((480,270),Image.Resampling.NEAREST))
+march.alpha_composite(Image.open(SCENERY/'region-3.png').resize((480,270),Image.Resampling.NEAREST))
 knight=Image.open(ROOT/'sprites/characters.png').crop((0,0,64,80)).resize((32,40),Image.Resampling.NEAREST)
 for x in range(38,400,48):march.alpha_composite(knight,(x,204))
 march.crop((0,50,480,250)).resize((960,400),Image.Resampling.NEAREST).save(ROOT/'sprites/march.png')

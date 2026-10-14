@@ -22,6 +22,10 @@ final class CombatSystem {
                     continue;
                 }
                 enemy.health--;
+                if (!enemy.boss && enemy.health > 0) {
+                    enemy.calmTime = 0;
+                    EnemyPerception.alert(enemy, player);
+                }
                 enemy.flash = 0.14;
                 if (enemy.health == 0) enemy.state = Enemy.State.DEAD;
                 events.add(GameEvent.HIT);

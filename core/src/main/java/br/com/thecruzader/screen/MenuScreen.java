@@ -2,7 +2,7 @@ package br.com.thecruzader.screen;
 
 import br.com.thecruzader.CrusaderGame;
 import br.com.thecruzader.gameplay.GameWorld;
-import br.com.thecruzader.level.LevelLoader;
+import br.com.thecruzader.presentation.LevelResources;
 import br.com.thecruzader.presentation.AudioPlayer;
 import br.com.thecruzader.presentation.GameAssets;
 import br.com.thecruzader.presentation.DisplaySettings;
@@ -34,6 +34,7 @@ public final class MenuScreen extends ScreenAdapter {
     private final Table root = new Table();
     private final WorldRenderer renderer;
     private final GameWorld backdrop;
+    private final LevelResources level;
     private final List<TextButton> buttons = new ArrayList<>();
     private final List<Runnable> actions = new ArrayList<>();
     private Page page = Page.MAIN;
@@ -59,8 +60,9 @@ public final class MenuScreen extends ScreenAdapter {
         this.game = game;
         this.assets = assets;
         this.audio = audio;
-        renderer = new WorldRenderer(assets);
-        backdrop = new GameWorld(LevelLoader.load(Gdx.files.internal(GameAssets.MAP)));
+        level = new LevelResources(game.campaign().levels().getFirst(), assets);
+        renderer = new WorldRenderer(assets, level);
+        backdrop = new GameWorld(level.data());
         root.setFillParent(true);
         root.setBackground(assets.panel(new Color(.025f, .04f, .075f, .78f)));
         stage.addActor(root);
@@ -123,7 +125,7 @@ public final class MenuScreen extends ScreenAdapter {
 
     private void buildMain() {
         Table introduction = new Table();
-        introduction.add(label("menu.chapter", .8f, GameAssets.GOLD))
+        introduction.add(label(level.definition().texts().chapter(), .8f, GameAssets.GOLD))
                 .left().padBottom(20);
         introduction.row();
         introduction.add(label("menu.title", 3.8f, GameAssets.PAPER)).left().padBottom(22);
@@ -133,7 +135,7 @@ public final class MenuScreen extends ScreenAdapter {
         introduction.row();
         Table story = new Table();
         story.add(new Image(assets.characters[0][0])).size(112, 140).padRight(20);
-        Label description = label("menu.story", .95f, GameAssets.PAPER);
+        Label description = label(level.definition().texts().story(), .95f, GameAssets.PAPER);
         story.add(description).left();
         introduction.add(story).left();
         introduction.row();
@@ -142,7 +144,7 @@ public final class MenuScreen extends ScreenAdapter {
         root.add(introduction).width(450).left();
         root.add().width(42);
         Table menu = card();
-        menu.add(label("menu.level", .85f, GameAssets.GOLD)).padBottom(12);
+        menu.add(label(level.definition().texts().title(), .85f, GameAssets.GOLD)).padBottom(12);
         menu.row();
         menu.add(label("menu.motto", .9f, GameAssets.PAPER)).padBottom(24);
         menu.row();
@@ -238,5 +240,5 @@ public final class MenuScreen extends ScreenAdapter {
     public void hide() { Gdx.input.setInputProcessor(null); }
 
     @Override
-    public void dispose() { stage.dispose(); renderer.dispose(); }
+    public void dispose() { stage.dispose(); renderer.dispose(); level.dispose(); }
 }

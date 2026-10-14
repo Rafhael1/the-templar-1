@@ -2,26 +2,27 @@ package br.com.thecruzader.screen;
 
 import br.com.thecruzader.CrusaderGame;
 import br.com.thecruzader.presentation.GameAssets;
+import br.com.thecruzader.presentation.IntroAnimation;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
-/** Three illustrated, player-paced scenes. Dialogue is original historical fiction. */
+/** Three animated pixel-art, player-paced scenes. Dialogue is original historical fiction. */
 public final class IntroScreen extends ScreenAdapter {
     private static final String[] SCENES = {"council", "call", "march"};
     private final CrusaderGame game;
     private final GameAssets assets;
     private final Stage stage = new Stage(new FitViewport(960, 540));
     private final Table root = new Table();
+    private final IntroAnimation illustration;
     private int scene;
-    private boolean finished;
+    private boolean finished, paused;
     private float elapsed;
     private final InputAdapter input = new InputAdapter() {
         @Override public boolean keyDown(int key) {
@@ -34,6 +35,9 @@ public final class IntroScreen extends ScreenAdapter {
     public IntroScreen(CrusaderGame game, GameAssets assets) {
         this.game = game;
         this.assets = assets;
+        illustration = new IntroAnimation(assets);
+        illustration.setBounds(0, 140, 960, 400);
+        stage.addActor(illustration);
         root.setFillParent(true);
         stage.addActor(root);
         build();
@@ -46,33 +50,35 @@ public final class IntroScreen extends ScreenAdapter {
     }
     private void build() {
         root.clearChildren();
-        root.pad(24);
+        root.top();
         Label title = new Label(assets.texts.text("intro." + SCENES[scene] + ".title"), assets.skin);
         title.setColor(GameAssets.GOLD);
-        root.add(title).padBottom(12).row();
-        Image illustration = new Image(assets.texture(scene == 2 ? "march" : "council"));
-        illustration.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.forever(
-                com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence(
-                        com.badlogic.gdx.scenes.scene2d.actions.Actions.moveBy(4, 0, 3),
-                        com.badlogic.gdx.scenes.scene2d.actions.Actions.moveBy(-4, 0, 3))));
-        root.add(illustration).size(816, 340).row();
+        root.add(title).padTop(12).row();
+        root.add().expandY().row();
+        Table caption = new Table();
+        caption.setBackground(assets.panel(new com.badlogic.gdx.graphics.Color(.025f, .04f, .065f, 1)));
+        caption.pad(12);
         Label story = new Label(assets.texts.text("intro." + SCENES[scene] + ".text"), assets.skin);
         story.setAlignment(com.badlogic.gdx.utils.Align.center);
-        root.add(story).padTop(12).row();
+        caption.add(story).expandX().padBottom(12).row();
         Label controls = new Label(assets.texts.text("intro.navigation"), assets.skin);
         controls.setFontScale(.75f * GameAssets.UI_FONT_SCALE);
-        root.add(controls).padTop(10);
+        caption.add(controls);
+        root.add(caption).growX().height(140);
     }
     @Override public void show() { Gdx.input.setInputProcessor(input); }
     @Override public void render(float delta) {
         if (finished) { game.startGame(); return; }
-        elapsed += Math.min(delta, .1f);
+        if (!paused) elapsed += Math.min(delta, .1f);
+        illustration.setFrame(scene, elapsed);
         ScreenUtils.clear(.025f, .04f, .065f, 1);
         stage.getViewport().apply();
         root.setColor(1, 1, 1, Math.min(1, elapsed * 2));
-        stage.act(delta); stage.draw();
+        stage.act(paused ? 0 : Math.min(delta, .1f)); stage.draw();
     }
     @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
+    @Override public void pause() { paused = true; }
+    @Override public void resume() { paused = false; }
     @Override public void hide() { Gdx.input.setInputProcessor(null); }
     @Override public void dispose() { stage.dispose(); }
 }

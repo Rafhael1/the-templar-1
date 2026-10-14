@@ -3,7 +3,8 @@ package br.com.thecruzader.desktop;
 import br.com.thecruzader.gameplay.GameWorld;
 import br.com.thecruzader.input.PlayerInput;
 import br.com.thecruzader.level.LevelData;
-import br.com.thecruzader.level.LevelLoader;
+import br.com.thecruzader.level.CampaignLoader;
+import br.com.thecruzader.presentation.LevelResources;
 import br.com.thecruzader.presentation.GameAssets;
 import br.com.thecruzader.presentation.Hud;
 import br.com.thecruzader.presentation.WorldRenderer;
@@ -15,20 +16,28 @@ import java.util.Arrays;
 final class PerformanceTest extends ApplicationAdapter {
     private GameAssets assets;
     private WorldRenderer renderer;
+    private LevelResources resources;
     private Hud hud;
-    private final GameWorld[] worlds = new GameWorld[4];
-    private final double[] samples = new double[300];
+    private GameWorld[] worlds;
+    private double[] samples;
     private int frame, count;
     @Override public void create() {
         br.com.thecruzader.presentation.DisplaySettings.apply(true);
         assets = new GameAssets();
-        renderer = new WorldRenderer(assets);
-        hud = new Hud(assets);
-        LevelData level = LevelLoader.load(Gdx.files.internal(GameAssets.MAP));
-        for (int i = 0; i < worlds.length; i++)
+        var definition = CampaignLoader.load(Gdx.files.internal(CampaignLoader.PATH)).levels().getFirst();
+        resources = new LevelResources(definition, assets);
+        renderer = new WorldRenderer(assets, resources);
+        hud = new Hud(assets, definition, false);
+        LevelData level = resources.data();
+        worlds = new GameWorld[definition.regions().size() + 1];
+        samples = new double[worlds.length * 75];
+        for (int i = 0; i < definition.regions().size(); i++)
             worlds[i] = new GameWorld(new LevelData(level.width(), level.height(),
-                    new LevelData.Point(480 + i * 2240, 64), level.checkpoint(), level.breads(),
+                    new LevelData.Point(Math.min(level.width() - br.com.thecruzader.gameplay.Player.WIDTH, 480 + definition.regions().get(i).start()), level.spawn().y()), level.checkpoint(), level.bandages(),
                     level.gate(), level.exit(), level.arena(), level.solids(), level.enemies()));
+        worlds[worlds.length - 1] = new GameWorld(new LevelData(level.width(), level.height(),
+                new LevelData.Point(level.arena().x() + 80, level.arena().y()), level.checkpoint(), level.bandages(),
+                level.gate(), level.exit(), level.arena(), level.solids(), level.enemies()));
     }
     @Override public void resize(int width, int height) {
         renderer.resize(width, height); hud.resize(width, height);
@@ -43,7 +52,7 @@ final class PerformanceTest extends ApplicationAdapter {
         Gdx.gl.glFinish();
         double ms = (System.nanoTime() - start) / 1_000_000.0;
         if (frame % 90 >= 15) samples[count++] = ms;
-        if (++frame == 360) {
+        if (++frame == worlds.length * 90) {
             Arrays.sort(samples);
             System.out.printf(java.util.Locale.ROOT,
                     "PERFORMANCE: %dx%d framebuffer, median %.3f ms, p95 %.3f ms, max %.3f ms (%d frames)%n",
@@ -52,5 +61,5 @@ final class PerformanceTest extends ApplicationAdapter {
             Gdx.app.exit();
         }
     }
-    @Override public void dispose() { hud.dispose(); renderer.dispose(); assets.dispose(); }
+    @Override public void dispose() { hud.dispose(); renderer.dispose(); resources.dispose(); assets.dispose(); }
 }

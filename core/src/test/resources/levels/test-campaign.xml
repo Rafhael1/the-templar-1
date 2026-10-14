@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<campaign>
+  <level id="exiles-road" map="levels/exiles-road/maps/exiles-road.tmx" blendWidth="640" chapter="menu.chapter" title="menu.level" story="menu.story" travelObjective="hud.gate" bossObjective="hud.guardian" bossName="hud.bossName" completionTitle="overlay.victory.title" completionText="overlay.victory.text">
+    <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
+      <light x="184" y="176" />
+      <light x="356" y="176" />
+      <light x="604" y="176" />
+      <light x="776" y="176" />
+    </interior>
+    <region start="0" texture="levels/exiles-road/scenery/region-0.png" announcement="notice.region.0" />
+    <region start="2240" texture="levels/exiles-road/scenery/region-1.png" announcement="notice.region.1" />
+    <region start="4480" texture="levels/exiles-road/scenery/region-2.png" announcement="notice.region.2" />
+    <region start="6720" texture="levels/exiles-road/scenery/region-3.png" announcement="notice.region.3" />
+    <decoration kind="CRATES" x="160" y="64" />
+    <decoration kind="FLAG" x="480" y="64" color="743844" />
+    <decoration kind="SIGN" x="800" y="64" />
+    <decoration kind="BRAZIER" x="1120" y="64" />
+    <decoration kind="CRATES" x="1440" y="64" />
+    <decoration kind="FLAG" x="1760" y="64" color="743844" />
+    <decoration kind="SIGN" x="2080" y="64" />
+    <decoration kind="BRAZIER" x="2400" y="64" />
+    <decoration kind="CRATES" x="2720" y="64" />
+    <decoration kind="FLAG" x="3040" y="64" color="743844" />
+    <decoration kind="SIGN" x="3360" y="64" />
+    <decoration kind="BRAZIER" x="3680" y="64" />
+    <decoration kind="CRATES" x="4000" y="64" />
+    <decoration kind="FLAG" x="4320" y="64" color="743844" />
+    <decoration kind="SIGN" x="4640" y="64" />
+    <decoration kind="BRAZIER" x="4960" y="64" />
+    <decoration kind="CRATES" x="5280" y="64" />
+    <decoration kind="FLAG" x="5600" y="64" color="365c69" />
+    <decoration kind="SIGN" x="5920" y="64" />
+    <decoration kind="BRAZIER" x="6240" y="64" />
+    <decoration kind="CRATES" x="6560" y="64" />
+    <decoration kind="FLAG" x="6880" y="64" color="365c69" />
+    <decoration kind="SIGN" x="7200" y="64" />
+    <decoration kind="BRAZIER" x="7520" y="64" />
+    <decoration kind="CRATES" x="7840" y="64" />
+    <decoration kind="TORCH" x="230" y="64" />
+    <decoration kind="TORCH" x="790" y="64" />
+    <decoration kind="TORCH" x="1350" y="64" />
+    <decoration kind="TORCH" x="1910" y="64" />
+    <decoration kind="TORCH" x="2470" y="64" />
+    <decoration kind="TORCH" x="3030" y="64" />
+    <decoration kind="TORCH" x="3590" y="64" />
+    <decoration kind="TORCH" x="4150" y="64" />
+    <decoration kind="TORCH" x="4710" y="64" />
+    <decoration kind="TORCH" x="5270" y="64" />
+    <decoration kind="TORCH" x="5830" y="64" />
+    <decoration kind="TORCH" x="6390" y="64" />
+    <decoration kind="TORCH" x="6950" y="64" />
+    <decoration kind="TORCH" x="7510" y="64" />
+    <decoration kind="TORCH" x="8070" y="64" />
+    <decoration kind="TORCH" x="8630" y="64" />
+  </level>
+  <level id="test-road" map="levels/test-road/maps/test-road.tmx" blendWidth="128" chapter="menu.chapter" title="menu.level" story="menu.story" travelObjective="hud.gate" bossObjective="hud.guardian" bossName="hud.bossName" completionTitle="overlay.victory.title" completionText="overlay.victory.text">
+    <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
+      <light x="184" y="176" />
+      <light x="356" y="176" />
+      <light x="604" y="176" />
+      <light x="776" y="176" />
+    </interior>
+    <region start="0" texture="levels/exiles-road/scenery/region-0.png" announcement="notice.region.0" />
+  </level>
+</campaign>

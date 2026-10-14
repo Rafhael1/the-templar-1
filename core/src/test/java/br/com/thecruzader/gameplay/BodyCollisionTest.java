@@ -103,7 +103,7 @@ class BodyCollisionTest {
     @Test void walkingStopsAtLivingBodiesInTheSimulation() {
         LevelData base = level(List.of(), 2700);
         GameWorld world = new GameWorld(new LevelData(base.width(), base.height(), base.spawn(),
-                base.checkpoint(), base.breads(), base.gate(), base.exit(), base.arena(), base.solids(),
+                base.checkpoint(), base.bandages(), base.gate(), base.exit(), base.arena(), base.solids(),
                 List.of(new LevelData.Spawn(180, 64, LevelData.EnemyKind.SENTINEL), base.enemies().getFirst())));
         Enemy enemy = world.enemies().getFirst();
         for (int tick = 0; tick < 150; tick++) {
@@ -120,7 +120,7 @@ class BodyCollisionTest {
                 var enemies = new ArrayList<>(base.enemies());
                 if (kind != LevelData.EnemyKind.GUARDIAN) enemies.add(new LevelData.Spawn(180, 64, kind));
                 GameWorld world = new GameWorld(new LevelData(base.width(), base.height(),
-                        new LevelData.Point(playerX, 64), base.checkpoint(), base.breads(), base.gate(),
+                        new LevelData.Point(playerX, 64), base.checkpoint(), base.bandages(), base.gate(),
                         base.exit(), base.arena(), base.solids(), enemies));
                 Enemy target = world.enemies().stream().filter(e -> e.kind == kind).findFirst().orElseThrow();
                 double before = target.x();

@@ -7,9 +7,10 @@ public enum GameEvent {
     BLOCK,
     HURT,
     CHECKPOINT,
-    RELIC,
+    BANDAGE,
     DEATH,
     ARENA_START,
     BOSS_DEFEATED,
+    GATES_OPEN,
     VICTORY
 }

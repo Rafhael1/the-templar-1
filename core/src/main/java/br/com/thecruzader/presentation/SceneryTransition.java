@@ -1,25 +1,23 @@
 package br.com.thecruzader.presentation;
 
-/** Region scenery blends across a stretch of road, rather than switching the whole screen. */
+import br.com.thecruzader.level.LevelDefinition;
+
+/** Authored boundaries blend continuously without overlapping transition intervals. */
 public final class SceneryTransition {
-    private static final float REGION_LENGTH = 2240;
-    private static final float BLEND_WIDTH = 640;
-    public static final int REGIONS = 4;
-
-    private SceneryTransition() {}
-
-    public static int regionAt(double x) {
-        return Math.max(0, Math.min(REGIONS - 1, (int) (x / REGION_LENGTH)));
+    private final LevelDefinition level;
+    public SceneryTransition(LevelDefinition level) { this.level = level; }
+    public int regionAt(double x) {
+        int region = 0;
+        while (region + 1 < level.regions().size() && x >= level.regions().get(region + 1).start()) region++;
+        return region;
     }
-
-    public static float weight(int region, float x) {
-        float entering = region == 0 ? 1 : blend(x, region * REGION_LENGTH);
-        float leaving = region == REGIONS - 1 ? 0 : blend(x, (region + 1) * REGION_LENGTH);
+    public float weight(int region, float x) {
+        float entering = region == 0 ? 1 : blend(x, level.regions().get(region).start());
+        float leaving = region == level.regions().size() - 1 ? 0 : blend(x, level.regions().get(region + 1).start());
         return entering * (1 - leaving);
     }
-
-    private static float blend(float x, float boundary) {
-        float t = Math.max(0, Math.min(1, (x - boundary + BLEND_WIDTH / 2) / BLEND_WIDTH));
+    private float blend(float x, double boundary) {
+        float t = (float) Math.max(0, Math.min(1, (x - boundary + level.blendWidth() / 2) / level.blendWidth()));
         return t * t * (3 - 2 * t);
     }
 }

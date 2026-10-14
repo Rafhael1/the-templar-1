@@ -25,50 +25,50 @@ class ExpandedCombatTest {
     }
 
     @Test
-    void multipleBreadPickupsHealIndependentlyAndStayCollectedAfterRespawn() {
+    void multipleBandagePickupsHealIndependentlyAndStayCollectedAfterRespawn() {
         GameWorld world = new GameWorld(LevelLoader.load(new FileHandle(
-                System.getProperty("assets.path") + "/maps/exiles-road.tmx")));
+                System.getProperty("assets.path") + "/levels/exiles-road/maps/exiles-road.tmx")));
         for (int index : new int[] {1, 2}) {
-            Bounds bread = world.level().breads().get(index);
-            world.player().x = bread.x();
-            world.player().y = bread.y();
+            Bounds bandage = world.level().bandages().get(index);
+            world.player().x = bandage.x();
+            world.player().y = bandage.y();
             world.player().health = 3;
             world.update(GameWorld.STEP, PlayerInput.NONE);
             assertEquals(5, world.player().health());
-            assertTrue(world.breadCollected(index));
+            assertTrue(world.bandageCollected(index));
             world.player().health = 3;
             world.update(GameWorld.STEP, PlayerInput.NONE);
-            assertEquals(3, world.player().health(), "Consumed bread cannot heal twice");
+            assertEquals(3, world.player().health(), "Consumed bandage cannot heal twice");
         }
-        assertEquals(2, world.collectedBreadCount());
+        assertEquals(2, world.collectedBandageCount());
         world.player().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         world.respawn();
-        assertEquals(2, world.collectedBreadCount());
-        assertFalse(world.breadCollected(0));
+        assertEquals(2, world.collectedBandageCount());
+        assertFalse(world.bandageCollected(0));
         assertTrue(world.arrows().isEmpty());
     }
 
     @Test
-    void breadWaitsUntilPlayerNeedsHealing() {
+    void bandageWaitsUntilPlayerNeedsHealing() {
         GameWorld world = new GameWorld(level());
         world.player().x = 742;
         world.player().y = 232;
         world.update(GameWorld.STEP, PlayerInput.NONE);
-        assertFalse(world.breadCollected(0));
+        assertFalse(world.bandageCollected(0));
         world.player().health = 4;
         world.update(GameWorld.STEP, PlayerInput.NONE);
-        assertTrue(world.breadCollected(0));
+        assertTrue(world.bandageCollected(0));
         assertEquals(5, world.player().health());
     }
 
     @Test
     void respawnClearsArrowsAlreadyInFlight() {
-        GameWorld world = new GameWorld(LevelLoader.load(new FileHandle(
-                System.getProperty("assets.path") + "/maps/exiles-road.tmx")));
-        Enemy archer = world.enemies().stream().filter(Enemy::archer).findFirst().orElseThrow();
-        world.player().x = archer.x() - 200;
-        for (int tick = 0; tick < 90; tick++)
+        LevelData base = level();
+        GameWorld world = new GameWorld(new LevelData(base.width(), base.height(), base.spawn(), base.checkpoint(),
+                base.bandages(), base.gate(), base.exit(), base.arena(), base.solids(),
+                List.of(base.enemies().getFirst(), new LevelData.Spawn(300, 64, LevelData.EnemyKind.ARCHER))));
+        for (int tick = 0; tick < 145; tick++)
             world.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true));
         assertFalse(world.arrows().isEmpty());
         world.player().health = 0;
@@ -80,15 +80,16 @@ class ExpandedCombatTest {
     @Test
     void archerTelegraphsThenFiresOnceAtTheCommittedAimPoint() {
         Enemy archer = enemy(100, LevelData.EnemyKind.ARCHER);
+        archer.facing = 1;
         Player player = new Player(new LevelData.Point(350, 64));
         var arrows = new ArrayList<Arrow>();
-        EnemySystem system = new EnemySystem();
-        system.update(archer, player, GameWorld.STEP, arrows);
+        EnemySystem system = new EnemySystem(new CollisionWorld(level()));
+        for (int tick = 0; tick < 50; tick++) system.update(archer, player, GameWorld.STEP, arrows, true);
         assertEquals(Enemy.State.WINDUP, archer.state());
         assertTrue(arrows.isEmpty());
         double aimX = archer.aimX;
         player.x = 400;
-        for (int tick = 0; tick < 95; tick++) system.update(archer, player, GameWorld.STEP, arrows);
+        for (int tick = 0; tick < 95; tick++) system.update(archer, player, GameWorld.STEP, arrows, true);
         assertEquals(1, arrows.size());
         assertEquals(364, aimX);
         assertEquals(Enemy.State.RECOVER, archer.state());
@@ -178,31 +179,31 @@ class ExpandedCombatTest {
         Enemy boss = enemy(100, LevelData.EnemyKind.GUARDIAN);
         boss.grounded = true;
         Player player = new Player(new LevelData.Point(320, 64));
-        EnemySystem system = new EnemySystem();
+        EnemySystem system = new EnemySystem(new CollisionWorld(level()));
         var arrows = new ArrayList<Arrow>();
-        system.update(boss, player, .01, arrows);
+        system.update(boss, player, .01, arrows, true);
         assertEquals(Enemy.State.BLOCK, boss.state());
-        system.update(boss, player, .76, arrows);
+        system.update(boss, player, .76, arrows, true);
         assertEquals(Enemy.State.RECOVER, boss.state());
-        system.update(boss, player, .26, arrows);
+        system.update(boss, player, .26, arrows, true);
         assertEquals(Enemy.State.DASH_WINDUP, boss.state());
         assertEquals(0, boss.vx);
-        system.update(boss, player, .46, arrows);
+        system.update(boss, player, .46, arrows, true);
         assertEquals(Enemy.State.DASH, boss.state());
-        system.update(boss, player, .01, arrows);
+        system.update(boss, player, .01, arrows, true);
         assertEquals(480, boss.vx);
-        system.update(boss, player, .3, arrows);
+        system.update(boss, player, .3, arrows, true);
         assertEquals(Enemy.State.RECOVER, boss.state());
-        system.update(boss, player, .66, arrows);
+        system.update(boss, player, .66, arrows, true);
         assertEquals(Enemy.State.JUMP_WINDUP, boss.state());
-        system.update(boss, player, .51, arrows);
+        system.update(boss, player, .51, arrows, true);
         assertEquals(Enemy.State.JUMP, boss.state());
         assertTrue(boss.vy > 0);
         assertFalse(boss.grounded);
         CollisionWorld collision = new CollisionWorld(level());
         double highest = boss.y;
         for (int tick = 0; tick < 110; tick++) {
-            system.update(boss, player, GameWorld.STEP, arrows);
+            system.update(boss, player, GameWorld.STEP, arrows, true);
             collision.move(boss, GameWorld.STEP, false);
             highest = Math.max(highest, boss.y);
         }
@@ -216,8 +217,8 @@ class ExpandedCombatTest {
         Enemy boss = enemy(100, LevelData.EnemyKind.GUARDIAN);
         boss.grounded = true;
         boss.health = 6;
-        new EnemySystem().update(boss, new Player(new LevelData.Point(300, 64)),
-                .01, new ArrayList<>());
+        new EnemySystem(new CollisionWorld(level())).update(boss, new Player(new LevelData.Point(300, 64)),
+                .01, new ArrayList<>(), true);
         assertEquals(.6, boss.actionTime, .001);
     }
 

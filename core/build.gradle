@@ -5,4 +5,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 sourceSets.main.resources.srcDirs = [rootProject.file('assets')]
-test { systemProperty 'assets.path', rootProject.file('assets').absolutePath }
+test {
+    systemProperty 'assets.path', rootProject.file('assets').absolutePath
+    systemProperty 'test.assets.path', file('src/test/resources').absolutePath
+}
