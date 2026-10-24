@@ -61,7 +61,7 @@ public final class LevelLoader {
                         requireUnique(exit, type);
                         exit = rectangle(object, x, y);
                     }
-                    case "sentinel", "archer", "guardian" -> {
+                    case "sentinel", "archer", "spearman", "shield_bearer", "brute", "oil_thrower", "guardian" -> {
                         point(object, x, y);
                         enemies.add(new LevelData.Spawn(x, y,
                                 LevelData.EnemyKind.valueOf(type.toUpperCase(java.util.Locale.ROOT))));

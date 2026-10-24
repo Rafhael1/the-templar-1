@@ -1,11 +1,12 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import br.com.thecruzader.level.LevelData;
 import br.com.thecruzader.level.Bounds;
-import java.util.List;
+import br.com.thecruzader.level.LevelData;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class EnemySystemTest {
     private final Enemy enemy = new Enemy(new LevelData.Spawn(500, 64, LevelData.EnemyKind.SENTINEL));
@@ -17,7 +18,7 @@ class EnemySystemTest {
             new Bounds(3010, 64, 110, 100), new Bounds(64, 64, 2886, 256), List.of(new Bounds(0, 0, 3200, 64)),
             List.of(new LevelData.Spawn(2700, 64, LevelData.EnemyKind.GUARDIAN))));
 
-    private final EnemySystem system = new EnemySystem(collision);
+    private final EnemySystem system = new EnemySystem(collision, new java.util.ArrayList<>());
 
     private void advance(int ticks) {
         for (int i = 0; i < ticks; i++) {

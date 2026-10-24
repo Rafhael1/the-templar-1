@@ -1,13 +1,14 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import br.com.thecruzader.input.PlayerInput;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
 import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class DefenseAndAirAttackTest {
     private GameWorld world() {
@@ -71,12 +72,12 @@ class DefenseAndAirAttackTest {
             CombatSystem combat = new CombatSystem();
             combat.resolve(p, List.of(front), events);
             combat.resolve(p, List.of(front), events);
-            assertEquals(5, p.health());
+            assertEquals(p.maxHealth(), p.health());
             assertEquals(List.of(GameEvent.BLOCK), events);
             assertTrue(p.blockFlash() > 0);
             Enemy rear = strike(100 - facing * 45, facing);
             combat.resolve(p, List.of(rear), events);
-            assertEquals(4, p.health());
+            assertEquals(p.maxHealth() - 1, p.health());
         }
     }
 

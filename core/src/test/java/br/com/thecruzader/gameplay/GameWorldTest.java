@@ -1,18 +1,16 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import br.com.thecruzader.input.PlayerInput;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
 import br.com.thecruzader.level.LevelLoader;
-
 import com.badlogic.gdx.files.FileHandle;
-
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class GameWorldTest {
     private static final double STEP = GameWorld.STEP;
@@ -87,7 +85,7 @@ class GameWorldTest {
     @Test
     void bandageRouteIsReachableThroughJumpsAndReturnsToRoad() {
         GameWorld w = terrainWorld();
-        w.player().health = 3;
+        w.player().health = 1;
         w.player().x = 390;
         w.update(STEP, PlayerInput.NONE);
         w.update(STEP, new PlayerInput(1, true, false, false, false, false));
@@ -175,7 +173,7 @@ class GameWorldTest {
         e.attack.start();
         e.attack.update(.60);
         w.update(STEP, new PlayerInput(0, false, false, true, false, false));
-        assertEquals(5, p.health());
+        assertEquals(p.maxHealth(), p.health());
         assertTrue(p.dodging());
         assertTrue(p.invulnerable() > 0);
     }
@@ -189,10 +187,10 @@ class GameWorldTest {
         var events = new ArrayList<GameEvent>();
         CombatSystem combat = new CombatSystem();
         combat.resolve(p, List.of(e), events);
-        assertEquals(4, p.health());
+        assertEquals(p.maxHealth() - 1, p.health());
         p.invulnerable = 0;
         combat.resolve(p, List.of(e), events);
-        assertEquals(4, p.health());
+        assertEquals(p.maxHealth() - 1, p.health());
     }
 
     @Test
@@ -213,14 +211,14 @@ class GameWorldTest {
         w.player().health = 2;
         w.update(STEP, PlayerInput.NONE);
         assertTrue(w.checkpoint());
-        assertEquals(5, w.player().health());
+        assertEquals(w.player().maxHealth(), w.player().health());
         w.player().health = 0;
         w.update(STEP, PlayerInput.NONE);
         assertEquals(GameWorld.State.DEAD, w.state());
         w.respawn();
         assertEquals(GameWorld.State.PLAYING, w.state());
         assertEquals(w.level().checkpoint().x(), w.player().x());
-        assertEquals(5, w.player().health());
+        assertEquals(w.player().maxHealth(), w.player().health());
     }
 
     @Test
@@ -305,6 +303,7 @@ class GameWorldTest {
 
     @Test
     void completeLevelUsingOnlyPlayerCommands() {
+        int heavyWindup = 0;
         GameWorld w = world();
         for (int tick = 0; tick < 180 * 120 && w.state() == GameWorld.State.PLAYING; tick++) {
             Player p = w.player();
@@ -323,16 +322,47 @@ class GameWorldTest {
                         || target.state() == Enemy.State.JUMP_WINDUP || target.state() == Enemy.State.JUMP) {
                     block = true;
                 } else {
-                    attack = target.state() == Enemy.State.RECOVER && Math.abs(distance) < 80;
+                    attack = (target.archer() || target.state() == Enemy.State.RECOVER) && Math.abs(distance) < 80;
                     if (p.attack().running() || Math.abs(distance) < 50) direction = 0;
                 }
             }
+            if (target != null && target.kind() == LevelData.EnemyKind.SHIELD_BEARER
+                && target.state() == Enemy.State.WINDUP) {
+                block = target.attackProgress() >= .9;
+            }
+            boolean heavy = target != null && target.boss()
+                && (target.state() == Enemy.State.DASH || target.state() == Enemy.State.JUMP
+                || target.state() == Enemy.State.DASH_WINDUP || target.state() == Enemy.State.JUMP_WINDUP);
+            boolean preparingHeavy = heavy && (target.state() == Enemy.State.DASH_WINDUP
+                || target.state() == Enemy.State.JUMP_WINDUP);
+            heavyWindup = preparingHeavy ? heavyWindup + (w.hitStopped() ? 0 : 1) : 0;
+            double warningDuration = heavy && target.state() == Enemy.State.DASH_WINDUP ? .45 : .50;
+            if (target != null && target.health() <= target.maxHealth() / 2) warningDuration *= .8;
+            boolean timedParry = preparingHeavy && heavyWindup * GameWorld.STEP >= warningDuration - .07
+                && Math.abs(target.x() - p.x()) < 80 && !p.attack().running();
+            if (heavy) {
+                block = timedParry || (!preparingHeavy && p.blocking());
+                direction = block ? (target.x() >= p.x() ? 1 : -1)
+                    : preparingHeavy && Math.abs(target.x() - p.x()) < 80 ? 0
+                    : target.x() >= p.x() ? -1 : 1;
+            }
+            if (heavy && (target.state() == Enemy.State.JUMP_WINDUP
+                || target.state() == Enemy.State.JUMP)) {
+                block = false;
+                direction = target.x() >= p.x() ? -1 : 1;
+            }
+            if (target != null && target.boss() && p.attack().running()) attack = false;
+            boolean dodge = heavy && !block && Math.abs(target.x() - p.x()) < 110
+                && (target.state() == Enemy.State.DASH || (target.state() == Enemy.State.JUMP
+                && Math.abs(target.y() - p.y()) < 80));
+            if (dodge && target.state() == Enemy.State.JUMP)
+                direction = target.x() >= p.x() ? 1 : -1;
             boolean jump = p.grounded() && direction > 0 && w.level().solids().stream()
-                    .anyMatch(solid -> solid.y() == 64 && solid.top() > 64
+                .anyMatch(solid -> solid.top() > p.y()
                             && solid.x() >= p.x() + Player.WIDTH
                             && solid.x() - (p.x() + Player.WIDTH) < 85
-                            && solid.top() > p.y() && solid.top() - p.y() < 160);
-            w.update(STEP, new PlayerInput(direction, jump, attack, false, false, block));
+                    && solid.top() - p.y() < 160);
+            w.update(STEP, new PlayerInput(direction, jump, attack, dodge, false, block));
         }
         assertEquals(
                 GameWorld.State.WON,

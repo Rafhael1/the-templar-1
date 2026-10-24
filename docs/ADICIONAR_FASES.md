@@ -1,5 +1,8 @@
 # Como adicionar fases
 
+As [instruções para o modelo](GUIA_DE_PROMPTS_E_NOVAS_FASES.md) orientam a execução de pedidos de fases, bosses e
+mecânicas. Este documento detalha o contrato técnico dos mapas.
+
 O jogo mantém regras compartilhadas e conteúdo de fase separado. A campanha de produção tem uma fase completa; novas fases são registradas em `assets/levels/campaign.xml`, na ordem em que devem ser jogadas. Não é necessário alterar `GameWorld`, duplicar telas ou trocar uma constante Java.
 
 O conteúdo exclusivo de cada fase fica em `assets/levels/<id>/`: `maps/` para TMX, `scenery/` para fundos e `chapel/` para fachada/interior/portas. `assets/levels/campaign.xml` registra os caminhos completos. Novas imagens e sons exclusivos devem permanecer dentro da pasta da fase, usando subpastas com nomes claros. Recursos reutilizados (personagens, bandagens, santuário, céu, áudio comum, fontes, UI, tiles e classes do Tiled) permanecem nas pastas compartilhadas. A fase de teste segue a mesma organização dentro de `core/src/test/resources/levels/test-road/`, sem duplicar as texturas de produção que reutiliza.
@@ -18,18 +21,22 @@ O contrato atual é intencionalmente horizontal:
 - Uma camada `collisions` com retângulos sólidos sem rotação; uma camada `entities` com as classes abaixo. Desenho do terreno e colisões devem coincidir.
 - Spawn/checkpoint/inimigos são pontos sem rotação. Áreas de coleta, arena, portão e saída são retângulos sem rotação.
 
-| Classe | Quantidade | Regra |
-|---|---|---|
-| `spawn` | 1 | Corpo do jogador livre de terreno e antes da entrada da arena |
-| `checkpoint` | 1 | Corpo do jogador livre de terreno e antes da entrada da arena |
-| `sentinel`, `archer` | 0 ou mais | Corpos livres de terreno e antes da entrada da arena |
-| `guardian` | 1 | Corpo inteiro dentro da arena, sobre seu piso |
-| `bandage` | 1 ou mais | Área livre de terreno/portões; representa bandagens |
-| `arena` | 1 | Piso plano e livre; largura entre 70 e 896 pixels; altura mínima de 240 |
-| `gate` | 1 | X coincide com a borda direita da arena; mesmo piso; altura mínima de 176 |
-| `exit` | 1 | Depois do portão, no mesmo piso e livre de terreno |
+| Classe                                                                    | Quantidade | Regra                                                                     |
+|---------------------------------------------------------------------------|------------|---------------------------------------------------------------------------|
+| `spawn`                                                                   | 1          | Corpo do jogador livre de terreno e antes da entrada da arena             |
+| `checkpoint`                                                              | 1          | Corpo do jogador livre de terreno e antes da entrada da arena             |
+| `sentinel`, `archer`, `spearman`, `shield_bearer`, `brute`, `oil_thrower` | 0 ou mais  | Corpos livres de terreno e antes da entrada da arena                      |
+| `guardian`                                                                | 1          | Corpo inteiro dentro da arena, sobre seu piso                             |
+| `bandage`                                                                 | 1 ou mais  | Área livre de terreno/portões; representa bandagens                       |
+| `arena`                                                                   | 1          | Piso plano e livre; largura entre 70 e 896 pixels; altura mínima de 240   |
+| `gate`                                                                    | 1          | X coincide com a borda direita da arena; mesmo piso; altura mínima de 176 |
+| `exit`                                                                    | 1          | Depois do portão, no mesmo piso e livre de terreno                        |
 
-O portão de entrada tem 32 pixels de largura e fica imediatamente antes da arena. Um retângulo de piso deve sustentar continuamente a arena até o fim da saída. A arena e as duas barreiras devem caber na câmera centrada: metade da largura da arena mais a maior largura de portão deve ser no máximo 480. Assim, um portão de saída de 40 pixels limita a arena a 880 pixels. Portões não podem sobrepor terreno estático. O validador usa corpos reais: jogador 28 × 52, sentinela/arqueiro 30 × 48 e guardião 42 × 68.
+O portão de entrada tem 32 pixels de largura e fica imediatamente antes da arena. Um retângulo de piso deve sustentar
+continuamente a arena até o fim da saída. A arena e as duas barreiras devem caber na câmera centrada: metade da largura
+da arena mais a maior largura de portão deve ser no máximo 480. Assim, um portão de saída de 40 pixels limita a arena a
+880 pixels. Portões não podem sobrepor terreno estático. O validador usa corpos reais: jogador 28 × 52, inimigos comuns
+30 × 48 e guardião 42 × 68.
 
 O carregamento rejeita formatos e posições incompatíveis, mas não prova que todos os saltos/coletas sejam alcançáveis. Ensaie a rota. Inimigos sobem degraus de até 32 pixels e saltam entre superfícies por trajetórias livres de colisão, com cerca de 110 pixels de altura máxima. Plataformas são sólidas; spawns devem ter apoio para o corpo inteiro. Fases verticais, mais checkpoints, chefes diferentes ou objetivos sem chefe exigem mudanças explícitas nesse contrato.
 
@@ -61,7 +68,10 @@ Acrescente um `<level>` ao manifesto. IDs devem ser únicos; todos os atributos 
 
 A primeira região começa em zero. Os limites seguintes ficam em ordem, dentro da largura do mapa e separados por pelo menos `blendWidth`, para que as transições não se sobreponham. Use texturas de cenário com o formato visual 960 × 540. Uma textura pode servir a várias regiões da mesma fase e é carregada uma vez por bundle.
 
-As decorações são opcionais: `CRATES`, `FLAG`, `SIGN`, `BRAZIER`, `TORCH`. X/Y são a base no mundo com Y crescente para cima; ajuste ao piso local. `FLAG` exige cor RGB com seis dígitos hexadecimais. Não há posicionamento automático baseado no comprimento da estrada. A queda visual dos corpos consulta os pisos do mapa, sem assumir Y=64.
+As decorações são opcionais: `CRATES`, `FLAG`, `SIGN`, `BRAZIER`, `TORCH`, `ARCH`, `SHRINE`, `GRAVES`, `DEAD_TREE`,
+`WAGON` e `PENNANT`. X/Y são a base no mundo com Y crescente para cima; ajuste ao piso local. `FLAG` exige cor RGB com
+seis dígitos hexadecimais. Não há posicionamento automático baseado no comprimento da estrada. A queda visual dos corpos
+consulta os pisos do mapa, sem assumir Y=64.
 
 Cada fase exige um único `<interior>` com cinco texturas. A fachada tem 960 × 448 pixels: entrada no centro X=112, módulo central repetível entre X=256 e 736, saída no centro X=848. O renderizador ancora as portas aos portões físicos e recorta o módulo central em pixels inteiros para ajustar a largura. Fundo e primeiro plano do interior têm 960 × 540; o primeiro plano usa transparência. A porta tem 64 × 256 (duas folhas de 32 pixels) e o arco tem 96 × 288. Dimensões incorretas interrompem o carregamento.
 
@@ -101,3 +111,26 @@ Cada nova fase começa com vida cheia, inimigos novos, nenhuma coleta, checkpoin
 `Jogar.command` abre o aplicativo empacotado, não as classes recém-compiladas pelo Gradle. Refaça `appImage` depois de alterar mapas/código. Recursos adicionados em `assets/` entram automaticamente no JAR de `core`. Gere pacotes no sistema/arquitetura de destino.
 
 O gerador `tools/generate_assets.py` regenera os assets compartilhados e específicos de exiles-road e não escreve TMX por padrão. Para gerar o mapa original, forneça `--map-output <destino>` explicitamente; esse arquivo será sobrescrito. Use o Tiled para novas fases. Não é necessário executar o gerador para compilar ou jogar.
+
+### Passagens exploráveis e relevo
+
+A camada de objetos `passages` aceita retângulos `cave`, `gallery` e `mountain`,
+em coordenadas Tiled. Cavernas e galerias desenham o fundo e ocultam a fachada
+quando o centro do jogador entra no retângulo; a transição pausa junto com o jogo.
+As duas extremidades ficam abertas. O tipo `mountain` desenha os picos ao fundo.
+Essa camada é visual: pisos, tetos e degraus continuam na camada `collisions`,
+com os mesmos limites de altura do mapa. Deixe entradas com espaço para o corpo
+inteiro do jogador e patamares amplos antes dos combates.
+
+No level 1, a cripta ocupa X=1792–2560, sob o aqueduto; a galeria ocupa
+X=4768–5600, com telhado acessível; a serra sobe até Y=384 antes da capela.
+O gerador `tools/generate_first_level.py` mantém os tiles e as colisões alinhados.
+
+### Marcos do cenário
+
+O manifesto aceita `ARCH`, `SHRINE`, `GRAVES`, `DEAD_TREE`, `WAGON` e `PENNANT`, além das decorações existentes. Os seis
+quadros do atlas compartilhado `sprites/environment.png` têm 192 × 256 pixels; `x` e `y` posicionam a base inferior
+esquerda do quadro. Altares `SHRINE` são desenhados a 96 × 128 para caberem nas rotas elevadas. Desenhe-os atrás do
+terreno e dos personagens, sem colisões. Use `tools/generate_environment.py` para reproduzir o atlas e os fundos da
+primeira fase. `EnvironmentRenderer` acrescenta desgaste, vegetação e fragmentos nas superfícies expostas, sem ocupar
+espaço físico.

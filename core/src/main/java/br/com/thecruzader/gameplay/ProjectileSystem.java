@@ -12,11 +12,11 @@ final class ProjectileSystem {
             double dx = arrow.vx * dt, dy = arrow.vy * dt;
             double terrainHit = Double.POSITIVE_INFINITY;
             for (Bounds solid : collision.solids(gateLocked))
-                terrainHit = Math.min(terrainHit, hitFraction(arrow, dx, dy, solid));
-            double playerHit = hitFraction(arrow, dx, dy, player.bounds());
+                terrainHit = Math.min(terrainHit, hitFraction(arrow.x, arrow.y, dx, dy, solid, 6, 2));
+            double playerHit = hitFraction(arrow.x, arrow.y, dx, dy, player.bounds(), 6, 2);
             if (playerHit < terrainHit) {
                 CombatSystem.hitPlayer(player, player.x + Player.WIDTH / 2
-                        - Math.signum(arrow.vx) * 10, events);
+                    - Math.signum(arrow.vx) * 10, false, events);
                 iterator.remove();
                 continue;
             }
@@ -30,12 +30,12 @@ final class ProjectileSystem {
         }
     }
 
-    private double hitFraction(Arrow arrow, double dx, double dy, Bounds bounds) {
+    static double hitFraction(double x, double y, double dx, double dy, Bounds bounds, double halfWidth, double halfHeight) {
         double near = 0, far = 1;
-        double[] origin = {arrow.x, arrow.y};
+        double[] origin = {x, y};
         double[] motion = {dx, dy};
-        double[] low = {bounds.x() - 6, bounds.y() - 2};
-        double[] high = {bounds.right() + 6, bounds.top() + 2};
+        double[] low = {bounds.x() - halfWidth, bounds.y() - halfHeight};
+        double[] high = {bounds.right() + halfWidth, bounds.top() + halfHeight};
         for (int axis = 0; axis < 2; axis++) {
             if (motion[axis] == 0) {
                 if (origin[axis] < low[axis] || origin[axis] > high[axis])

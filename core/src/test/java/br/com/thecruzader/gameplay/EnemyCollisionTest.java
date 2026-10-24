@@ -1,15 +1,16 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import br.com.thecruzader.input.PlayerInput;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
 import br.com.thecruzader.level.LevelLoader;
 import com.badlogic.gdx.files.FileHandle;
 import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class EnemyCollisionTest {
     private CollisionWorld collision(Bounds... obstacles) {
@@ -86,7 +87,7 @@ class EnemyCollisionTest {
         Enemy enemy = enemy(200, 180);
         Player player = new Player(new LevelData.Point(240, 64));
         enemy.attack.start();
-        new EnemySystem(collision).update(enemy, player, GameWorld.STEP, new java.util.ArrayList<>(), true);
+        new EnemySystem(collision, new java.util.ArrayList<>()).update(enemy, player, GameWorld.STEP, new java.util.ArrayList<>(), true);
         collision.move(enemy, GameWorld.STEP, false);
         assertTrue(enemy.y() < 180);
         assertEquals(0, enemy.vx);

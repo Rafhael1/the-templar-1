@@ -19,7 +19,7 @@ public final class Hud implements Disposable {
     private int lastBandageCount = -1;
     private final Stage stage = new Stage(new FitViewport(960, 540));
     private final GameAssets assets;
-    private final Image[] hearts = new Image[Player.MAX_HEALTH];
+    private final Image[] hearts;
     private final Image shield;
     private final ProgressBar dodge;
     private final Label objective, bandageCount, sound, message, overlayTitle, overlayText;
@@ -29,7 +29,8 @@ public final class Hud implements Disposable {
     private final LevelDefinition definition;
     private final boolean hasNextLevel;
 
-    public Hud(GameAssets assets, LevelDefinition definition, boolean hasNextLevel) {
+    public Hud(GameAssets assets, LevelDefinition definition, boolean hasNextLevel, Player player) {
+        hearts = new Image[player.maxHealth()];
         this.assets = assets;
         this.definition = definition;
         this.hasNextLevel = hasNextLevel;

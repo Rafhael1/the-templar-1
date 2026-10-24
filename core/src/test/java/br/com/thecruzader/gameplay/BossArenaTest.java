@@ -1,13 +1,15 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
 import br.com.thecruzader.input.PlayerInput;
 import br.com.thecruzader.level.LevelData;
 import br.com.thecruzader.level.LevelLoader;
 import com.badlogic.gdx.files.FileHandle;
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class BossArenaTest {
     private LevelData level() { return LevelLoader.load(new FileHandle(
@@ -82,7 +84,7 @@ class BossArenaTest {
         for (int tick = 0; tick < 90; tick++) new ProjectileSystem().update(arrows, player, collision,
                 true, GameWorld.STEP, new ArrayList<>());
         assertTrue(arrows.isEmpty());
-        assertEquals(Player.MAX_HEALTH, player.health());
+        assertEquals(GameRules.DEFAULT.playerHearts(), player.health());
     }
     @Test void defeatingGuardianOpensBothEndsAndAllowsVictory() {
         GameWorld world = entered();

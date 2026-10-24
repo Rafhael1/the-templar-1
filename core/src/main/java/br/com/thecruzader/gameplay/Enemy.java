@@ -19,9 +19,12 @@ public final class Enemy {
     double x, y, vx, vy, flash, alertTime, noticeTime;
     boolean grounded;
     double patrolCenter, targetX, targetY, chaseTime, calmTime, blockedTime, lastChaseX, lastChaseY, jumpVx;
-    final boolean boss;
+    final EnemyBehavior behavior;
     final LevelData.EnemyKind kind;
     double actionTime, aimX, aimY;
+    double stagger, knockback;
+    int impactDirection;
+    boolean comboSword, riposteReady;
     int nextMove;
     boolean shotFired;
     final Attack attack;
@@ -31,15 +34,30 @@ public final class Enemy {
     State state = State.PATROL;
 
     Enemy(LevelData.Spawn spawn) {
+        this(spawn, behaviorFor(spawn.kind()));
+    }
+
+    Enemy(LevelData.Spawn spawn, EnemyBehavior behavior) {
         previousX = x = spawn.x();
         previousY = y = spawn.y();
         patrolCenter = lastChaseX = x;
         lastChaseY = y;
         kind = spawn.kind();
-        boss = kind == LevelData.EnemyKind.GUARDIAN;
+        this.behavior = java.util.Objects.requireNonNull(behavior);
         health = maxHealth();
-        attack = new Attack(archer() ? 0.65 : boss ? 0.55 : 0.45,
-                archer() ? 0.08 : 0.16, archer() ? 1.10 : 0.65);
+        attack = behavior.createAttack();
+    }
+
+    private static EnemyBehavior behaviorFor(LevelData.EnemyKind kind) {
+        return switch (kind) {
+            case SENTINEL -> new SentinelBehavior();
+            case SPEARMAN -> new SpearmanBehavior();
+            case ARCHER -> new ArcherBehavior();
+            case SHIELD_BEARER -> new ShieldBearerBehavior();
+            case BRUTE -> new BruteBehavior();
+            case OIL_THROWER -> new OilThrowerBehavior();
+            case GUARDIAN -> new GuardianBehavior();
+        };
     }
 
     public double interpolatedX(double alpha) { return previousX + (x - previousX) * alpha; }
@@ -64,19 +82,45 @@ public final class Enemy {
     }
 
     public int maxHealth() {
-        return boss ? 12 : archer() ? 2 : 3;
+        return behavior.maxHealth;
     }
 
     public boolean boss() {
-        return boss;
+        return kind.boss;
     }
 
     public boolean archer() { return kind == LevelData.EnemyKind.ARCHER; }
 
-    public boolean blocking() { return state == State.BLOCK; }
+    public boolean spearman() {
+        return kind == LevelData.EnemyKind.SPEARMAN;
+    }
+
+    public LevelData.EnemyKind kind() {
+        return kind;
+    }
+
+    public boolean blocking() {
+        return state == State.BLOCK || behavior.guarding(this);
+    }
+
+    public boolean heavyAttack() {
+        return behavior.heavyAttack(this);
+    }
 
     public double flash() {
         return flash;
+    }
+
+    public double stagger() {
+        return stagger;
+    }
+
+    public int impactDirection() {
+        return impactDirection;
+    }
+
+    public boolean vulnerable() {
+        return boss() && riposteReady && stagger > 0;
     }
 
     public State state() {
@@ -98,7 +142,28 @@ public final class Enemy {
                 bounds().height() - 5);
     }
 
+    void updateAttackState() {
+        state = switch (attack.phase()) {
+            case WINDUP -> State.WINDUP;
+            case ACTIVE -> State.ATTACK;
+            case RECOVERY -> State.RECOVER;
+            case READY -> throw new IllegalStateException("Running attack cannot be ready");
+        };
+    }
+
+    public double attackProgress() {
+        return attack.phaseProgress();
+    }
+
+    public double aimX() {
+        return aimX;
+    }
+
+    public double aimY() {
+        return aimY;
+    }
+
     public double range() {
-        return boss ? 78 : 54;
+        return behavior.range;
     }
 }

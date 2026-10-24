@@ -10,7 +10,7 @@ import java.util.List;
 final class EnemyNavigation {
     private static final double WIDTH = LevelData.EnemyKind.SENTINEL.width;
     private static final double HEIGHT = LevelData.EnemyKind.SENTINEL.height;
-    private static final double SPEED = 125, JUMP_SPEED = 220, JUMP = 570, GRAVITY = 1450;
+    private static final double SPEED = 150, JUMP_SPEED = 220, JUMP = 570, GRAVITY = 1450;
     private static final double ARC_JUMP = JUMP - GRAVITY * GameWorld.STEP / 2;
     private record Surface(double left, double right, double y) {}
     private record Link(int from, int to, double launch, double vx, boolean jump) {}

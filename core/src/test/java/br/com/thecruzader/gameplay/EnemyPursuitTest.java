@@ -1,11 +1,13 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class EnemyPursuitTest {
     private CollisionWorld terrain(Bounds... obstacles) {
@@ -28,7 +30,7 @@ class EnemyPursuitTest {
     @Test void sentinelsJumpOntoSolidPlatformsFromEitherSide() {
         for (int direction : new int[] {-1, 1}) {
             CollisionWorld terrain = terrain(new Bounds(448, 128, 160, 32));
-            EnemySystem system = new EnemySystem(terrain);
+            EnemySystem system = new EnemySystem(terrain, new java.util.ArrayList<>());
             Enemy enemy = new Enemy(new LevelData.Spawn(direction > 0 ? 300 : 760, 64, LevelData.EnemyKind.SENTINEL));
             Player player = new Player(new LevelData.Point(520, 160));
             enemy.facing = direction;
@@ -45,7 +47,7 @@ class EnemyPursuitTest {
 
     @Test void followsTheTemplarAcrossMoreThanOnePlatform() {
         CollisionWorld terrain = terrain(new Bounds(448, 128, 160, 32), new Bounds(672, 192, 160, 32));
-        EnemySystem system = new EnemySystem(terrain);
+        EnemySystem system = new EnemySystem(terrain, new java.util.ArrayList<>());
         Enemy enemy = new Enemy(new LevelData.Spawn(420, 64, LevelData.EnemyKind.SENTINEL));
         Player player = new Player(new LevelData.Point(740, 224));
         // This route test begins after acquisition; intervening platforms now correctly obstruct sight.
@@ -62,7 +64,7 @@ class EnemyPursuitTest {
 
     @Test void archersPursueWhenTheirShotIsBlockedByThePlatform() {
         CollisionWorld terrain = terrain(new Bounds(448, 128, 160, 32));
-        EnemySystem system = new EnemySystem(terrain);
+        EnemySystem system = new EnemySystem(terrain, new java.util.ArrayList<>());
         Enemy enemy = new Enemy(new LevelData.Spawn(480, 64, LevelData.EnemyKind.ARCHER));
         Player player = new Player(new LevelData.Point(520, 160));
         EnemyPerception.alert(enemy, player);
@@ -77,7 +79,7 @@ class EnemyPursuitTest {
 
     @Test void pursuitCrossesTheOldSpawnBoundaryThenExpiresWithoutImmediateReacquisition() {
         CollisionWorld terrain = terrain();
-        EnemySystem system = new EnemySystem(terrain);
+        EnemySystem system = new EnemySystem(terrain, new java.util.ArrayList<>());
         Enemy enemy = new Enemy(new LevelData.Spawn(100, 64, LevelData.EnemyKind.SENTINEL));
         Player player = new Player(new LevelData.Point(400, 64));
         EnemyPerception.alert(enemy, player);
@@ -97,7 +99,7 @@ class EnemyPursuitTest {
 
     @Test void unreachableTargetsAreAbandonedAndTallWallsStaySolid() {
         CollisionWorld terrain = terrain(new Bounds(600, 64, 64, 300));
-        EnemySystem system = new EnemySystem(terrain);
+        EnemySystem system = new EnemySystem(terrain, new java.util.ArrayList<>());
         Enemy enemy = new Enemy(new LevelData.Spawn(550, 64, LevelData.EnemyKind.SENTINEL));
         Player player = new Player(new LevelData.Point(750, 64));
         EnemyPerception.alert(enemy, player);
@@ -109,7 +111,7 @@ class EnemyPursuitTest {
 
     @Test void unalertedPlatformEnemiesPatrolWithoutFallingOff() {
         CollisionWorld terrain = terrain(new Bounds(448, 128, 160, 32));
-        EnemySystem system = new EnemySystem(terrain);
+        EnemySystem system = new EnemySystem(terrain, new java.util.ArrayList<>());
         Enemy enemy = new Enemy(new LevelData.Spawn(520, 160, LevelData.EnemyKind.SENTINEL));
         Player player = new Player(new LevelData.Point(2000, 64));
         for (int tick = 0; tick < 20 * 120; tick++) {
@@ -120,7 +122,7 @@ class EnemyPursuitTest {
     }
     @Test void reachesAPlatformOnlyOneTileWide() {
         CollisionWorld terrain = terrain(new Bounds(448, 128, 32, 32));
-        EnemySystem system = new EnemySystem(terrain);
+        EnemySystem system = new EnemySystem(terrain, new java.util.ArrayList<>());
         Enemy enemy = new Enemy(new LevelData.Spawn(300, 64, LevelData.EnemyKind.SENTINEL));
         Player player = new Player(new LevelData.Point(450, 160));
         enemy.facing = 1;

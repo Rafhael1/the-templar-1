@@ -10,4 +10,6 @@ A interface usa DejaVu Sans, rasterizada em alta resolução por `tools/generate
 - JUnit — EPL 2.0 (somente testes): https://github.com/junit-team/junit-framework/blob/main/LICENSE.md
 - Eclipse Temurin/OpenJDK — GPLv2 com Classpath Exception; licenças em `Contents/runtime/Contents/Home/legal` no bundle Mac.
 
-A geração opcional de assets usa Pillow; não é dependência do runtime. Este documento identifica a origem dos recursos e não altera suas licenças.
+A geração opcional de assets usa Pillow e NumPy; não são dependências do runtime. `tools/generate_music.py`, chamado
+pelo gerador completo, compõe e sintetiza as trilhas originais de menu, exploração, combate e vitória, sem samples ou
+gravações externas. Este documento identifica a origem dos recursos e não altera suas licenças.

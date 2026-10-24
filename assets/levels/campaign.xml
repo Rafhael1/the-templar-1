@@ -41,5 +41,35 @@
     <decoration kind="FLAG" x="7620" y="256" color="365c69" />
     <decoration kind="BRAZIER" x="7864" y="64" />
     <decoration kind="TORCH" x="7976" y="64" />
+      <decoration kind="WAGON" x="40" y="64"/>
+      <decoration kind="GRAVES" x="264" y="64"/>
+      <decoration kind="ARCH" x="640" y="64"/>
+      <decoration kind="PENNANT" x="1120" y="160"/>
+      <decoration kind="WAGON" x="1300" y="64"/>
+      <decoration kind="DEAD_TREE" x="1550" y="64"/>
+      <decoration kind="GRAVES" x="1810" y="64"/>
+      <decoration kind="PENNANT" x="2016" y="64"/>
+      <decoration kind="GRAVES" x="2296" y="64"/>
+      <decoration kind="SHRINE" x="2370" y="320"/>
+      <decoration kind="DEAD_TREE" x="2630" y="64"/>
+      <decoration kind="ARCH" x="3030" y="64"/>
+      <decoration kind="GRAVES" x="3250" y="64"/>
+      <decoration kind="WAGON" x="3510" y="64"/>
+      <decoration kind="PENNANT" x="3620" y="224"/>
+      <decoration kind="DEAD_TREE" x="3860" y="64"/>
+      <decoration kind="GRAVES" x="4080" y="64"/>
+      <decoration kind="ARCH" x="4250" y="64"/>
+      <decoration kind="GRAVES" x="4670" y="64"/>
+      <decoration kind="PENNANT" x="4832" y="160"/>
+      <decoration kind="SHRINE" x="5250" y="384"/>
+      <decoration kind="ARCH" x="5660" y="64"/>
+      <decoration kind="GRAVES" x="5980" y="128"/>
+      <decoration kind="PENNANT" x="6208" y="224"/>
+      <decoration kind="DEAD_TREE" x="6440" y="288"/>
+      <decoration kind="GRAVES" x="6790" y="352"/>
+      <decoration kind="SHRINE" x="6896" y="384"/>
+      <decoration kind="PENNANT" x="7312" y="96"/>
+      <decoration kind="GRAVES" x="7450" y="160"/>
+      <decoration kind="ARCH" x="7744" y="64"/>
   </level>
 </campaign>

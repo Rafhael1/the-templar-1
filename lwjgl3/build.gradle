@@ -6,6 +6,8 @@ dependencies {
 }
 def mac = System.getProperty('os.name').toLowerCase().contains('mac')
 def windows = System.getProperty('os.name').toLowerCase().contains('windows')
+def linux = System.getProperty('os.name').toLowerCase().contains('linux')
+def packageType = mac ? 'dmg' : windows ? 'exe' : 'deb'
 def appIcon = rootProject.file('assets/branding/' + (mac ? 'o-templario.icns' : windows ? 'o-templario.ico' : 'icon-1024.png'))
 application {
     mainClass = 'br.com.thecruzader.desktop.DesktopLauncher'
@@ -35,17 +37,56 @@ tasks.register('appImage', Exec) {
     inputs.file(appIcon)
     def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }.get()
     commandLine launcher.metadata.installationPath.file('bin/jpackage').asFile,
-        '--type', 'app-image', '--name', 'O Templário', '--app-version', project.version,
+        '--type', 'app-image', '--name', mac ? 'o-templario' : 'O Templário', '--app-version', project.version,
         '--vendor', 'O Templário', '--input', layout.buildDirectory.dir('install/o-templario/lib').get().asFile,
         '--icon', appIcon,
         '--main-jar', tasks.jar.archiveFileName.get(), '--main-class', application.mainClass.get(),
         '--dest', destination.get().asFile
     if (mac) args '--java-options', '-XstartOnFirstThread'
+    if (mac) {
+        def resources = file('src/main/packaging/macos')
+        inputs.dir(resources)
+        args '--mac-package-identifier', 'br.com.thecruzader.game',
+            '--mac-app-category', 'games', '--resource-dir', resources
+        doLast {
+            // An ASCII executable avoids codesign sealing the accented launcher as nested code.
+            def image = destination.get().asFile
+            java.nio.file.Files.move(new File(image, 'o-templario.app').toPath(),
+                new File(image, 'O Templário.app').toPath())
+            providers.exec {
+                commandLine 'codesign', '--verify', '--deep', '--strict',
+                    new File(image, 'O Templário.app')
+            }.result.get().assertNormalExitValue()
+        }
+    }
+}
+
+tasks.register('installer', Exec) {
+    group = 'distribution'
+    description = 'Builds a native installer (macOS DMG, Windows EXE, Linux DEB) with Java included.'
+    dependsOn tasks.named('appImage')
+    def destination = layout.buildDirectory.dir('installer')
+    def image = layout.buildDirectory.dir('app-image/' + (mac ? 'O Templário.app' : 'O Templário'))
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }.get()
+    commandLine launcher.metadata.installationPath.file('bin/jpackage').asFile,
+        '--type', packageType, '--name', 'O Templário', '--app-version', project.version,
+        '--vendor', 'O Templário', '--description', 'O Templário — 2D action and platform game',
+        '--app-image', image.get().asFile, '--dest', destination.get().asFile,
+        '--icon', appIcon
+    if (windows) args '--win-per-user-install', '--win-dir-chooser', '--win-menu', '--win-shortcut',
+        '--win-upgrade-uuid', 'ae102aa9-cd97-4a5c-91d0-d0dad1376f49'
+    if (linux) args '--linux-package-name', 'o-templario', '--linux-shortcut',
+        '--linux-menu-group', 'Game', '--linux-app-category', 'games'
+    doFirst {
+        if (!mac && !windows && !linux) throw new GradleException('Unsupported installer operating system.')
+        delete destination
+    }
 }
 
 tasks.named('jar') {
     manifest {
         attributes 'Main-Class': application.mainClass.get(),
+            'Implementation-Version': project.version.toString(),
             'Class-Path': configurations.runtimeClasspath.files.collect { it.name }.join(' ')
     }
 }
@@ -58,4 +99,14 @@ tasks.register('performanceTest', JavaExec) {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
     jvmArgs application.applicationDefaultJvmArgs
     args '--profile'
+}
+
+tasks.register('framePacingTest', JavaExec) {
+    group = 'verification'
+    description = 'Measures active encounters and frame intervals with the normal vsync presentation.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = application.mainClass
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    jvmArgs application.applicationDefaultJvmArgs
+    args '--profile-paced'
 }

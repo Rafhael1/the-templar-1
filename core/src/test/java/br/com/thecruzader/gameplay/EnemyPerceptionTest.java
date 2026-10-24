@@ -1,11 +1,13 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class EnemyPerceptionTest {
     private CollisionWorld terrain(Bounds... obstacles) {
@@ -31,7 +33,7 @@ class EnemyPerceptionTest {
 
     @Test void seeingANearbyPlayerFirstPausesToNoticeThenPursues() {
         var terrain = terrain();
-        var system = new EnemySystem(terrain);
+        var system = new EnemySystem(terrain, new java.util.ArrayList<>());
         var enemy = sentinel(500);
         var player = new Player(new LevelData.Point(300, 64));
         advance(system, terrain, enemy, player, 24);
@@ -45,7 +47,7 @@ class EnemyPerceptionTest {
 
     @Test void playerBehindThePatrolRemainsUnnoticedUntilClose() {
         var terrain = terrain();
-        var system = new EnemySystem(terrain);
+        var system = new EnemySystem(terrain, new java.util.ArrayList<>());
         var enemy = sentinel(500);
         var player = new Player(new LevelData.Point(700, 64));
         advance(system, terrain, enemy, player, 120);
@@ -61,7 +63,7 @@ class EnemyPerceptionTest {
         for (boolean platform : new boolean[] {false, true}) {
             var terrain = platform ? terrain(new Bounds(448, 128, 160, 32))
                     : terrain(new Bounds(560, 64, 32, 200));
-            var system = new EnemySystem(terrain);
+            var system = new EnemySystem(terrain, new java.util.ArrayList<>());
             var enemy = sentinel(platform ? 480 : 500);
             enemy.facing = 1;
             var player = new Player(new LevelData.Point(platform ? 520 : 650, platform ? 160 : 64));
@@ -74,7 +76,7 @@ class EnemyPerceptionTest {
 
     @Test void aBriefGlimpseDoesNotAccumulateAcrossSeparateEncounters() {
         var terrain = terrain();
-        var system = new EnemySystem(terrain);
+        var system = new EnemySystem(terrain, new java.util.ArrayList<>());
         var enemy = sentinel(500);
         var player = new Player(new LevelData.Point(300, 64));
         advance(system, terrain, enemy, player, 24);
@@ -89,7 +91,7 @@ class EnemyPerceptionTest {
 
     @Test void losingSightKeepsTheLastSeenPositionInsteadOfTrackingThroughTheWall() {
         var terrain = terrain(new Bounds(600, 64, 32, 200));
-        var system = new EnemySystem(terrain);
+        var system = new EnemySystem(terrain, new java.util.ArrayList<>());
         var enemy = sentinel(400);
         enemy.facing = 1;
         var player = new Player(new LevelData.Point(570, 64));

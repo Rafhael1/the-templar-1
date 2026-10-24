@@ -105,6 +105,50 @@
       "useAs": [
         "object"
       ]
+    },
+    {
+      "color": "#ff9b6145",
+      "drawFill": true,
+      "id": 10,
+      "members": [],
+      "name": "spearman",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
+    },
+    {
+      "color": "#ffb38a49",
+      "drawFill": true,
+      "id": 11,
+      "members": [],
+      "name": "shield_bearer",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
+    },
+    {
+      "color": "#ffb38a49",
+      "drawFill": true,
+      "id": 12,
+      "members": [],
+      "name": "brute",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
+    },
+    {
+      "color": "#ffb38a49",
+      "drawFill": true,
+      "id": 13,
+      "members": [],
+      "name": "oil_thrower",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
     }
   ]
 }

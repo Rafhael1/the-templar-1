@@ -11,6 +11,10 @@ final class MovementSystem {
             double dt,
             List<GameEvent> events) {
         player.blockFlash = Math.max(0, player.blockFlash - dt);
+        player.hurtFlash = Math.max(0, player.hurtFlash - dt);
+        player.parryFlash = Math.max(0, player.parryFlash - dt);
+        player.parryWindow = Math.max(0, player.parryWindow - dt);
+        player.attackBuffer = Math.max(0, player.attackBuffer - dt);
         player.invulnerable = Math.max(0, player.invulnerable - dt);
         player.dodge = Math.max(0, player.dodge - dt);
         player.dodgeCooldown = Math.max(0, player.dodgeCooldown - dt);
@@ -27,7 +31,10 @@ final class MovementSystem {
 
     void move(Player player, PlayerInput input, double dt, CollisionWorld collision,
             boolean gateLocked) {
-        if (input.dodge() && player.dodgeCooldown == 0 && !player.attack.running() && !player.blocking) {
+        if (input.dodge() && player.dodgeCooldown == 0
+            && (!player.attack.running() || player.attack.lateRecovery(.10)) && !player.blocking) {
+            player.attack.cancel();
+            player.attackBuffer = 0;
             player.dodge = 0.20;
             player.dodgeCooldown = Player.DODGE_COOLDOWN;
             player.invulnerable = 0.24;

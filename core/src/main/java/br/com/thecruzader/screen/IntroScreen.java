@@ -1,6 +1,7 @@
 package br.com.thecruzader.screen;
 
 import br.com.thecruzader.CrusaderGame;
+import br.com.thecruzader.presentation.AudioPlayer;
 import br.com.thecruzader.presentation.GameAssets;
 import br.com.thecruzader.presentation.IntroAnimation;
 import com.badlogic.gdx.Gdx;
@@ -18,6 +19,7 @@ public final class IntroScreen extends ScreenAdapter {
     private static final String[] SCENES = {"council", "call", "march"};
     private final CrusaderGame game;
     private final GameAssets assets;
+    private final AudioPlayer audio;
     private final Stage stage = new Stage(new FitViewport(960, 540));
     private final Table root = new Table();
     private final IntroAnimation illustration;
@@ -26,15 +28,21 @@ public final class IntroScreen extends ScreenAdapter {
     private float elapsed;
     private final InputAdapter input = new InputAdapter() {
         @Override public boolean keyDown(int key) {
+            if (key == Input.Keys.M) {
+                audio.toggleMute();
+                return true;
+            }
             if (key == Input.Keys.ESCAPE) { finished = true; return true; }
             if (key == Input.Keys.ENTER || key == Input.Keys.SPACE) { advance(); return true; }
             return false;
         }
         @Override public boolean touchDown(int x, int y, int pointer, int button) { advance(); return true; }
     };
-    public IntroScreen(CrusaderGame game, GameAssets assets) {
+
+    public IntroScreen(CrusaderGame game, GameAssets assets, AudioPlayer audio) {
         this.game = game;
         this.assets = assets;
+        this.audio = audio;
         illustration = new IntroAnimation(assets);
         illustration.setBounds(0, 140, 960, 400);
         stage.addActor(illustration);
@@ -77,8 +85,18 @@ public final class IntroScreen extends ScreenAdapter {
         stage.act(paused ? 0 : Math.min(delta, .1f)); stage.draw();
     }
     @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
-    @Override public void pause() { paused = true; }
-    @Override public void resume() { paused = false; }
+
+    @Override
+    public void pause() {
+        paused = true;
+        audio.setPaused(true);
+    }
+
+    @Override
+    public void resume() {
+        paused = false;
+        audio.setPaused(false);
+    }
     @Override public void hide() { Gdx.input.setInputProcessor(null); }
     @Override public void dispose() { stage.dispose(); }
 }

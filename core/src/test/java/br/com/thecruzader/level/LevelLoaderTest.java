@@ -1,13 +1,13 @@
 package br.com.thecruzader.level;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import com.badlogic.gdx.files.FileHandle;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class LevelLoaderTest {
     @TempDir Path temporary;
@@ -21,12 +21,48 @@ class LevelLoaderTest {
         LevelData map = LevelLoader.load(actualMap());
         assertEquals(8960, map.width());
         assertEquals(64, map.spawn().y());
-        assertEquals(17, map.enemies().size());
-        assertEquals(33, map.solids().size());
-        assertEquals(10, map.bandages().size());
-        assertEquals(5, map.enemies().stream()
+        assertEquals(27, map.enemies().size());
+        assertTrue(map.solids().size() > 40);
+        assertEquals(13, map.bandages().size());
+        assertEquals(4, map.enemies().stream()
                 .filter(enemy -> enemy.kind() == LevelData.EnemyKind.ARCHER).count());
+        assertEquals(List.of(new LevelData.Spawn(4640, 64, LevelData.EnemyKind.SPEARMAN),
+                new LevelData.Spawn(5980, 128, LevelData.EnemyKind.SPEARMAN),
+                new LevelData.Spawn(6824, 352, LevelData.EnemyKind.SPEARMAN)),
+            map.enemies().stream().filter(enemy -> enemy.kind() == LevelData.EnemyKind.SPEARMAN).toList());
+        assertEquals(3, map.enemies().stream().filter(enemy -> enemy.kind() == LevelData.EnemyKind.SHIELD_BEARER).count());
+        for (var kind : List.of(LevelData.EnemyKind.BRUTE, LevelData.EnemyKind.OIL_THROWER))
+            assertEquals(2, map.enemies().stream().filter(enemy -> enemy.kind() == kind).count(), kind.name());
         assertEquals(160, map.solids().get(1).top());
+    }
+
+    @Test
+    void galleryRoofHasReachableApproach() {
+        LevelData map = LevelLoader.load(actualMap());
+        double previous = 64;
+        for (int x : new int[]{4544, 4640, 4736, 4768}) {
+            double top = map.solids().stream()
+                .filter(solid -> solid.x() <= x && solid.right() >= x + LevelData.PLAYER_WIDTH)
+                .mapToDouble(Bounds::top).max().orElseThrow();
+            assertTrue(top > previous && top - previous <= 96, "Roof access step at " + x);
+            previous = top;
+        }
+        assertEquals(384, previous);
+    }
+
+    @Test
+    void mountainHasContinuousRockAndClimbableSteps() {
+        LevelData map = LevelLoader.load(actualMap());
+        double previous = 160;
+        for (int x = 6144; x < 7328; x += 32) {
+            final int column = x;
+            Bounds rock = map.solids().stream()
+                .filter(solid -> solid.x() <= column && solid.right() >= column + 32)
+                .max(java.util.Comparator.comparingDouble(Bounds::top)).orElseThrow();
+            assertEquals(64, rock.y(), "Ridge must not hide a trapping pit at " + x);
+            assertTrue(Math.abs(rock.top() - previous) <= 96, "Unclimbable step at " + x);
+            previous = rock.top();
+        }
     }
 
     @Test
@@ -93,7 +129,7 @@ class LevelLoaderTest {
     void expandedHalfContainsTerrainEncountersAndFinalObjectives() {
         LevelData map = LevelLoader.load(actualMap());
         assertTrue(map.solids().stream().filter(solid -> solid.x() >= 3200).count() >= 10);
-        assertEquals(11, map.enemies().stream().filter(enemy -> enemy.x() >= 3200).count());
+        assertEquals(17, map.enemies().stream().filter(enemy -> enemy.x() >= 3200).count());
         assertTrue(map.checkpoint().x() >= 4200 && map.checkpoint().x() <= 4700);
         assertTrue(map.gate().x() >= 6000);
         assertTrue(map.exit().x() > map.gate().right());
@@ -148,13 +184,26 @@ class LevelLoaderTest {
                     && solid.x() <= spawn.x() && solid.right() >= spawn.x() + spawn.kind().width),
                     "Spawn must be supported by its authored surface");
         }
-        assertEquals(11, elevated);
-        assertArrayEquals(new int[] {5, 4, 4, 3}, regions);
+        assertEquals(19, elevated);
+        assertArrayEquals(new int[]{7, 6, 7, 6}, regions);
+    }
+
+    @Test
+    void alternateRoutesHaveEncountersAndSanctuaryHasBreathingRoom() {
+        LevelData level = LevelLoader.load(actualMap());
+        assertTrue(level.enemies().stream().anyMatch(e -> e.x() >= 1792 && e.x() < 2560 && e.y() == 320));
+        assertTrue(level.enemies().stream().anyMatch(e -> e.x() >= 4768 && e.x() < 5600 && e.y() == 384));
+        assertTrue(level.enemies().stream().noneMatch(e -> Math.abs(e.x() - level.checkpoint().x()) < 160));
+        var encounters = level.enemies().stream().filter(e -> !e.kind().boss)
+            .sorted(java.util.Comparator.comparingDouble(LevelData.Spawn::x)).toList();
+        for (int i = 1; i < encounters.size(); i++)
+            assertTrue(encounters.get(i).x() - encounters.get(i - 1).x() <= 900,
+                "Long empty stretch before " + encounters.get(i).x());
     }
     @Test void partiallyUnsupportedPlatformSpawnFailsBeforeGameplay() {
         FileHandle file = new FileHandle(temporary.resolve("off-platform.tmx").toFile());
-        file.writeString(actualMap().readString().replace("name=\"sentinel-9\" x=\"6550\"",
-                "name=\"sentinel-9\" x=\"6600\""), false);
+        file.writeString(actualMap().readString().replace("name=\"sentinel-0\" x=\"520\"",
+            "name=\"sentinel-0\" x=\"590\""), false);
         var error = assertThrows(IllegalArgumentException.class, () -> LevelLoader.load(file));
         assertTrue(error.getMessage().contains("stand fully"));
     }

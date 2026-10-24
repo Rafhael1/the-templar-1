@@ -9,7 +9,9 @@ public final class LevelValidator {
         if (level.width() < VIEW_WIDTH || level.height() < VIEW_HEIGHT)
             throw new IllegalArgumentException("Map must cover the 960 x 540 viewport");
         Bounds arena = level.arena();
-        if (arena.width() < LevelData.PLAYER_WIDTH + LevelData.EnemyKind.GUARDIAN.width
+        LevelData.EnemyKind bossKind = level.enemies().stream().filter(enemy -> enemy.kind().boss)
+            .findFirst().orElseThrow().kind();
+        if (arena.width() < LevelData.PLAYER_WIDTH + bossKind.width
                 || arena.width() / 2 + Math.max(32, level.gate().width()) > VIEW_WIDTH / 2.0
                 || arena.height() < 240)
             throw new IllegalArgumentException("Arena must fit the viewport including gates and contain boss jumps");
@@ -39,9 +41,9 @@ public final class LevelValidator {
             Bounds body = new Bounds(enemy.x(), enemy.y(), enemy.kind().width, enemy.kind().height);
             clear(level, body, "Enemy " + enemy.kind());
             supported(level, body, "Enemy " + enemy.kind());
-            if (enemy.kind() == LevelData.EnemyKind.GUARDIAN) {
+            if (enemy.kind().boss) {
                 if (body.x() < arena.x() || body.right() > arena.right() || body.y() != arena.y())
-                    throw new IllegalArgumentException("Guardian must stand inside the arena");
+                    throw new IllegalArgumentException("Boss must stand inside the arena");
             } else if (body.right() > level.arenaEntrance().x()) {
                 throw new IllegalArgumentException("Road enemies must precede the arena entrance");
             }

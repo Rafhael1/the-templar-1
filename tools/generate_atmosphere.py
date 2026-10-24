@@ -1,32 +1,12 @@
-"""Original pixel scenery, opening illustrations and seamless ambient score."""
+"""Original pixel scenery and opening illustrations."""
 from pathlib import Path
 from PIL import Image, ImageDraw
-import math, wave, array, random
 ROOT = Path(__file__).resolve().parents[1] / 'assets'
 SCENERY = ROOT / 'levels/exiles-road/scenery'
 SCENERY.mkdir(parents=True, exist_ok=True)
-# Four distinct silhouettes: camp, road, ruins, siege.
-for kind in range(4):
-    im=Image.new('RGBA',(480,270));d=ImageDraw.Draw(im)
-    for x in range(0,480,96):
-        if kind==0:
-            d.polygon([(x,238),(x+35,194),(x+78,238)], fill='#75665c')
-            d.polygon([(x+35,194),(x+48,238),(x+78,238)], fill='#51464b')
-            d.rectangle((x+30,218,x+41,238),fill='#292d38')
-        elif kind==1:
-            d.polygon([(x-30,235),(x+52,120+x%51),(x+144,235)],fill='#66545a')
-            d.line((x+24,226,x+30,188,x+38,179),fill='#343c47',width=3)
-        elif kind==2:
-            d.rectangle((x+8,145,x+27,239),fill='#6e5d5a')
-            d.rectangle((x+65,172,x+83,239),fill='#6e5d5a')
-            d.rectangle((x+4,145,x+54,158),fill='#8e7b68')
-            d.rectangle((x+13,164,x+16,231),fill='#a18a70')
-        else:
-            d.rectangle((x,162,x+95,239),fill='#76695e')
-            for k in range(0,96,24):d.rectangle((x+k,151,x+k+12,162),fill='#76695e')
-            d.rectangle((x+35,182,x+46,205),fill='#34303b')
-            for y in range(169,238,16):d.line((x,y,x+95,y),fill='#5d5352')
-    im.resize((960,540),Image.Resampling.NEAREST).save(SCENERY/f'region-{kind}.png')
+# One source of truth for road backgrounds and the architectural prop atlas.
+import runpy
+runpy.run_path(str(Path(__file__).with_name('generate_environment.py')))
 # Council chamber: proportioned figure, one blessing hand and a pastoral staff.
 im=Image.new('RGBA',(480,200),'#202735');d=ImageDraw.Draw(im)
 for y in range(12,169,14):
@@ -94,19 +74,4 @@ march.alpha_composite(Image.open(SCENERY/'region-3.png').resize((480,270),Image.
 knight=Image.open(ROOT/'sprites/characters.png').crop((0,0,64,80)).resize((32,40),Image.Resampling.NEAREST)
 for x in range(38,400,48):march.alpha_composite(knight,(x,204))
 march.crop((0,50,480,250)).resize((960,400),Image.Resampling.NEAREST).save(ROOT/'sprites/march.png')
-# 48-second D dorian score: plucked strings, breathy melody, sustained fifths,
-# frame drum and wind. Integer cycles and boundary envelopes make it loop cleanly.
-rate=22050;duration=48;notes=[146.832,164.814,174.614,220,195.998,174.614,164.814,146.832,220,246.942,293.665,246.942,220,195.998,164.814,146.832]
-rng=random.Random(1095);samples=array.array('h')
-for i in range(rate*duration):
-    t=i/rate;beat=t%0.75;bar=int(t/3);note=notes[int(t/3)%16];phase=t%3
-    fade=min(1,t/.3,(duration-t)/.3)
-    pluck=(math.sin(2*math.pi*note*t)+.3*math.sin(4*math.pi*note*t))*math.exp(-beat*5)*.10
-    melody=math.sin(2*math.pi*note*2*t+.012*math.sin(t*25))*math.sin(math.pi*phase/3)**2*.07
-    pad=(math.sin(2*math.pi*73.416*t)+.5*math.sin(2*math.pi*110*t))*.035
-    drum=math.sin(2*math.pi*(78*beat-22*beat*beat))*math.exp(-beat*25)*(.09 if int(t/.75)%4==0 else .035)
-    wind=rng.uniform(-1,1)*.012*(.6+.4*math.sin(t*.4)**2)
-    samples.append(int((pluck+melody+pad+drum+wind)*fade*32767))
-with wave.open(str(ROOT/'audio/ambience.wav'),'wb') as f:
-    f.setnchannels(1);f.setsampwidth(2);f.setframerate(rate);f.writeframes(samples.tobytes())
-print('Generated four regions, council illustration and 48-second original score.')
+print('Generated four regions and opening illustrations.')

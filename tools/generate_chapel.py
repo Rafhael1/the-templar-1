@@ -181,7 +181,7 @@ for x in (100, 322):
         d.rectangle((px, 211, px + 13, 216), fill=RED)
         d.rectangle((px - 1, 216, px + 14, 222), fill='#655346')
         d.point((px + 6, 183), fill=GOLD)
-# Steps, carved altar, embroidered cloth, tabernacle and Marian icon.
+# Steps, carved altar, embroidered cloth, tabernacle and standing cross.
 for y, x0, x1 in ((231, 191, 290), (227, 200, 281), (223, 208, 273)):
     d.rectangle((x0, y, x1, y + 4), fill=SHADE)
     d.line((x0, y, x1, y), fill=GOLD)
@@ -200,12 +200,10 @@ d.rectangle((231, 187, 250, 199), fill='#8e7356')
 d.rectangle((233, 188, 248, 198), fill=GOLD)
 pointed(d, (235, 190, 11, 8), RED)
 cross(d, 241, 191, 6)
-# Our Lady from the game's own sanctuary, mounted in a framed devotional panel.
-marian = Image.open(ROOT / 'sprites/sanctuary.png').crop((38, 40, 75, 95))
-interior.alpha_composite(marian, (222, 135))
-d = ImageDraw.Draw(interior)
-d.line((221, 137, 221, 188), fill=GOLD)
-d.line((259, 137, 259, 188), fill=GOLD)
+# A standing gold cross rises from the tabernacle at the center of the altar.
+cross(d, 240, 138, 48)
+d.rectangle((234, 184, 246, 186), fill=GOLD)
+d.line((235, 184, 245, 184), fill=LIGHT)
 # Candlesticks, prayer books and an open lectern.
 for x in (217, 264):
     d.rectangle((x - 2, 197, x + 2, 199), fill=GOLD)

@@ -35,7 +35,11 @@ public record LevelDefinition(String id, String mapPath, double blendWidth, Text
         }
         public List<String> textures() { return List.of(exterior, background, foreground, door, doorFrame); }
     }
-    public enum DecorationKind { CRATES, FLAG, SIGN, BRAZIER, TORCH }
+
+    public enum DecorationKind {
+        CRATES, FLAG, SIGN, BRAZIER, TORCH,
+        ARCH, SHRINE, GRAVES, DEAD_TREE, WAGON, PENNANT
+    }
     public record Decoration(DecorationKind kind, double x, double y, int flagRgb) {
         public Decoration {
             Objects.requireNonNull(kind);

@@ -11,7 +11,7 @@ final class EnemyPerception {
         double dy = player.y - enemy.y;
         boolean aware = enemy.alertTime > 0;
         boolean close = Math.abs(dx) <= 80 && Math.abs(dy) <= 60;
-        double range = aware ? 420 : enemy.archer() ? 280 : 230;
+        double range = aware ? 420 : enemy.behavior.sightRange();
         boolean visible = enemy.calmTime == 0 && Math.abs(dx) <= range
                 && Math.abs(dy) <= (aware ? 240 : 160)
                 && (aware || close || dx * enemy.facing > 0)

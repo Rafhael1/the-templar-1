@@ -38,8 +38,28 @@ public final class Attack {
         return remaining > recovery ? Phase.ACTIVE : Phase.RECOVERY;
     }
 
+    /**
+     * Progress within the current phase, for synchronizing presentation with combat.
+     */
+    public double phaseProgress() {
+        return switch (phase()) {
+            case READY -> 0;
+            case WINDUP -> 1 - (remaining - active - recovery) / windup;
+            case ACTIVE -> 1 - (remaining - recovery) / active;
+            case RECOVERY -> 1 - remaining / recovery;
+        };
+    }
+
     public boolean running() {
         return remaining > 0;
+    }
+
+    public boolean lateRecovery(double window) {
+        return phase() == Phase.RECOVERY && remaining <= window;
+    }
+
+    void cancel() {
+        remaining = 0;
     }
 
     public long sequence() {

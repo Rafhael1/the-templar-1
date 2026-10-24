@@ -1,15 +1,31 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
-import br.com.thecruzader.level.*;
 import br.com.thecruzader.input.PlayerInput;
+import br.com.thecruzader.level.Campaign;
+import br.com.thecruzader.level.CampaignLoader;
+import br.com.thecruzader.level.LevelData;
+import br.com.thecruzader.level.LevelLoader;
 import com.badlogic.gdx.files.FileHandle;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class JourneyTest {
     private final FileHandle assets = new FileHandle(System.getProperty("assets.path"));
     private final FileHandle testAssets = new FileHandle(System.getProperty("test.assets.path"));
     private final Campaign campaign = CampaignLoader.load(testAssets.child("levels/test-campaign.xml"));
+
+    @Test
+    void customHeartsPersistAcrossLevelTransitions() {
+        Journey journey = new Journey(campaign, new GameRules(7));
+        GameWorld first = journey.enterLevel(LevelLoader.load(assets.child(journey.currentLevel().mapPath())));
+        assertEquals(7, first.player().health());
+        complete(first);
+        journey.continueAfterVictory();
+        GameWorld second = journey.enterLevel(LevelLoader.load(testAssets.child(journey.currentLevel().mapPath())));
+        assertEquals(7, second.player().maxHealth());
+        assertEquals(7, second.player().health());
+    }
 
     @Test void twoLevelJourneyAdvancesResetsWorldAndRestartsAfterFinalVictory() {
         Journey journey = new Journey(campaign);
@@ -17,7 +33,7 @@ class JourneyTest {
         assertThrows(IllegalStateException.class, journey::continueAfterVictory);
         assertThrows(IllegalStateException.class, () -> journey.enterLevel(first.level()));
         first.player().x = first.level().bandages().get(1).x();
-        first.player().health = 3;
+        first.player().health = 1;
         first.update(GameWorld.STEP, PlayerInput.NONE);
         assertTrue(first.collectedBandageCount() > 0);
         first.player().x = first.level().checkpoint().x();
@@ -32,7 +48,7 @@ class JourneyTest {
         GameWorld second = journey.enterLevel(LevelLoader.load(testAssets.child(journey.currentLevel().mapPath())));
         assertNotSame(first, second);
         assertNotSame(first.player(), second.player());
-        assertEquals(Player.MAX_HEALTH, second.player().health());
+        assertEquals(GameRules.DEFAULT.playerHearts(), second.player().health());
         assertFalse(second.checkpoint());
         assertEquals(0, second.collectedBandageCount());
         assertEquals(0, second.time());
@@ -57,6 +73,7 @@ class JourneyTest {
     }
 
     private static void complete(GameWorld world) {
+        int heavyWindup = 0;
         for (int tick = 0; tick < 180 * 120 && world.state() == GameWorld.State.PLAYING; tick++) {
             Player player = world.player();
             Enemy target = world.enemies().stream().filter(e -> e.health() > 0 && Math.abs(e.y() - player.y()) < 80)
@@ -71,16 +88,48 @@ class JourneyTest {
                     default -> false;
                 };
                 if (!block) {
-                    attack = target.state() == Enemy.State.RECOVER && Math.abs(distance) < 80;
+                    attack = (target.archer() || target.state() == Enemy.State.RECOVER) && Math.abs(distance) < 80;
                     if (player.attack().running() || Math.abs(distance) < 50) direction = 0;
                 }
             }
+            if (target != null && target.kind() == LevelData.EnemyKind.SHIELD_BEARER
+                && target.state() == Enemy.State.WINDUP) {
+                block = target.attackProgress() >= .9;
+            }
+            boolean heavy = target != null && target.boss()
+                && (target.state() == Enemy.State.DASH || target.state() == Enemy.State.JUMP
+                || target.state() == Enemy.State.DASH_WINDUP || target.state() == Enemy.State.JUMP_WINDUP);
+            boolean preparingHeavy = heavy && (target.state() == Enemy.State.DASH_WINDUP
+                || target.state() == Enemy.State.JUMP_WINDUP);
+            heavyWindup = preparingHeavy ? heavyWindup + (world.hitStopped() ? 0 : 1) : 0;
+            double warningDuration = heavy && target.state() == Enemy.State.DASH_WINDUP ? .45 : .50;
+            if (target != null && target.health() <= target.maxHealth() / 2) warningDuration *= .8;
+            boolean timedParry = preparingHeavy && heavyWindup * GameWorld.STEP >= warningDuration - .07
+                && Math.abs(target.x() - player.x()) < 80 && !player.attack().running();
+            if (heavy) {
+                block = timedParry || (!preparingHeavy && player.blocking());
+                direction = block ? (target.x() >= player.x() ? 1 : -1)
+                    : preparingHeavy && Math.abs(target.x() - player.x()) < 80 ? 0
+                    : target.x() >= player.x() ? -1 : 1;
+            }
+            if (heavy && (target.state() == Enemy.State.JUMP_WINDUP
+                || target.state() == Enemy.State.JUMP)) {
+                block = false;
+                direction = target.x() >= player.x() ? -1 : 1;
+            }
+            if (target != null && target.boss() && player.attack().running()) attack = false;
+            boolean dodge = heavy && !block && Math.abs(target.x() - player.x()) < 110
+                && (target.state() == Enemy.State.DASH || (target.state() == Enemy.State.JUMP
+                && Math.abs(target.y() - player.y()) < 80));
+            if (dodge && target.state() == Enemy.State.JUMP)
+                direction = target.x() >= player.x() ? 1 : -1;
             boolean jump = player.grounded() && direction > 0 && world.level().solids().stream()
-                    .anyMatch(solid -> solid.y() <= player.y() && solid.top() > player.y()
+                .anyMatch(solid -> solid.top() > player.y()
                             && solid.x() >= player.x() + Player.WIDTH
                             && solid.x() - (player.x() + Player.WIDTH) < 85
                             && solid.top() - player.y() < 160);
-            world.update(GameWorld.STEP, new PlayerInput(direction, jump, attack, false, false, block));
+            world.update(GameWorld.STEP, new PlayerInput(direction, jump, attack, dodge, false, block));
+
         }
         assertEquals(GameWorld.State.WON, world.state(), "Failed at x=" + world.player().x());
     }

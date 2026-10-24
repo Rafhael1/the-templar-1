@@ -4,14 +4,7 @@ import br.com.thecruzader.CrusaderGame;
 import br.com.thecruzader.gameplay.GameEvent;
 import br.com.thecruzader.gameplay.GameWorld;
 import br.com.thecruzader.input.InputMapper;
-import br.com.thecruzader.presentation.LevelResources;
-import br.com.thecruzader.presentation.AudioPlayer;
-import br.com.thecruzader.presentation.GameAssets;
-import br.com.thecruzader.presentation.Hud;
-import br.com.thecruzader.presentation.WorldRenderer;
-import br.com.thecruzader.presentation.SceneryTransition;
-import br.com.thecruzader.presentation.TemplarDeathAnimation;
-
+import br.com.thecruzader.presentation.*;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
 
@@ -37,7 +30,7 @@ public final class PlayScreen extends ScreenAdapter {
         scenery = new SceneryTransition(level.definition());
         visitedRegions = new boolean[level.definition().regions().size()];
         renderer = new WorldRenderer(assets, level);
-        hud = new Hud(assets, level.definition(), game.journey().hasNextLevel());
+        hud = new Hud(assets, level.definition(), game.journey().hasNextLevel(), world.player());
     }
 
     public GameWorld world() {

@@ -1,17 +1,17 @@
 package br.com.thecruzader;
 
-import br.com.thecruzader.presentation.AudioPlayer;
-import br.com.thecruzader.presentation.GameAssets;
-import br.com.thecruzader.presentation.DisplaySettings;
-import br.com.thecruzader.screen.MenuScreen;
-import br.com.thecruzader.screen.PlayScreen;
-
+import br.com.thecruzader.gameplay.Journey;
 import br.com.thecruzader.i18n.Language;
 import br.com.thecruzader.level.Campaign;
 import br.com.thecruzader.level.CampaignLoader;
-import br.com.thecruzader.gameplay.Journey;
-import com.badlogic.gdx.Gdx;
+import br.com.thecruzader.presentation.AudioPlayer;
+import br.com.thecruzader.presentation.DisplaySettings;
+import br.com.thecruzader.presentation.GameAssets;
+import br.com.thecruzader.presentation.WindowMode;
+import br.com.thecruzader.screen.MenuScreen;
+import br.com.thecruzader.screen.PlayScreen;
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 
 public final class CrusaderGame extends Game {
@@ -19,10 +19,22 @@ public final class CrusaderGame extends Game {
     private GameAssets assets;
     private AudioPlayer audio;
     private final String campaignPath;
+    private final WindowMode windowMode;
     private Campaign campaign;
     private Journey journey;
 
-    public CrusaderGame(String campaignPath) { this.campaignPath = java.util.Objects.requireNonNull(campaignPath); }
+    public CrusaderGame(String campaignPath, WindowMode windowMode) {
+        this.campaignPath = java.util.Objects.requireNonNull(campaignPath);
+        this.windowMode = java.util.Objects.requireNonNull(windowMode);
+    }
+
+    public boolean fullscreen() {
+        return windowMode.fullscreen();
+    }
+
+    public void toggleFullscreen() {
+        windowMode.toggleFullscreen();
+    }
 
     public Campaign campaign() { return campaign; }
     public Journey journey() { return journey; }
@@ -44,13 +56,12 @@ public final class CrusaderGame extends Game {
     }
 
     public void showMenu() {
-        audio.endDeath();
         replaceScreen(new MenuScreen(this, assets, audio));
     }
 
     public void startJourney() {
         journey = new Journey(campaign);
-        replaceScreen(new br.com.thecruzader.screen.IntroScreen(this, assets));
+        replaceScreen(new br.com.thecruzader.screen.IntroScreen(this, assets, audio));
     }
 
     public void startGame() {

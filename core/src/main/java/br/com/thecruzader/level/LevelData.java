@@ -20,9 +20,16 @@ public record LevelData(
     }
 
     public enum EnemyKind {
-        SENTINEL(30, 48), ARCHER(30, 48), GUARDIAN(42, 68);
+        SENTINEL(30, 48, false), ARCHER(30, 48, false), SPEARMAN(30, 48, false), SHIELD_BEARER(30, 48, false),
+        BRUTE(30, 48, false), OIL_THROWER(30, 48, false), GUARDIAN(42, 68, true);
         public final double width, height;
-        EnemyKind(double width, double height) { this.width = width; this.height = height; }
+        public final boolean boss;
+
+        EnemyKind(double width, double height, boolean boss) {
+            this.width = width;
+            this.height = height;
+            this.boss = boss;
+        }
     }
 
     public record Spawn(double x, double y, EnemyKind kind) {
@@ -55,7 +62,7 @@ public record LevelData(
         enemies = List.copyOf(enemies);
         if (solids.isEmpty())
             throw new IllegalArgumentException("Level requires collision geometry");
-        if (enemies.stream().filter(enemy -> enemy.kind() == EnemyKind.GUARDIAN).count() != 1)
-            throw new IllegalArgumentException("Level requires exactly one guardian");
+        if (enemies.stream().filter(enemy -> enemy.kind().boss).count() != 1)
+            throw new IllegalArgumentException("Level requires exactly one boss");
     }
 }

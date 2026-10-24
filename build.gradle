@@ -1,7 +1,15 @@
 plugins { id 'base' }
+def releaseVersion = providers.gradleProperty('gameVersion').get()
+if (!(releaseVersion ==~ /[1-9]\d*\.(0|[1-9]\d*)\.(0|[1-9]\d*)/)) {
+    throw new GradleException('gameVersion must use MAJOR.MINOR.PATCH (for example, 1.0.0).')
+}
+def versionParts = releaseVersion.split('\\.').collect { new BigInteger(it) }
+if (versionParts[0] > 255 || versionParts[1] > 255 || versionParts[2] > 65535) {
+    throw new GradleException('gameVersion exceeds native installer limits: MAJOR/MINOR <= 255, PATCH <= 65535.')
+}
 allprojects {
     group = 'br.com.thecruzader'
-    version = '1.0.0'
+    version = releaseVersion
     repositories { mavenCentral() }
 }
 subprojects {

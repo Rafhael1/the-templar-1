@@ -1,14 +1,16 @@
 package br.com.thecruzader.gameplay;
 
-import static org.junit.jupiter.api.Assertions.*;
 import br.com.thecruzader.input.PlayerInput;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
 import br.com.thecruzader.level.LevelLoader;
 import com.badlogic.gdx.files.FileHandle;
 import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class ExpandedCombatTest {
     private LevelData level(Bounds... obstacles) {
@@ -32,13 +34,13 @@ class ExpandedCombatTest {
             Bounds bandage = world.level().bandages().get(index);
             world.player().x = bandage.x();
             world.player().y = bandage.y();
-            world.player().health = 3;
+            world.player().health = 1;
             world.update(GameWorld.STEP, PlayerInput.NONE);
-            assertEquals(5, world.player().health());
+            assertEquals(world.player().maxHealth(), world.player().health());
             assertTrue(world.bandageCollected(index));
-            world.player().health = 3;
+            world.player().health = 1;
             world.update(GameWorld.STEP, PlayerInput.NONE);
-            assertEquals(3, world.player().health(), "Consumed bandage cannot heal twice");
+            assertEquals(1, world.player().health(), "Consumed bandage cannot heal twice");
         }
         assertEquals(2, world.collectedBandageCount());
         world.player().health = 0;
@@ -56,10 +58,10 @@ class ExpandedCombatTest {
         world.player().y = 232;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         assertFalse(world.bandageCollected(0));
-        world.player().health = 4;
+        world.player().health = world.player().maxHealth() - 1;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         assertTrue(world.bandageCollected(0));
-        assertEquals(5, world.player().health());
+        assertEquals(world.player().maxHealth(), world.player().health());
     }
 
     @Test
@@ -68,7 +70,7 @@ class ExpandedCombatTest {
         GameWorld world = new GameWorld(new LevelData(base.width(), base.height(), base.spawn(), base.checkpoint(),
                 base.bandages(), base.gate(), base.exit(), base.arena(), base.solids(),
                 List.of(base.enemies().getFirst(), new LevelData.Spawn(300, 64, LevelData.EnemyKind.ARCHER))));
-        for (int tick = 0; tick < 145; tick++)
+        for (int tick = 0; tick < 240 && world.arrows().isEmpty(); tick++)
             world.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true));
         assertFalse(world.arrows().isEmpty());
         world.player().health = 0;
@@ -78,21 +80,72 @@ class ExpandedCombatTest {
     }
 
     @Test
-    void archerTelegraphsThenFiresOnceAtTheCommittedAimPoint() {
+    void archerTracksDuringPreparationThenFiresOnceAtTheUpdatedAimPoint() {
         Enemy archer = enemy(100, LevelData.EnemyKind.ARCHER);
         archer.facing = 1;
         Player player = new Player(new LevelData.Point(350, 64));
         var arrows = new ArrayList<Arrow>();
-        EnemySystem system = new EnemySystem(new CollisionWorld(level()));
+        EnemySystem system = new EnemySystem(new CollisionWorld(level()), new java.util.ArrayList<>());
         for (int tick = 0; tick < 50; tick++) system.update(archer, player, GameWorld.STEP, arrows, true);
         assertEquals(Enemy.State.WINDUP, archer.state());
         assertTrue(arrows.isEmpty());
         double aimX = archer.aimX;
         player.x = 400;
+        player.y = 130;
+        system.update(archer, player, GameWorld.STEP, arrows, true);
+        assertEquals(414, archer.aimX);
+        assertEquals(156, archer.aimY);
         for (int tick = 0; tick < 95; tick++) system.update(archer, player, GameWorld.STEP, arrows, true);
         assertEquals(1, arrows.size());
         assertEquals(364, aimX);
+        assertEquals(Math.toDegrees(Math.atan2(156 - 96, 414 - 115)), arrows.getFirst().angle(), .001);
         assertEquals(Enemy.State.RECOVER, archer.state());
+    }
+
+    @Test
+    void archerTurnsDuringPreparationButReleasedArrowsDoNotTrackThePlayer() {
+        Enemy archer = enemy(500, LevelData.EnemyKind.ARCHER);
+        Player player = new Player(new LevelData.Point(300, 64));
+        EnemyPerception.alert(archer, player);
+        var arrows = new ArrayList<Arrow>();
+        EnemySystem system = new EnemySystem(new CollisionWorld(level()), new ArrayList<>());
+        system.update(archer, player, GameWorld.STEP, arrows, false);
+        assertEquals(Enemy.State.WINDUP, archer.state());
+        assertEquals(-1, archer.facing());
+        player.x = 700;
+        player.y = 130;
+        system.update(archer, player, GameWorld.STEP, arrows, false);
+        assertEquals(1, archer.facing());
+        assertEquals(714, archer.aimX());
+        assertEquals(156, archer.aimY());
+        for (int tick = 0; tick < 100 && arrows.isEmpty(); tick++)
+            system.update(archer, player, GameWorld.STEP, arrows, false);
+        assertEquals(1, arrows.size());
+        Arrow arrow = arrows.getFirst();
+        double angle = arrow.angle();
+        assertTrue(arrow.vx > 0 && arrow.vy > 0);
+        player.x = 300;
+        player.y = 64;
+        system.update(archer, player, .1, arrows, false);
+        assertEquals(angle, arrow.angle());
+        assertEquals(714, archer.aimX());
+    }
+
+    @Test
+    void archerKeepsLastVisibleAimWhenThePlayerMovesBehindAWall() {
+        Enemy archer = enemy(100, LevelData.EnemyKind.ARCHER);
+        Player player = new Player(new LevelData.Point(300, 64));
+        EnemyPerception.alert(archer, player);
+        var arrows = new ArrayList<Arrow>();
+        EnemySystem system = new EnemySystem(new CollisionWorld(level(new Bounds(450, 64, 32, 240))), new ArrayList<>());
+        system.update(archer, player, GameWorld.STEP, arrows, false);
+        assertEquals(Enemy.State.WINDUP, archer.state());
+        player.x = 500;
+        for (int tick = 0; tick < 100 && arrows.isEmpty(); tick++)
+            system.update(archer, player, GameWorld.STEP, arrows, false);
+        assertEquals(1, arrows.size());
+        assertEquals(314, archer.aimX());
+        assertEquals(90, archer.aimY());
     }
 
     @Test
@@ -103,7 +156,7 @@ class ExpandedCombatTest {
         archer.attack.update(.66);
         Player player = new Player(new LevelData.Point(100, 64));
         new CombatSystem().resolve(player, List.of(archer), new ArrayList<>());
-        assertEquals(5, player.health());
+        assertEquals(player.maxHealth(), player.health());
     }
 
     @Test
@@ -114,7 +167,7 @@ class ExpandedCombatTest {
         new ProjectileSystem().update(arrows, player, new CollisionWorld(level(new Bounds(200, 64, 1, 120))),
                 false, .5, events);
         assertTrue(arrows.isEmpty());
-        assertEquals(5, player.health());
+        assertEquals(player.maxHealth(), player.health());
         assertTrue(events.isEmpty());
     }
 
@@ -128,7 +181,7 @@ class ExpandedCombatTest {
             var events = new ArrayList<GameEvent>();
             new ProjectileSystem().update(arrows, player, new CollisionWorld(level()), false, .5, events);
             assertTrue(arrows.isEmpty());
-            assertEquals(facing < 0 ? 5 : 4, player.health());
+            assertEquals(facing < 0 ? player.maxHealth() : player.maxHealth() - 1, player.health());
             assertEquals(List.of(facing < 0 ? GameEvent.BLOCK : GameEvent.HURT), events);
         }
     }
@@ -154,7 +207,7 @@ class ExpandedCombatTest {
         CombatSystem combat = new CombatSystem();
         combat.resolve(player, List.of(boss), events);
         combat.resolve(player, List.of(boss), events);
-        assertEquals(12, boss.health());
+        assertEquals(boss.maxHealth(), boss.health());
         assertEquals(List.of(GameEvent.BLOCK), events);
     }
 
@@ -170,7 +223,7 @@ class ExpandedCombatTest {
             player.attack.start();
             player.attack.update(.11);
             new CombatSystem().resolve(player, List.of(boss), new ArrayList<>());
-            assertEquals(11, boss.health());
+            assertEquals(boss.maxHealth() - 1, boss.health());
         }
     }
 
@@ -179,7 +232,7 @@ class ExpandedCombatTest {
         Enemy boss = enemy(100, LevelData.EnemyKind.GUARDIAN);
         boss.grounded = true;
         Player player = new Player(new LevelData.Point(320, 64));
-        EnemySystem system = new EnemySystem(new CollisionWorld(level()));
+        EnemySystem system = new EnemySystem(new CollisionWorld(level()), new java.util.ArrayList<>());
         var arrows = new ArrayList<Arrow>();
         system.update(boss, player, .01, arrows, true);
         assertEquals(Enemy.State.BLOCK, boss.state());
@@ -216,14 +269,14 @@ class ExpandedCombatTest {
     void woundedBossHasFasterTelegraphs() {
         Enemy boss = enemy(100, LevelData.EnemyKind.GUARDIAN);
         boss.grounded = true;
-        boss.health = 6;
-        new EnemySystem(new CollisionWorld(level())).update(boss, new Player(new LevelData.Point(300, 64)),
+        boss.health = boss.maxHealth() / 2;
+        new EnemySystem(new CollisionWorld(level()), new java.util.ArrayList<>()).update(boss, new Player(new LevelData.Point(300, 64)),
                 .01, new ArrayList<>(), true);
         assertEquals(.6, boss.actionTime, .001);
     }
 
     @Test
-    void bossDashDealsOneHitPerMoveAndHonorsPlayerShield() {
+    void bossDashBreaksHeldShieldAndDealsOneHitPerMove() {
         for (boolean block : new boolean[] {false, true}) {
             Player player = new Player(new LevelData.Point(100, 64));
             player.blocking = block;
@@ -235,7 +288,7 @@ class ExpandedCombatTest {
             combat.resolve(player, List.of(boss), events);
             player.invulnerable = 0;
             combat.resolve(player, List.of(boss), events);
-            assertEquals(block ? 5 : 4, player.health());
+            assertEquals(player.maxHealth() - 1, player.health());
             assertEquals(1, events.size());
         }
     }

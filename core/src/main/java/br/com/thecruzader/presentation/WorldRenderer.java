@@ -1,13 +1,8 @@
 package br.com.thecruzader.presentation;
 
-import br.com.thecruzader.gameplay.Attack;
-import br.com.thecruzader.gameplay.BossRelease;
-import br.com.thecruzader.gameplay.Enemy;
-import br.com.thecruzader.gameplay.GameWorld;
-import br.com.thecruzader.gameplay.Player;
+import br.com.thecruzader.gameplay.*;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelDefinition;
-
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -31,12 +26,12 @@ public final class WorldRenderer implements Disposable {
     private static final Color FLAME_LIGHT = Color.valueOf("f6d59b");
     private static final Color HEALTH_BACK = Color.valueOf("342e3c");
     private static final Color WARNING = Color.valueOf("edab71");
-    private static final Color BRASS = Color.valueOf("c6b590");
     private static final Color CLOUD = new Color(.78f, .72f, .65f, .10f);
     private static final Color CLOUD_LIGHT = new Color(.78f, .72f, .65f, .08f);
     private static final Color DUST = new Color(.8f, .66f, .45f, .24f);
     private static final Color FIRE_GLOW = new Color(1, .55f, .2f, .08f);
     private static final Color WINDUP = new Color(1, .75f, .65f, 1);
+    private static final Color HEAVY_WARNING = new Color(1, .30f, .20f, 1);
     private static final Color DASH_TRAIL = new Color(.82f, .58f, .31f, .25f);
     private final Color smoke = new Color();
     private GameWorld displayedWorld;
@@ -45,6 +40,9 @@ public final class WorldRenderer implements Disposable {
     private float playerDeath, cameraX, entranceClosure, exitClosure;
     private final RoomTransition room = new RoomTransition();
     private final EnclosedAreaRenderer enclosed;
+    private final PassageRenderer passages;
+    private final EnvironmentRenderer environment;
+    private final EnemyAttackRenderer enemyAttacks;
     private final TemplarDeathAnimation templarDeath;
     private final AngelReleaseAnimation angels;
 
@@ -67,6 +65,9 @@ public final class WorldRenderer implements Disposable {
         this.level = level;
         transition = new SceneryTransition(level.definition());
         enclosed = new EnclosedAreaRenderer(assets, level);
+        passages = new PassageRenderer(assets, level);
+        environment = new EnvironmentRenderer(assets, level);
+        enemyAttacks = new EnemyAttackRenderer(assets);
         templarDeath = new TemplarDeathAnimation(assets);
         angels = new AngelReleaseAnimation(assets);
         scenery = new Texture[level.definition().regions().size()];
@@ -82,7 +83,8 @@ public final class WorldRenderer implements Disposable {
     }
 
     public void render(GameWorld world, float delta, float alpha) {
-        updateDeaths(world, delta);
+        if (world.hitStopped()) alpha = 1;
+        updateDeaths(world, world.hitStopped() ? 0 : delta);
         ScreenUtils.clear(0.035f, 0.05f, 0.08f, 1);
         viewport.apply();
         room.update(world.insideArena(), delta, world.paused());
@@ -93,6 +95,18 @@ public final class WorldRenderer implements Disposable {
         cameraX = (float) target;
         // The scene switch covers the camera cut; each interior has a stable one-screen view.
         camera.position.set(Math.round(cameraX), interior ? (float) enclosed.bottom(world) + 270 : 270, 0);
+        float impact = (float) Math.min(2.5, world.player().parryFlash() * 10);
+        if (world.player().health() > 0)
+            impact = Math.max(impact, (float) (world.player().hurtFlash() / .28 * 3));
+        for (Enemy enemy : world.enemies())
+            if (world.level().insideArena(enemy.x()) == interior && Math.abs(enemy.x() - cameraX) < 480)
+                impact = Math.max(impact, (float) Math.min(2, enemy.flash() * 14));
+        for (var effect : world.effects())
+            if (effect.kind() == br.com.thecruzader.gameplay.CombatEffect.Kind.MACE_IMPACT
+                && world.level().insideArena(effect.x()) == interior && Math.abs(effect.x() - cameraX) < 350)
+                impact = Math.max(impact, (float) (1.8 * Math.max(0, 1 - effect.age() / .14)));
+        camera.position.x += Math.round(Math.sin(world.time() * 95) * impact);
+        camera.position.y += Math.round(Math.cos(world.time() * 79) * impact * .5);
         if (!world.paused()) {
             if (world.bossDefeated()) {
                 entranceClosure = exitClosure = 1 - BossRelease.opening(world.bossReleaseElapsed());
@@ -117,6 +131,8 @@ public final class WorldRenderer implements Disposable {
             }
             drawScenery(world, left);
             enclosed.drawExterior(batch, world);
+            passages.background(batch, world, delta, left);
+            environment.background(batch, left);
         }
         batch.end();
         if (!interior) {
@@ -125,6 +141,7 @@ public final class WorldRenderer implements Disposable {
             mapRenderer.render();
         }
         batch.begin();
+        if (!interior) environment.surfaces(batch, left);
         drawObjects(world, left, interior);
         for (int i = 0; i < world.enemies().size(); i++) {
             Enemy enemy = world.enemies().get(i);
@@ -133,7 +150,10 @@ public final class WorldRenderer implements Disposable {
             if (enemy.health() > 0) drawEnemy(enemy, world.time(), alpha);
             else if (enemyDeaths[i] < 2.2f)
                 drawDeath(world, enemy.x(), enemy.y(), enemy.facing(), enemy.boss() ? 1.3f : 1,
-                        enemy.archer() ? 3 : enemy.boss() ? 2 : 1, enemyDeaths[i], true);
+                    deathRow(enemy), enemyDeaths[i], true);
+            if (enemy.flash() > 0) impactSparks(enemy.interpolatedX(alpha) + enemy.width() / 2,
+                enemy.interpolatedY(alpha) + enemy.height() / 2, enemy.impactDirection(),
+                (float) ((.14 - enemy.flash()) / .14));
         }
         for (var arrow : world.arrows()) {
             if (world.level().insideArena(arrow.x()) != interior) continue;
@@ -141,6 +161,8 @@ public final class WorldRenderer implements Disposable {
             batch.draw(assets.texture("arrow"), (float) arrow.x() - 8, (float) arrow.y() - 3,
                     8, 3, 16, 6, 1, 1, (float) arrow.angle(), 0, 0, 16, 6, false, false);
         }
+        drawOil(world, interior);
+        enemyAttacks.effects(batch, world, left, interior);
         if (world.player().health() > 0) drawPlayer(world.player(), world.time(), alpha);
         for (int i = 0; i < 30; i++) {
             float x = left + (float) ((i * 173 + world.time() * (8 + i % 7)) % 960);
@@ -148,12 +170,15 @@ public final class WorldRenderer implements Disposable {
             rect(x, y, 2, 2, DUST);
         }
         if (interior) enclosed.drawForeground(batch, world);
+        else passages.foreground(batch, left);
         if (interior) angels.draw(batch, world);
         if (world.player().health() <= 0) {
             Player player = world.player();
             double y = Math.max(floorBelow(world, player.x(), player.y()), player.y() - 725 * playerDeath * playerDeath);
             templarDeath.draw(batch, player.x(), y, player.facing(), playerDeath, left, camera.position.y - 270);
         }
+        if (world.player().health() > 0 && world.player().hurtFlash() > 0)
+            drawDamageEdges(left, camera.position.y - 270, (float) (world.player().hurtFlash() / .28));
         if (room.opacity() > 0) {
             float bottom = camera.position.y - 270;
             rect(left, bottom, 960, 540, smoke.set(0, 0, 0, room.opacity()));
@@ -280,6 +305,9 @@ public final class WorldRenderer implements Disposable {
                     rect(x, y + 8, 5, 27, WOOD_SHADOW);
                     flame(x + 2, y + 39, world.time());
                 }
+                case ARCH, SHRINE, GRAVES, DEAD_TREE, WAGON, PENNANT -> {
+                    // Architectural props are drawn by EnvironmentRenderer behind the terrain.
+                }
             }
         }
     }
@@ -292,9 +320,13 @@ public final class WorldRenderer implements Disposable {
 
     private void drawPlayer(Player p, double time, float alpha) {
         double x = p.interpolatedX(alpha), y = p.interpolatedY(alpha);
-        if (p.invulnerable() > 0 && !p.dodging() && (int) (time * 24) % 2 == 0) return;
+        boolean hurt = p.hurtFlash() > .16;
+        if (p.hurtFlash() > 0)
+            impactSparks(x + Player.WIDTH / 2, y + Player.HEIGHT / 2, -p.facing(),
+                (float) (1 - p.hurtFlash() / .28));
+        if (!hurt && p.invulnerable() > 0 && !p.dodging() && (int) (time * 24) % 2 == 0) return;
         int row =
-                p.dodging()
+            hurt ? 5 : p.dodging()
                         ? 4
                         : p.attack().running()
                                 ? 3
@@ -318,7 +350,7 @@ public final class WorldRenderer implements Disposable {
                     80,
                     p.facing());
         }
-        batch.setColor(Color.WHITE);
+        batch.setColor(hurt ? Color.SALMON : Color.WHITE);
         sprite(assets.characters[row][frame], x - 18, y - 10, 64, 80, p.facing());
         double handX = x + (p.facing() > 0 ? 29 : -1);
         double handY = y + 27;
@@ -337,15 +369,59 @@ public final class WorldRenderer implements Disposable {
 
     }
 
+    private void drawDamageEdges(float left, float bottom, float strength) {
+        for (int i = 0; i < 4; i++) {
+            float inset = i * 6;
+            Color color = smoke.set(.65f, .08f, .09f, strength * (.22f - i * .045f));
+            rect(left + inset, bottom + inset, 960 - inset * 2, 6, color);
+            rect(left + inset, bottom + 534 - inset, 960 - inset * 2, 6, color);
+            rect(left + inset, bottom + inset + 6, 6, 528 - inset * 2, color);
+            rect(left + 954 - inset, bottom + inset + 6, 6, 528 - inset * 2, color);
+        }
+    }
+
+    private int deathRow(Enemy enemy) {
+        return switch (enemy.kind()) {
+            case SENTINEL -> 1;
+            case GUARDIAN -> 2;
+            case ARCHER -> 3;
+            case SPEARMAN -> 4;
+            case SHIELD_BEARER -> 5;
+            case BRUTE -> 6;
+            case OIL_THROWER -> 7;
+        };
+    }
+
+    private TextureRegion enemyFrame(Enemy enemy, int frame) {
+        return switch (enemy.kind()) {
+            case SENTINEL -> assets.characters[6][frame];
+            case GUARDIAN -> assets.characters[7][frame];
+            case ARCHER -> assets.characters[8][frame];
+            case SPEARMAN -> assets.spearman[frame];
+            case SHIELD_BEARER -> assets.shieldBearer[frame];
+            case BRUTE -> assets.brute[frame];
+            case OIL_THROWER -> assets.oilThrower[frame];
+        };
+    }
+
+    private void drawOil(GameWorld world, boolean interior) {
+        for (var pot : world.oilPots()) {
+            if (world.level().insideArena(pot.x()) != interior) continue;
+            enemyAttacks.oil(batch, pot, world.time());
+        }
+    }
+
     private void drawEnemy(Enemy e, double time, float alpha) {
         double x = e.interpolatedX(alpha), y = e.interpolatedY(alpha);
         boolean warning = e.state() == Enemy.State.WINDUP
                 || e.state() == Enemy.State.DASH_WINDUP || e.state() == Enemy.State.JUMP_WINDUP;
+        boolean heavy = e.heavyAttack();
         batch.setColor(
-                e.flash() > 0 ? Color.SALMON : warning ? WINDUP : Color.WHITE);
+            e.flash() > 0 ? Color.SALMON : warning && heavy ? HEAVY_WARNING : warning ? WINDUP : Color.WHITE);
         float scale = e.boss() ? 1.3f : 1;
+        boolean moving = Math.abs(e.x() - e.interpolatedX(0)) + Math.abs(e.y() - e.interpolatedY(0)) > .01;
         sprite(
-                assets.characters[e.archer() ? 8 : e.boss() ? 7 : 6][(int) (time * 7) % 8],
+            enemyAttacks.pose(e, enemyFrame(e, moving ? (int) (time * 7) % 8 : 0)),
                 x - 17,
                 y - 10,
                 64 * scale,
@@ -359,8 +435,8 @@ public final class WorldRenderer implements Disposable {
                 3,
                 GameAssets.GOLD);
         if (warning) {
-            rect(x + 12, y + (e.boss() ? 102 : 82), 4, 12, WARNING);
-            rect(x + 12, y + (e.boss() ? 97 : 77), 4, 3, WARNING);
+            rect(x + 12, y + (e.boss() ? 102 : 82), 4, 12, heavy ? HEAVY_WARNING : WARNING);
+            rect(x + 12, y + (e.boss() ? 97 : 77), 4, 3, heavy ? HEAVY_WARNING : WARNING);
         }
         if (e.state() == Enemy.State.NOTICE) {
             rect(x + 10, y + 88, 8, 2, GameAssets.GOLD);
@@ -368,20 +444,27 @@ public final class WorldRenderer implements Disposable {
             rect(x + 12, y + 80, 6, 2, GameAssets.GOLD);
             rect(x + 12, y + 76, 2, 2, GameAssets.GOLD);
         }
-        float angle = switch (e.state()) {
-            case WINDUP, DASH_WINDUP, JUMP_WINDUP -> 90;
-            case ATTACK, RECOVER, DASH -> e.facing() > 0 ? 0 : 180;
-            default -> -90;
-        };
-        if (e.archer()) {
-            batch.setColor(Color.WHITE);
-            sprite(assets.bow,
-                    e.facing() > 0 ? x + e.width() - 6 : x - 14,
-                    y + 13, 20, 36, e.facing());
-            if (warning) rect(x + (e.facing() > 0 ? 22 : -8), y + 30, 18, 2,
-                    BRASS);
+        if (e.vulnerable()) rect(x, y + 99, e.width(), 3, Color.CYAN);
+        if (e.stagger() > 0) {
+            rect(x + 8, y + e.height() + 12, 3, 3, GameAssets.GOLD);
+            rect(x + 22, y + e.height() + 16, 3, 3, Color.WHITE);
+        }
+        if (e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.BRUTE
+            || e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.OIL_THROWER || e.spearman()) {
+            enemyAttacks.weapon(batch, e, x, y, time);
+            if (e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.OIL_THROWER && warning) {
+                double targetY = e.aimY() - Player.HEIGHT / 2;
+                rect(e.aimX() - 36, targetY + 1, 72, 2, WARNING);
+                rect(e.aimX() - 36, targetY + 1, 2, 7, WARNING);
+                rect(e.aimX() + 34, targetY + 1, 2, 7, WARNING);
+            }
+        } else if (e.archer()) {
+            enemyAttacks.bow(batch, e, x, y);
         } else {
-            sword(e.facing() > 0 ? x + e.width() : x, y + 27, angle, scale, true);
+            enemyAttacks.sword(batch, e, x, y, scale);
+        }
+        if (e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.SHIELD_BEARER) {
+            enemyAttacks.shield(batch, e, x, y);
         }
         if (e.boss()) {
             batch.setColor(Color.WHITE);
@@ -406,6 +489,18 @@ public final class WorldRenderer implements Disposable {
         if (p.blockFlash() > 0) {
             rect(x - 4, y + 31, 3, 7, Color.WHITE);
             rect(x + 25, y + 14, 6, 3, GameAssets.GOLD);
+        }
+        if (p.parryFlash() > 0) impactSparks(x + 12, y + 22, p.facing(),
+            (float) ((.25 - p.parryFlash()) / .25));
+    }
+
+    private void impactSparks(double x, double y, int direction, float progress) {
+        float distance = 4 + progress * 24;
+        for (int i = 0; i < 5; i++) {
+            double angle = direction == 0 ? Math.PI / 2 + (i - 2) * .35
+                : (direction > 0 ? 0 : Math.PI) + (i - 2) * .4;
+            rect(x + Math.cos(angle) * distance, y + Math.sin(angle) * distance,
+                i % 2 == 0 ? 4 : 2, 2, i % 2 == 0 ? GameAssets.GOLD : Color.WHITE);
         }
     }
 

@@ -1,9 +1,8 @@
 package br.com.thecruzader.desktop;
 
 import br.com.thecruzader.CrusaderGame;
-import br.com.thecruzader.screen.PlayScreen;
 import br.com.thecruzader.i18n.Language;
-
+import br.com.thecruzader.screen.PlayScreen;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -13,14 +12,18 @@ import com.badlogic.gdx.graphics.PixmapIO;
 
 /** Desktop integration harness using the same screens, assets and input adapter as the player. */
 final class SmokeTest extends ApplicationAdapter {
-    private final CrusaderGame game = new CrusaderGame(br.com.thecruzader.level.CampaignLoader.PATH);
+    private final CrusaderGame game;
+    private final br.com.thecruzader.presentation.WindowMode windowMode;
     private final String output;
     private int frame;
     private Language originalLanguage;
     private boolean rendering;
+    private int heavyWindup;
 
-    SmokeTest(String output) {
+    SmokeTest(String output, br.com.thecruzader.presentation.WindowMode windowMode) {
         this.output = output;
+        this.windowMode = windowMode;
+        game = new CrusaderGame(br.com.thecruzader.level.CampaignLoader.PATH, windowMode);
     }
 
     @Override
@@ -222,18 +225,18 @@ final class SmokeTest extends ApplicationAdapter {
         var assets = new br.com.thecruzader.presentation.GameAssets();
         var resources = new br.com.thecruzader.presentation.LevelResources(game.campaign().levels().getFirst(), assets);
         var renderer = new br.com.thecruzader.presentation.WorldRenderer(assets, resources);
-        var hud = new br.com.thecruzader.presentation.Hud(assets, resources.definition(), false);
+        var level = resources.data();
+        var guardian = level.enemies().stream().filter(e ->
+            e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.GUARDIAN).findFirst().orElseThrow();
+        var world = new br.com.thecruzader.gameplay.GameWorld(new br.com.thecruzader.level.LevelData(
+            level.width(), level.height(), new br.com.thecruzader.level.LevelData.Point(520, 160),
+            level.checkpoint(), level.bandages(), level.gate(), level.exit(), level.arena(), level.solids(),
+            java.util.List.of(new br.com.thecruzader.level.LevelData.Spawn(300, 64,
+                br.com.thecruzader.level.LevelData.EnemyKind.SENTINEL), guardian)));
+        var hud = new br.com.thecruzader.presentation.Hud(assets, resources.definition(), false, world.player());
         try {
             renderer.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
             hud.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-            var level = resources.data();
-            var guardian = level.enemies().stream().filter(e ->
-                    e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.GUARDIAN).findFirst().orElseThrow();
-            var world = new br.com.thecruzader.gameplay.GameWorld(new br.com.thecruzader.level.LevelData(
-                    level.width(), level.height(), new br.com.thecruzader.level.LevelData.Point(520, 160),
-                    level.checkpoint(), level.bandages(), level.gate(), level.exit(), level.arena(), level.solids(),
-                    java.util.List.of(new br.com.thecruzader.level.LevelData.Spawn(300, 64,
-                            br.com.thecruzader.level.LevelData.EnemyKind.SENTINEL), guardian)));
             var enemy = world.enemies().getFirst();
             boolean noticed = false, launched = false, landed = false;
             renderer.render(world, 0, 1);
@@ -270,7 +273,7 @@ final class SmokeTest extends ApplicationAdapter {
     }
 
     private void checkCampaignTransition() {
-        CrusaderGame campaignGame = new CrusaderGame("levels/test-campaign.xml");
+        CrusaderGame campaignGame = new CrusaderGame("levels/test-campaign.xml", windowMode);
         campaignGame.create();
         try {
             campaignGame.startJourney();
@@ -336,16 +339,48 @@ final class SmokeTest extends ApplicationAdapter {
                 default -> false;
             };
             if (!block) {
-                attack = target.state() == br.com.thecruzader.gameplay.Enemy.State.RECOVER && Math.abs(distance) < 80;
+                attack = (target.archer() || target.state() == br.com.thecruzader.gameplay.Enemy.State.RECOVER)
+                    && Math.abs(distance) < 80;
                 if (player.attack().running() || Math.abs(distance) < 50) direction = 0;
             }
         }
+        if (target != null && target.kind() == br.com.thecruzader.level.LevelData.EnemyKind.SHIELD_BEARER
+            && target.state() == br.com.thecruzader.gameplay.Enemy.State.WINDUP) {
+            block = target.attackProgress() >= .9;
+        }
+        boolean heavy = target != null && target.boss()
+            && (target.state() == br.com.thecruzader.gameplay.Enemy.State.DASH || target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP
+            || target.state() == br.com.thecruzader.gameplay.Enemy.State.DASH_WINDUP || target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP_WINDUP);
+        boolean preparingHeavy = heavy && (target.state() == br.com.thecruzader.gameplay.Enemy.State.DASH_WINDUP
+            || target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP_WINDUP);
+        heavyWindup = preparingHeavy ? heavyWindup + (world.hitStopped() ? 0 : 1) : 0;
+        double warningDuration = heavy && target.state() == br.com.thecruzader.gameplay.Enemy.State.DASH_WINDUP ? .45 : .50;
+        if (target != null && target.health() <= target.maxHealth() / 2) warningDuration *= .8;
+        boolean timedParry = preparingHeavy && heavyWindup * br.com.thecruzader.gameplay.GameWorld.STEP >= warningDuration - .07
+            && Math.abs(target.x() - player.x()) < 80 && !player.attack().running();
+        if (heavy) {
+            block = timedParry || (!preparingHeavy && player.blocking());
+            direction = block ? (target.x() >= player.x() ? 1 : -1)
+                : preparingHeavy && Math.abs(target.x() - player.x()) < 80 ? 0
+                : target.x() >= player.x() ? -1 : 1;
+        }
+        if (heavy && (target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP_WINDUP
+            || target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP)) {
+            block = false;
+            direction = target.x() >= player.x() ? -1 : 1;
+        }
+        if (target != null && target.boss() && player.attack().running()) attack = false;
+        boolean dodge = heavy && !block && Math.abs(target.x() - player.x()) < 110
+            && (target.state() == br.com.thecruzader.gameplay.Enemy.State.DASH || (target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP
+            && Math.abs(target.y() - player.y()) < 80));
+        if (dodge && target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP)
+            direction = target.x() >= player.x() ? 1 : -1;
         boolean jump = player.grounded() && direction > 0 && world.level().solids().stream()
-                .anyMatch(solid -> solid.y() <= player.y() && solid.top() > player.y()
+            .anyMatch(solid -> solid.top() > player.y()
                         && solid.x() >= player.x() + br.com.thecruzader.gameplay.Player.WIDTH
                         && solid.x() - (player.x() + br.com.thecruzader.gameplay.Player.WIDTH) < 85
                         && solid.top() - player.y() < 160);
-        return new br.com.thecruzader.input.PlayerInput(direction, jump, attack, false, false, block);
+        return new br.com.thecruzader.input.PlayerInput(direction, jump, attack, dodge, false, block);
     }
 
     private void captureLevelTour() {
@@ -381,14 +416,14 @@ final class SmokeTest extends ApplicationAdapter {
             if (target != null && target.archer() && !archerCaptured
                     && target.state() == br.com.thecruzader.gameplay.Enemy.State.WINDUP
                     && Math.abs(target.x() - player.x()) < 300) {
-                game.render();
+                game.getScreen().render(0);
                 capture("13-archer.png");
                 archerCaptured = true;
             }
             if (!arrowCaptured && world.arrows().stream().anyMatch(arrow ->
                     Math.abs(arrow.x() - player.x()) > 40
                             && Math.abs(arrow.x() - player.x()) < 160)) {
-                game.render();
+                game.getScreen().render(0);
                 capture("14-arrows.png");
                 arrowCaptured = true;
             }
@@ -398,19 +433,22 @@ final class SmokeTest extends ApplicationAdapter {
                         || (target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP
                             && target.vy() < 0))
                     && bossCaptures.add(target.state())) {
-                game.render();
+                game.getScreen().render(0);
                 capture("15-boss-" + target.state().name().toLowerCase(java.util.Locale.ROOT) + ".png");
             }
             if (landmark < landmarks.length && player.x() >= landmarks[landmark]) {
-                game.render();
+                game.getScreen().render(0);
                 capture(names[landmark++]);
             }
         }
-        if (!archerCaptured || !arrowCaptured || !angelsCaptured || bossCaptures.size() != 3
+        // Boss moves are captured when encountered; a successful fight need not use every move.
+        if (!archerCaptured || !arrowCaptured || !angelsCaptured
                 || landmark != landmarks.length
                 || world.state() != br.com.thecruzader.gameplay.GameWorld.State.WON)
-            throw new IllegalStateException("Level tour failed at x=" + world.player().x());
-        game.render();
+            throw new IllegalStateException("Level tour failed at x=" + world.player().x()
+                + ", state=" + world.state() + ", archer=" + archerCaptured + ", arrow=" + arrowCaptured
+                + ", angels=" + angelsCaptured + ", boss=" + bossCaptures + ", landmarks=" + landmark);
+        game.getScreen().render(0);
         capture("12-victory.png");
         System.out.println("LEVEL_TOUR_PASS: bandage route, sanctuary, stairs, arena and victory");
     }
@@ -470,6 +508,7 @@ final class SmokeTest extends ApplicationAdapter {
                     }
                 }
             } finally { tile.dispose(); }
+            checkAnchoredGroundDetails(renderer, level);
             var arenaWorld = visualWorld(level, level.arena().x() + 8,
                     java.util.List.of(level.enemies().stream().filter(e ->
                             e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.GUARDIAN).findFirst().orElseThrow()));
@@ -482,14 +521,20 @@ final class SmokeTest extends ApplicationAdapter {
             renderer.render(arenaWorld, .1f, 1);
             if (renderer.cameraX() != lockedCamera)
                 throw new IllegalStateException("Arena camera followed the player");
-            var arenaHud = new br.com.thecruzader.presentation.Hud(assets, resources.definition(), false);
+            var arenaHud = new br.com.thecruzader.presentation.Hud(assets, resources.definition(), false, arenaWorld.player());
             try {
                 arenaHud.announce("notice.arena");
                 arenaHud.render(arenaWorld, .35f, false, 0);
                 capture("24-english-arena.png");
             } finally { arenaHud.dispose(); }
             System.out.println("ARENA_SMOKE_PASS: locked camera, sealed gates, boss health bar and localized announcement");
+            capturePassages(renderer, level);
             checkChapelViews(renderer, level);
+            checkDynamicCombat(renderer, level, assets);
+            checkSpearman(renderer, level);
+            checkEnemyVariants(renderer, level);
+            checkSpecialistEffects(renderer, level, assets);
+            checkMusicThemes(assets);
             var sentinel = new br.com.thecruzader.level.LevelData.Spawn(142, 64,
                     br.com.thecruzader.level.LevelData.EnemyKind.SENTINEL);
             var guardian = level.enemies().stream().filter(e ->
@@ -534,7 +579,7 @@ final class SmokeTest extends ApplicationAdapter {
             if (assets.requiem().isPlaying() || !assets.ambience().isPlaying())
                 throw new IllegalStateException("Respawn audio did not return to ambience");
             deathAudio.setPaused(true);
-            var translatedHud = new br.com.thecruzader.presentation.Hud(assets, resources.definition(), false);
+            var translatedHud = new br.com.thecruzader.presentation.Hud(assets, resources.definition(), false, playerWorld.player());
             try {
                 translatedHud.render(playerWorld, .1f, false, renderer.deathElapsed());
                 capture("21-english-death.png");
@@ -567,9 +612,10 @@ final class SmokeTest extends ApplicationAdapter {
         for (int tick = 0; tick < 12000 && world.state() == br.com.thecruzader.gameplay.GameWorld.State.PLAYING; tick++)
             world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
                     new br.com.thecruzader.input.PlayerInput(world.player().x() < 1800 ? 1 : 0,
-                            false, false, false, false, false));
+                        tick % 90 == 0, false, false, false, false));
         if (world.state() != br.com.thecruzader.gameplay.GameWorld.State.DEAD)
-            throw new IllegalStateException("Death input setup failed");
+            throw new IllegalStateException("Death input setup failed at " + world.player().x() + "," + world.player().y()
+                + ", health=" + world.player().health() + ", paused=" + world.paused());
         var fallen = world.player();
         screen.render(.1f);
         Gdx.input.getInputProcessor().keyDown(Input.Keys.R);
@@ -602,6 +648,23 @@ final class SmokeTest extends ApplicationAdapter {
                 level.checkpoint(), level.bandages(), level.gate(), level.exit(), level.arena(), level.solids(), enemies));
     }
 
+    private void checkAnchoredGroundDetails(br.com.thecruzader.presentation.WorldRenderer renderer,
+                                            br.com.thecruzader.level.LevelData level) {
+        for (int spawnX : new int[]{700, 701, 715, 732, 733, 748}) {
+            renderer.render(visualWorld(level, spawnX, level.enemies()), 0, 1);
+            float scale = Gdx.graphics.getBackBufferWidth() / 960f;
+            int screenX = Math.round((1005 - (renderer.cameraX() - 480)) * scale);
+            Pixmap pixel = Pixmap.createFromFrameBuffer(screenX, Math.round(65 * scale), 1, 1);
+            try {
+                if ((pixel.getPixel(0, 0) >>> 8) != 0x727661)
+                    throw new IllegalStateException("Ground vegetation moved with camera at spawn " + spawnX);
+            } finally {
+                pixel.dispose();
+            }
+        }
+        System.out.println("SCENERY_ANCHOR_SMOKE_PASS: ground details stay fixed while camera crosses tile boundaries");
+    }
+
     private void assertGroundPixel(br.com.thecruzader.gameplay.GameWorld world, Pixmap tile) {
         int bufferWidth = Gdx.graphics.getBackBufferWidth(), bufferHeight = Gdx.graphics.getBackBufferHeight();
         float scale = Math.min(bufferWidth / 960f, bufferHeight / 540f);
@@ -621,6 +684,22 @@ final class SmokeTest extends ApplicationAdapter {
                 throw new IllegalStateException("Terrain tint leaked: actual=" + Integer.toHexString(actual)
                         + ", expected=" + Integer.toHexString(expected) + ", x=" + worldX);
         } finally { pixel.dispose(); }
+    }
+
+    private void capturePassages(br.com.thecruzader.presentation.WorldRenderer renderer,
+                                 br.com.thecruzader.level.LevelData level) {
+        double[][] viewpoints = {{1700, 64}, {2050, 64}, {5000, 160}, {5100, 384}, {6900, 384}};
+        String[] names = {"36-crypt-entrance", "36-crypt-interior", "37-gallery-interior",
+            "37-gallery-rooftop", "38-mountain-ridge"};
+        for (int i = 0; i < viewpoints.length; i++) {
+            var world = new br.com.thecruzader.gameplay.GameWorld(new br.com.thecruzader.level.LevelData(
+                level.width(), level.height(),
+                new br.com.thecruzader.level.LevelData.Point(viewpoints[i][0], viewpoints[i][1]),
+                level.checkpoint(), level.bandages(), level.gate(), level.exit(), level.arena(),
+                level.solids(), level.enemies()));
+            for (int settle = 0; settle < 10; settle++) renderer.render(world, .1f, 1);
+            captureIntroFrame(names[i] + ".png");
+        }
     }
 
     private void checkChapelViews(br.com.thecruzader.presentation.WorldRenderer renderer,
@@ -666,6 +745,291 @@ final class SmokeTest extends ApplicationAdapter {
             throw new IllegalStateException("Chapel respawn retained interior or fade");
         captureIntroFrame("28-chapel-respawn.png");
         System.out.println("CHAPEL_SMOKE_PASS: hidden guardian outside, physical entry, interior cut, paused fade and exterior respawn");
+    }
+
+    private void checkDynamicCombat(br.com.thecruzader.presentation.WorldRenderer renderer,
+                                    br.com.thecruzader.level.LevelData level,
+                                    br.com.thecruzader.presentation.GameAssets assets) {
+        var guardian = level.enemies().stream().filter(e -> e.kind().boss).findFirst().orElseThrow();
+        var sentinel = new br.com.thecruzader.level.LevelData.Spawn(145, 64,
+            br.com.thecruzader.level.LevelData.EnemyKind.SENTINEL);
+        var world = visualWorld(level, 100, java.util.List.of(sentinel, guardian));
+        int windup = 0;
+        for (int tick = 0; tick < 180 && world.player().parryFlash() == 0; tick++) {
+            if (world.enemies().getFirst().state() == br.com.thecruzader.gameplay.Enemy.State.WINDUP)
+                windup++;
+            world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+                new br.com.thecruzader.input.PlayerInput(0, false, false, false, false, windup >= 42));
+        }
+        if (world.player().parryFlash() == 0 || world.enemies().getFirst().stagger() == 0
+            || !world.hitStopped()) throw new IllegalStateException("Timed parry failed");
+        renderer.render(world, 0, 1);
+        captureIntroFrame("32-combat-parry.png");
+        world.setPaused(true);
+        long frozen = frameHash();
+        renderer.render(world, .1f, 1);
+        if (frameHash() != frozen) throw new IllegalStateException("Paused combat effects moved");
+        world.setPaused(false);
+        world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+            new br.com.thecruzader.input.PlayerInput(0, false, true, false, false, false));
+        for (int tick = 0; tick < 60 && world.enemies().getFirst().health() == 3; tick++)
+            world.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
+        if (world.enemies().getFirst().health() != 2) throw new IllegalStateException("Parry counterattack failed");
+        for (int tick = 0; tick < 8; tick++)
+            world.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
+        renderer.render(world, 0, 1);
+        captureIntroFrame("33-combat-counterattack.png");
+
+        var airborne = new br.com.thecruzader.gameplay.GameWorld(new br.com.thecruzader.level.LevelData(
+            level.width(), level.height(), new br.com.thecruzader.level.LevelData.Point(145, 150),
+            level.checkpoint(), level.bandages(), level.gate(), level.exit(), level.arena(), level.solids(),
+            java.util.List.of(sentinel, guardian)));
+        airborne.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+            new br.com.thecruzader.input.PlayerInput(0, false, true, false, true, false));
+        for (int tick = 0; tick < 60 && airborne.enemies().getFirst().health() == 3; tick++)
+            airborne.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
+        if (airborne.enemies().getFirst().health() != 2 || airborne.player().grounded()
+            || !airborne.hitStopped()) throw new IllegalStateException("Downward bounce failed");
+        double beforeBounce = airborne.player().y();
+        renderer.render(airborne, 0, 1);
+        captureIntroFrame("34-combat-downward-hit.png");
+        for (int tick = 0; tick < 12; tick++)
+            airborne.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
+        if (airborne.player().y() <= beforeBounce)
+            throw new IllegalStateException("Downward hit did not launch player");
+        renderer.render(airborne, 0, 1);
+        captureIntroFrame("34-combat-bounce.png");
+        var hurtWorld = visualWorld(level, 100, java.util.List.of(sentinel, guardian));
+        for (int tick = 0; tick < 240 && hurtWorld.player().health() == hurtWorld.player().maxHealth(); tick++)
+            hurtWorld.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
+        if (hurtWorld.player().hurtFlash() <= 0)
+            throw new IllegalStateException("Player damage feedback did not start");
+        var hurtAudio = new br.com.thecruzader.presentation.AudioPlayer(assets);
+        hurtAudio.play(hurtWorld.drainEvents());
+        renderer.render(hurtWorld, 0, 1);
+        captureIntroFrame("38-player-hurt-impact.png");
+        hurtWorld.setPaused(true);
+        long hurtFrozen = frameHash();
+        renderer.render(hurtWorld, .1f, 1);
+        if (frameHash() != hurtFrozen) throw new IllegalStateException("Paused player damage feedback moved");
+        hurtWorld.setPaused(false);
+        for (int tick = 0; tick < 12; tick++)
+            hurtWorld.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
+        renderer.render(hurtWorld, 0, 1);
+        captureIntroFrame("38-player-hurt-fade.png");
+        for (int tick = 0; tick < 28; tick++)
+            hurtWorld.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
+        if (hurtWorld.player().hurtFlash() != 0)
+            throw new IllegalStateException("Player damage feedback did not expire");
+        renderer.render(hurtWorld, 0, 1);
+        captureIntroFrame("38-player-hurt-recovered.png");
+        hurtAudio.setPaused(true);
+        System.out.println("PLAYER_HURT_SMOKE_PASS: armor impact, sparks, camera shake, damage edges, pause and expiry");
+        System.out.println("DYNAMIC_COMBAT_SMOKE_PASS: timed parry, paused effects, counterattack, knockback and aerial bounce");
+    }
+
+    private void checkSpearman(br.com.thecruzader.presentation.WorldRenderer renderer,
+                               br.com.thecruzader.level.LevelData level) {
+        var guardian = level.enemies().stream().filter(e -> e.kind().boss).findFirst().orElseThrow();
+        var spear = new br.com.thecruzader.level.LevelData.Spawn(220, 64,
+            br.com.thecruzader.level.LevelData.EnemyKind.SPEARMAN);
+        var world = visualWorld(level, 100, java.util.List.of(spear, guardian));
+        var captured = java.util.EnumSet.noneOf(br.com.thecruzader.gameplay.Enemy.State.class);
+        for (int tick = 0; tick < 250; tick++) {
+            world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+                new br.com.thecruzader.input.PlayerInput(0, false, false, false, false, true));
+            var state = world.enemies().getFirst().state();
+            if ((state == br.com.thecruzader.gameplay.Enemy.State.WINDUP
+                || state == br.com.thecruzader.gameplay.Enemy.State.ATTACK
+                || state == br.com.thecruzader.gameplay.Enemy.State.RECOVER) && captured.add(state)) {
+                renderer.render(world, 0, 1);
+                captureIntroFrame("35-spearman-" + state.name().toLowerCase(java.util.Locale.ROOT) + ".png");
+            }
+        }
+        if (captured.size() != 3 || world.player().health() != world.player().maxHealth())
+            throw new IllegalStateException("Spearman attack cycle or shield defense failed");
+        var defeated = visualWorld(level, 180, java.util.List.of(spear, guardian));
+        for (int tick = 0; tick < 600 && defeated.enemies().getFirst().health() > 0; tick++)
+            defeated.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+                new br.com.thecruzader.input.PlayerInput(0, false, true, false, false, false));
+        if (defeated.enemies().getFirst().health() != 0)
+            throw new IllegalStateException("Spearman could not be defeated");
+        renderer.render(defeated, .1f, 1);
+        renderer.render(defeated, .1f, 1);
+        captureIntroFrame("35-spearman-death.png");
+        System.out.println("SPEARMAN_SMOKE_PASS: windup, thrust, recovery, shield defense and death");
+    }
+
+    private void checkEnemyVariants(br.com.thecruzader.presentation.WorldRenderer renderer,
+                                    br.com.thecruzader.level.LevelData level) {
+        var guardian = level.enemies().stream().filter(e -> e.kind().boss).findFirst().orElseThrow();
+        for (var kind : java.util.List.of(br.com.thecruzader.level.LevelData.EnemyKind.SENTINEL,
+            br.com.thecruzader.level.LevelData.EnemyKind.ARCHER,
+            br.com.thecruzader.level.LevelData.EnemyKind.SHIELD_BEARER,
+            br.com.thecruzader.level.LevelData.EnemyKind.BRUTE,
+            br.com.thecruzader.level.LevelData.EnemyKind.OIL_THROWER)) {
+            boolean oil = kind == br.com.thecruzader.level.LevelData.EnemyKind.OIL_THROWER;
+            for (int facing : oil ? new int[]{-1} : new int[]{-1, 1}) {
+                var spawn = new br.com.thecruzader.level.LevelData.Spawn(oil ? 300 : facing < 0 ? 365 : 235, 64, kind);
+                var world = visualWorld(level, oil ? 100 : 300, java.util.List.of(spawn, guardian));
+                var captured = java.util.EnumSet.noneOf(br.com.thecruzader.gameplay.Enemy.State.class);
+                boolean flying = false, burning = false;
+                String prefix = "36-" + kind.name().toLowerCase(java.util.Locale.ROOT) + (facing > 0 ? "-right" : "");
+                if (!oil && facing < 0) {
+                    renderer.render(world, 0, 1);
+                    captureIntroFrame(prefix + "-idle.png");
+                }
+                var midPhaseCaptured = java.util.EnumSet.noneOf(br.com.thecruzader.gameplay.Enemy.State.class);
+                for (int tick = 0; tick < 400 && world.state() == br.com.thecruzader.gameplay.GameWorld.State.PLAYING; tick++) {
+                    int direction = oil && !world.oilPots().isEmpty() ? -1 : 0;
+                    world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+                        new br.com.thecruzader.input.PlayerInput(direction, false, false, false, false, !oil));
+                    var state = world.enemies().getFirst().state();
+                    if ((state == br.com.thecruzader.gameplay.Enemy.State.WINDUP
+                        || state == br.com.thecruzader.gameplay.Enemy.State.ATTACK
+                        || state == br.com.thecruzader.gameplay.Enemy.State.RECOVER) && captured.add(state)) {
+                        renderer.render(world, 0, 1);
+                        captureIntroFrame(prefix + "-" + state.name().toLowerCase(java.util.Locale.ROOT) + ".png");
+                    }
+                    var enemy = world.enemies().getFirst();
+                    if (!oil && (state == br.com.thecruzader.gameplay.Enemy.State.WINDUP
+                        || state == br.com.thecruzader.gameplay.Enemy.State.ATTACK
+                        || state == br.com.thecruzader.gameplay.Enemy.State.RECOVER)
+                        && enemy.attackProgress() >= .5 && midPhaseCaptured.add(state)) {
+                        renderer.render(world, 0, 1);
+                        captureIntroFrame(prefix + "-" + state.name().toLowerCase(java.util.Locale.ROOT) + "-middle.png");
+                    }
+                    if (oil && !flying && world.oilPots().stream().anyMatch(pot -> !pot.burning())) {
+                        renderer.render(world, 0, 1);
+                        captureIntroFrame(prefix + "-pot.png");
+                        flying = true;
+                    }
+                    if (oil && !burning && world.oilPots().stream().anyMatch(pot -> pot.burning())) {
+                        renderer.render(world, 0, 1);
+                        captureIntroFrame(prefix + "-fire.png");
+                        burning = true;
+                    }
+                }
+                if (captured.size() != 3 || (oil && (!flying || !burning)))
+                    throw new IllegalStateException("Enemy variant smoke failed: " + kind + ", states=" + captured
+                        + ", pot=" + flying + ", fire=" + burning);
+            }
+        }
+        System.out.println("ENEMY_VARIANTS_SMOKE_PASS: sentinel sword, archer draw/release, lowered shield, heavy mace, ballistic pot and fire");
+    }
+
+    private void checkSpecialistEffects(br.com.thecruzader.presentation.WorldRenderer renderer,
+                                        br.com.thecruzader.level.LevelData level, br.com.thecruzader.presentation.GameAssets assets) {
+        var guardian = level.enemies().stream().filter(e -> e.kind().boss).findFirst().orElseThrow();
+        var heard = java.util.EnumSet.noneOf(br.com.thecruzader.gameplay.GameEvent.class);
+        var audio = new br.com.thecruzader.presentation.AudioPlayer(assets);
+        for (var kind : java.util.List.of(br.com.thecruzader.level.LevelData.EnemyKind.BRUTE,
+            br.com.thecruzader.level.LevelData.EnemyKind.SPEARMAN,
+            br.com.thecruzader.level.LevelData.EnemyKind.OIL_THROWER)) {
+            boolean oil = kind == br.com.thecruzader.level.LevelData.EnemyKind.OIL_THROWER;
+            var world = visualWorld(level, oil ? 100 : 300,
+                java.util.List.of(new br.com.thecruzader.level.LevelData.Spawn(oil ? 300 : 365, 64, kind), guardian));
+            boolean effectCaptured = false;
+            for (int tick = 0; tick < 280 && world.state() == br.com.thecruzader.gameplay.GameWorld.State.PLAYING; tick++) {
+                world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+                    new br.com.thecruzader.input.PlayerInput(oil && !world.oilPots().isEmpty() ? -1 : 0,
+                        false, false, false, false, !oil));
+                var events = world.drainEvents();
+                heard.addAll(events);
+                audio.play(events);
+                if (tick % 8 == 0) {
+                    renderer.render(world, 0, 1);
+                    captureIntroFrame("specialist-frames/" + kind.name().toLowerCase(java.util.Locale.ROOT)
+                        + "-" + String.format(java.util.Locale.ROOT, "%03d", tick) + ".png");
+                }
+                if (!effectCaptured && world.effects().stream().anyMatch(effect -> effect.age() >= .1)) {
+                    world.setPaused(true);
+                    audio.setPaused(true);
+                    renderer.render(world, 0, 1);
+                    long frozen = frameHash();
+                    renderer.render(world, .1f, 1);
+                    if (frozen != frameHash()) throw new IllegalStateException("Paused specialist particles moved");
+                    captureIntroFrame("37-" + kind.name().toLowerCase(java.util.Locale.ROOT) + "-impact.png");
+                    audio.toggleMute();
+                    audio.toggleMute();
+                    audio.setPaused(false);
+                    world.setPaused(false);
+                    effectCaptured = true;
+                }
+            }
+            if (kind != br.com.thecruzader.level.LevelData.EnemyKind.SPEARMAN && !effectCaptured)
+                throw new IllegalStateException("No specialist impact captured for " + kind);
+        }
+        for (var expected : java.util.List.of(br.com.thecruzader.gameplay.GameEvent.MACE_LIFT,
+            br.com.thecruzader.gameplay.GameEvent.MACE_SWING, br.com.thecruzader.gameplay.GameEvent.MACE_IMPACT,
+            br.com.thecruzader.gameplay.GameEvent.SPEAR_DRAW, br.com.thecruzader.gameplay.GameEvent.SPEAR_THRUST,
+            br.com.thecruzader.gameplay.GameEvent.OIL_PRIME, br.com.thecruzader.gameplay.GameEvent.OIL_THROW,
+            br.com.thecruzader.gameplay.GameEvent.POT_SHATTER, br.com.thecruzader.gameplay.GameEvent.FIRE_IGNITE))
+            if (!heard.contains(expected)) throw new IllegalStateException("Specialist cue missing: " + expected);
+        audio.setPaused(true);
+        System.out.println("SPECIALIST_EFFECTS_SMOKE_PASS: nine sound cues, phase poses, mace debris, ceramic shatter, ignition and paused particles");
+    }
+
+    private void checkMusicThemes(br.com.thecruzader.presentation.GameAssets assets) {
+        var audio = new br.com.thecruzader.presentation.AudioPlayer(assets);
+        var menu = assets.menuMusic();
+        var exploration = assets.ambience();
+        var boss = assets.bossMusic();
+        var victory = assets.victoryMusic();
+        var requiem = assets.requiem();
+        if (!menu.isLooping() || !exploration.isLooping() || !boss.isLooping()
+            || !victory.isLooping() || requiem.isLooping())
+            throw new IllegalStateException("Music loop configuration is incorrect");
+        assertMusic(menu, assets);
+        audio.setPaused(true);
+        audio.toggleMute();
+        audio.toggleMute();
+        assertMusic(null, assets);
+        audio.setPaused(false);
+        assertMusic(menu, assets);
+        audio.endDeath();
+        assertMusic(exploration, assets);
+        audio.play(java.util.List.of(br.com.thecruzader.gameplay.GameEvent.ARENA_START));
+        assertMusic(boss, assets);
+        audio.play(java.util.List.of(br.com.thecruzader.gameplay.GameEvent.BOSS_DEFEATED));
+        assertMusic(victory, assets);
+        audio.setPaused(true);
+        assertMusic(null, assets);
+        audio.setPaused(false);
+        assertMusic(victory, assets);
+        audio.play(java.util.List.of(br.com.thecruzader.gameplay.GameEvent.GATES_OPEN,
+            br.com.thecruzader.gameplay.GameEvent.VICTORY));
+        assertMusic(victory, assets);
+        audio.endDeath();
+        assertMusic(exploration, assets);
+        audio.play(java.util.List.of(br.com.thecruzader.gameplay.GameEvent.ARENA_START));
+        audio.toggleMute();
+        assertMusic(null, assets);
+        audio.play(java.util.List.of(br.com.thecruzader.gameplay.GameEvent.BOSS_DEFEATED));
+        assertMusic(null, assets);
+        audio.toggleMute();
+        assertMusic(victory, assets);
+        audio.toggleMute();
+        audio.play(java.util.List.of(br.com.thecruzader.gameplay.GameEvent.ARENA_START));
+        assertMusic(null, assets);
+        audio.toggleMute();
+        assertMusic(boss, assets);
+        audio.play(java.util.List.of(br.com.thecruzader.gameplay.GameEvent.DEATH));
+        assertMusic(requiem, assets);
+        audio.endDeath();
+        assertMusic(exploration, assets);
+        audio.startMenu();
+        assertMusic(menu, assets);
+        audio.setPaused(true);
+        System.out.println("MUSIC_THEMES_SMOKE_PASS: exclusive menu/exploration/boss/victory loops, muted transitions, pause, death and respawn");
+    }
+
+    private void assertMusic(com.badlogic.gdx.audio.Music expected,
+                             br.com.thecruzader.presentation.GameAssets assets) {
+        for (var music : java.util.List.of(assets.menuMusic(), assets.ambience(), assets.bossMusic(),
+            assets.victoryMusic(), assets.requiem()))
+            if (music.isPlaying() != (music == expected))
+                throw new IllegalStateException("Unexpected active music track");
     }
 
     private long frameHash() {

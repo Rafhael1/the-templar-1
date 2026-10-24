@@ -1,17 +1,10 @@
 package br.com.thecruzader.screen;
 
 import br.com.thecruzader.CrusaderGame;
+import br.com.thecruzader.GameVersion;
 import br.com.thecruzader.gameplay.GameWorld;
-import br.com.thecruzader.presentation.LevelResources;
-import br.com.thecruzader.presentation.AudioPlayer;
-import br.com.thecruzader.presentation.GameAssets;
-import br.com.thecruzader.presentation.DisplaySettings;
-import br.com.thecruzader.presentation.WorldRenderer;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.ScreenAdapter;
+import br.com.thecruzader.presentation.*;
+import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -21,6 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,7 +40,9 @@ public final class MenuScreen extends ScreenAdapter {
             switch (key) {
                 case Input.Keys.UP, Input.Keys.W -> select(selected - 1);
                 case Input.Keys.DOWN, Input.Keys.S -> select(selected + 1);
-                case Input.Keys.ENTER, Input.Keys.SPACE -> actions.get(selected).run();
+                case Input.Keys.ENTER, Input.Keys.SPACE -> {
+                    if (!buttons.get(selected).isDisabled()) actions.get(selected).run();
+                }
                 case Input.Keys.ESCAPE -> { if (page != Page.MAIN) open(Page.MAIN); }
                 case Input.Keys.I -> { if (page == Page.MAIN) open(Page.INSTRUCTIONS); }
                 case Input.Keys.O -> { if (page == Page.MAIN) open(Page.OPTIONS); }
@@ -110,6 +106,7 @@ public final class MenuScreen extends ScreenAdapter {
         button.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                if (button.isDisabled()) return;
                 select(index);
                 action.run();
             }
@@ -141,6 +138,11 @@ public final class MenuScreen extends ScreenAdapter {
         introduction.row();
         introduction.add(label("menu.art", .65f, GameAssets.GOLD))
                 .left().padTop(20);
+        introduction.row();
+        Label version = new Label("v" + GameVersion.CURRENT, assets.skin);
+        version.setFontScale(.65f * GameAssets.UI_FONT_SCALE);
+        version.setColor(GameAssets.GOLD);
+        introduction.add(version).left().padTop(8);
         root.add(introduction).width(450).left();
         root.add().width(42);
         Table menu = card();
@@ -183,47 +185,75 @@ public final class MenuScreen extends ScreenAdapter {
     }
 
     private void buildOptions() {
+        root.pad(24);
         Table options = card();
-        options.add(label("menu.options", 2f, GameAssets.PAPER)).padBottom(12);
+        options.pad(22);
+        options.add(label("menu.options", 2f, GameAssets.PAPER)).padBottom(8);
         options.row();
-        options.add(label("options.subtitle", .85f, GameAssets.GOLD)).padBottom(26);
+        options.add(label("options.subtitle", .85f, GameAssets.GOLD)).padBottom(12);
         options.row();
         TextButton sound = button(soundText(), () -> {
             audio.toggleMute();
             buttons.get(0).setText(soundText());
         });
-        options.add(sound).width(300).height(48);
+        options.add(sound).width(300).height(40);
         options.row();
         options.add(button(displayText(), () -> {
             DisplaySettings.apply(!DisplaySettings.fullHd());
             buttons.get(1).setText(displayText());
-        })).width(300).height(48).padTop(10);
+        })).width(300).height(40).padTop(8);
         options.row();
         options.add(button(assets.texts.text("options.language"), () -> {
             int selection = selected;
             game.setLanguage(game.language().next());
             open(Page.OPTIONS);
             select(selection);
-        })).width(300).height(48).padTop(10);
+        })).width(300).height(40).padTop(8);
         options.row();
-        options.add(button(assets.texts.text("menu.back"), () -> open(Page.MAIN))).width(300).height(48).padTop(24);
+        options.add(button(fullscreenText(), game::toggleFullscreen)).width(300).height(40).padTop(8);
         options.row();
-        options.add(label("menu.navigation", .65f, GameAssets.GOLD)).padTop(20);
+        options.add(button(assets.texts.text("menu.back"), () -> open(Page.MAIN))).width(300).height(40).padTop(14);
+        options.row();
+        options.add(label("menu.navigation", .65f, GameAssets.GOLD)).padTop(12);
         root.add(options).width(430);
     }
 
     private String soundText() { return assets.texts.text(audio.muted() ? "options.soundOff" : "options.soundOn"); }
+
+    private String fullscreenText() {
+        return assets.texts.text(game.fullscreen() ? "options.fullscreenOn" : "options.fullscreenOff");
+    }
     private String displayText() { return assets.texts.format("options.resolution",
             Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight()); }
 
 
     @Override
-    public void show() { Gdx.input.setInputProcessor(new InputMultiplexer(keyboard, stage)); }
+    public void show() {
+        audio.startMenu();
+        Gdx.input.setInputProcessor(new InputMultiplexer(keyboard, stage));
+    }
+
+    @Override
+    public void pause() {
+        audio.setPaused(true);
+    }
+
+    @Override
+    public void resume() {
+        audio.setPaused(false);
+    }
 
     @Override
     public void render(float delta) {
         if (quitRequested) { Gdx.app.exit(); return; }
         if (startRequested) { game.startJourney(); return; }
+        if (page == Page.OPTIONS) {
+            boolean fullscreen = game.fullscreen();
+            buttons.get(1).setDisabled(fullscreen);
+            buttons.get(1).getColor().a = fullscreen ? .45f : 1;
+            buttons.get(1).setText(displayText());
+            buttons.get(3).setText(fullscreenText());
+        }
         renderer.render(backdrop, delta, 1);
         stage.getViewport().apply();
         stage.act(Math.min(delta, .1f));

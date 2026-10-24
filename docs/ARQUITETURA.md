@@ -8,32 +8,40 @@ Dois módulos Gradle, Java 21, libGDX 1.14.2 e orientação a objetos simples. O
 
 ## Responsabilidades
 
-| Componente | Responsabilidade |
-|---|---|
-| `CrusaderGame` | Ciclo de vida dos recursos e transição entre telas |
-| `IntroScreen` / `IntroAnimation` | Sequência/legendas/entrada e desenho das camadas animadas, respectivamente |
-| `MenuScreen` | Menu Scene2D e solicitação de início |
-| `PlayScreen` | Coordenação de entrada, simulação, apresentação e pausa |
-| `InputMapper` | Teclas para intenções; retém pressionamentos até um passo da simulação |
-| `PlayerInput` | Comando imutável para um passo: direção, salto, ataque e esquiva |
-| `GameWorld` | Estado da sessão, ordem de atualização e progressão |
-| `MovementSystem` | Velocidade, gravidade, salto, esquiva e tolerância de salto |
-| `CollisionWorld` | Resolução AABB por eixo e bloqueio físico do portão |
-| `EnemySystem` | Detecção, perseguição finita, patrulha, preparação e ataque |
-| `EnemyPerception` | Visão inicial por distância/direção/oclusão, observação e memória da última posição vista |
-| `EnemyNavigation` | Superfícies transitáveis, conexões de caminhada/salto e escolha de rota |
-| `CombatSystem` | Sobreposição de armas, dano, invulnerabilidade e um acerto por alvo |
-| `Attack` | Linha do tempo compartilhada de preparação, golpe ativo e recuperação |
-| `CampaignLoader` / `Campaign` | Registro único e ordenado de fases |
-| `LevelDefinition` | Caminho do mapa, regiões, decorações e chaves de texto por fase |
-| `Journey` | Progresso da campanha e mundo atual, sem acesso a arquivos ou gráficos |
-| `LevelLoader` / `LevelValidator` | Contrato TMX, conversão e validação do formato de fase suportado |
-| `LevelResources` | Mapa e cenários de uma tela, com descarte ao sair |
-| `LevelData` | Geometria e posições imutáveis do cenário |
-| `WorldRenderer` | Cenário, tilemap, sprites, efeitos e câmera |
-| `Hud` | Interface Scene2D e sobreposições de pausa/morte/vitória |
-| `AudioPlayer` | Eventos de jogo para áudio; mudo e pausa |
-| `GameAssets` | Carregamento e descarte único de sprites compartilhados, sons e skin |
+| Componente                                | Responsabilidade                                                                             |
+|-------------------------------------------|----------------------------------------------------------------------------------------------|
+| `CrusaderGame`                            | Ciclo de vida dos recursos e transição entre telas                                           |
+| `IntroScreen` / `IntroAnimation`          | Sequência/legendas/entrada e desenho das camadas animadas, respectivamente                   |
+| `MenuScreen`                              | Menu Scene2D e solicitação de início                                                         |
+| `PlayScreen`                              | Coordenação de entrada, simulação, apresentação e pausa                                      |
+| `InputMapper`                             | Teclas para intenções; retém pressionamentos até um passo da simulação                       |
+| `PlayerInput`                             | Comando imutável para um passo: direção, salto, ataque, esquiva, golpe para baixo e bloqueio |
+| `GameWorld`                               | Estado da sessão, ordem de atualização e progressão                                          |
+| `MovementSystem`                          | Velocidade, gravidade, salto, esquiva e tolerância de salto                                  |
+| `CollisionWorld`                          | Resolução AABB por eixo e bloqueio físico do portão                                          |
+| `GameRules`                               | Quantidade inicial/máxima de corações da sessão                                              |
+| `EnemySystem`                             | Atualização comum de cronômetros/morte e delegação ao comportamento                          |
+| `EnemyBehavior`                           | Contrato de decisões, atributos e ataques de cada tipo de inimigo                            |
+| `GroundEnemyBehavior`                     | Detecção, perseguição finita, patrulha e ciclo de ataque compartilhados                      |
+| `SentinelBehavior` / `ArcherBehavior`     | Alcance/percepção e ataque corpo a corpo ou disparo                                          |
+| `BossBehavior` / `GuardianBehavior`       | Ciclo comum do chefe e habilidades específicas do guardião                                   |
+| `EnemyPerception`                         | Visão inicial por distância/direção/oclusão, observação e memória da última posição vista    |
+| `EnemyNavigation`                         | Superfícies transitáveis, conexões de caminhada/salto e escolha de rota                      |
+| `CombatSystem`                            | Sobreposição de armas, dano, invulnerabilidade e um acerto por alvo                          |
+| `Attack`                                  | Linha do tempo compartilhada de preparação, golpe ativo e recuperação                        |
+| `CampaignLoader` / `Campaign`             | Registro único e ordenado de fases                                                           |
+| `LevelDefinition`                         | Caminho do mapa, regiões, decorações e chaves de texto por fase                              |
+| `Journey`                                 | Progresso da campanha e mundo atual, sem acesso a arquivos ou gráficos                       |
+| `LevelLoader` / `LevelValidator`          | Contrato TMX, conversão e validação do formato de fase suportado                             |
+| `LevelResources`                          | Mapa e cenários de uma tela, com descarte ao sair                                            |
+| `LevelData`                               | Geometria e posições imutáveis do cenário                                                    |
+| `WorldRenderer`                           | Cenário, tilemap, sprites, efeitos e câmera                                                  |
+| `EnvironmentRenderer` / `PassageRenderer` | Marcos, detalhes estáticos preparados por fase e apresentação de passagens                   |
+| `EnemyAttackRenderer`                     | Poses e efeitos visuais dos ataques de maça, lança e óleo                                    |
+| `CombatEffect`                            | Impactos transitórios emitidos pela simulação; não são áreas de dano                         |
+| `Hud`                                     | Interface Scene2D e sobreposições de pausa/morte/vitória                                     |
+| `AudioPlayer`                             | Eventos de jogo para áudio; mudo e pausa                                                     |
+| `GameAssets`                              | Carregamento e descarte único de sprites compartilhados, sons e skin                         |
 
 Não há ECS, contêiner de injeção, framework de IA ou motor de física adicional. A simulação usa classes concretas e referências explícitas. Os campos mutáveis das entidades são internos ao pacote de gameplay; a apresentação consulta métodos públicos.
 
@@ -53,9 +61,30 @@ Pausar limpa comandos e acumulador. Perder foco pausa a partida. A volta depende
 
 ## Combate
 
-O ataque do jogador tem 100 ms de preparação, 120 ms ativos e 220 ms de recuperação. Somente a fase ativa causa dano. O identificador do golpe evita múltiplos acertos no mesmo inimigo. Os inimigos têm preparação mais longa, sinalizada visualmente; a direção do golpe é travada quando ele começa.
+O ataque do jogador tem 100 ms de preparação, 120 ms ativos e 220 ms de recuperação. Somente a fase ativa causa dano. O
+identificador do golpe evita múltiplos acertos no mesmo inimigo. Nos últimos 120 ms de recuperação, um pressionamento
+prepara um único ataque seguinte; nos últimos 100 ms, a esquiva pode cancelar a recuperação. O golpe para baixo
+impulsiona o jogador uma vez por ataque bem-sucedido. Os inimigos têm preparação mais longa, sinalizada visualmente; a
+direção do golpe é travada quando ele começa.
 
-A esquiva dura 200 ms, oferece 240 ms de invulnerabilidade e tem recarga de 800 ms. Ataque e início de esquiva são mutuamente exclusivos. O jogador possui cinco pontos de vida. O santuário cura e define o retorno. Morrer repovoa inimigos, preservando o checkpoint e a bandagem da sessão.
+A esquiva dura 200 ms, oferece 240 ms de invulnerabilidade e tem recarga de 1400 ms. Fora do cancelamento de
+recuperação, ataque e início de esquiva são mutuamente exclusivos. O jogador possui três pontos de vida por padrão,
+definidos em `GameRules.DEFAULT`. `Player.maxHealth()` fornece a capacidade usada pela cura e pelo HUD. `Journey` recebe
+as regras da sessão e as mantém em cada fase e respawn. O santuário cura e define o retorno. Morrer repovoa inimigos,
+preservando o checkpoint e a bandagem da sessão.
+
+Erguer o escudo abre uma janela frontal de aparada de 120 ms; manter o botão pressionado não a renova. `CombatSystem`
+cancela ataques aparados e aplica atordoamento, enquanto `EnemySystem` movimenta o recuo pela colisão normal. Arqueiros
+preferem espaço antes de iniciar outro disparo. Golpes comuns não cancelam ataques comprometidos; fora deles, a reação
+dura 100 ms e não é renovada por novos acertos. Aparadas atordoam inimigos comuns por 450 ms e o guardião por 400 ms. O
+guardião tem 16 pontos de vida, não sofre recuo e concede dano dobrado somente ao primeiro contra-ataque após a aparada.
+Suas investidas e saltos atravessam bloqueio comum, têm aviso vermelho e continuam podendo ser aparados ou esquivados.
+Recuperação de golpe pesado não concede bônus de dano. A investida emenda espada abaixo de metade da vida.
+
+`GameWorld` congela a simulação por 35 ms em acertos e 55 ms em aparadas, preservando os pressionamentos recebidos
+durante esse intervalo. Pausa congela também esse relógio e respawn o limpa. `WorldRenderer` desenha faíscas,
+indicadores de atordoamento e tremor discreto de câmera a partir desse estado; `AudioPlayer` usa `PARRY` para o som da
+aparada.
 
 O salto usa gravidade e uma pequena tolerância após sair da borda (80 ms) e antes de tocar o chão (100 ms). O cenário usa retângulos sólidos, inclusive laterais e teto. O portão participa da colisão enquanto o guardião estiver vivo.
 
@@ -81,7 +110,11 @@ O próximo investimento deve ser na sensação do combate: animações próprias
 
 Os inimigos produzem uma velocidade horizontal na IA; `CollisionWorld` aplica essa intenção ao terreno e ao portão, além de gravidade durante movimento e ataque. Degraus de até 32 pixels são transpostos somente quando o inimigo está no chão e há espaço livre para o corpo na posição elevada. Paredes maiores bloqueiam a passagem.
 
-`LevelData` contém uma lista de unidades de bandagens e spawns tipados de sentinela, arqueiro e guardião. `GameWorld` mantém a coleta por índice entre respawns. `EnemySystem` produz os disparos do arqueiro e delega os movimentos do guardião a `BossSystem`; `ProjectileSystem` resolve flechas contra terreno, portão e jogador na ordem do impacto ao longo do deslocamento.
+`LevelData` contém uma lista de unidades de bandagens e spawns tipados de sentinela, arqueiro e guardião. `GameWorld`
+mantém a coleta por índice entre respawns. `EnemySystem` delega decisões ao comportamento composto em `Enemy`.
+`ArcherBehavior` produz disparos; `GuardianBehavior` define bloqueio, investida e salto sobre o ciclo comum de
+`BossBehavior`; `ProjectileSystem` resolve flechas contra terreno, portão e jogador na ordem do impacto ao longo do
+deslocamento.
 
 
 A apresentação interpola posições anteriores/atuais da simulação e arredonda a câmera para preservar a grade de pixels. `WorldRenderer` controla somente o tempo visual de morte; `TemplarDeathAnimation` desenha as doze poses do templário, oração e luz durante 3,8 segundos. `Hud` e `PlayScreen` usam essa mesma duração para exibir a mensagem e liberar o respawn. Os estados terminais da simulação permanecem congelados. `AudioPlayer` trata `DEATH` com um réquiem próprio não repetitivo, suspende a ambiência, respeita pausa/mute e impede que uma música já concluída reinicie ao retomar. Respawn/entrada numa nova tela de jogo restauram o áudio ambiente. Antes do tilemap, o batch compartilhado volta à cor branca opaca. Cores e regiões de armas são reutilizadas, objetos fora da câmera não são desenhados e colisões consultam coordenadas diretamente sem criar retângulos em cada comparação. `DisplaySettings` expressa os presets em pixels do framebuffer e compensa Retina.
@@ -108,4 +141,39 @@ Regiões têm limites e texturas explícitos; os anúncios usam uma lista de boo
 
 `EnemyNavigation` constrói um grafo das superfícies do `LevelData`, descontando paredes/tetos no espaço do corpo. Conexões usam degraus caminháveis ou arcos de salto validados contra os retângulos sólidos. A previsão inclui a integração de gravidade do passo fixo. A escolha de rota usa distâncias em saltos até a superfície do alvo e prefere a aproximação mais próxima entre conexões equivalentes. Os saltos mantêm a velocidade horizontal até a aterrissagem; ataques novos não interrompem um salto.
 
-`EnemySystem` mantém a última posição detectada, tempo de perseguição, ausência de progresso e intervalo de calma. Desistir muda o centro de patrulha para o local atual, sem teleporte ou clamp de coordenadas em torno do spawn. `CollisionWorld` continua sendo o único resolvedor físico e verifica a linha de tiro com o estado real dos portões. BossSystem conserva o comportamento do guardião. O grafo de superfícies pertence ao mundo e permanece fixo durante a sessão. Os estados de perseguição são dos inimigos e reiniciam no respawn; não há cache global.
+`GroundEnemyBehavior` coordena a última posição detectada, tempo de perseguição, ausência de progresso e intervalo de
+calma. Desistir muda o centro de patrulha para o local atual, sem teleporte ou clamp de coordenadas em torno do spawn.
+`CollisionWorld` continua sendo o único resolvedor físico e verifica a linha de tiro com o estado real dos portões.
+`GuardianBehavior` conserva as habilidades do guardião sobre o ciclo comum de `BossBehavior`. O grafo de superfícies
+pertence ao mundo e permanece fixo durante a sessão. Os estados de perseguição são dos inimigos e reiniciam no respawn;
+não há cache global.
+
+## Configurar vida e adicionar comportamentos
+
+Para alterar a vida padrão do jogo, mude `GameRules.DEFAULT = new GameRules(3)`. Uma sessão pode fornecer outra
+capacidade com `new Journey(campaign, new GameRules(7))` ou `new GameWorld(level, new GameRules(7))`. O valor deve ser
+positivo; o jogador inicia com essa vida, o santuário/respawn restauram essa capacidade e bandagens curam até dois
+pontos sem excedê-la. O HUD cria um ícone por ponto de vida máxima ao iniciar a tela.
+
+Para um novo inimigo terrestre, derive de `GroundEnemyBehavior` e defina atributos, percepção, condição de ataque,
+disparo e contato ofensivo. Para um chefe de outra fase, derive de `BossBehavior` e implemente `updateSkill`,
+`selectSkill` e o contato ofensivo. `updateSkill` retorna `true` enquanto uma habilidade ocupa o passo; `recover`
+compartilha o período de recuperação. O ciclo comum mantém percepção, aproximação, direção e atualização do ataque. O
+comportamento de cada inimigo possui sua própria instância.
+
+Registre o tipo em `LevelData.EnemyKind` (dimensões e flag `boss`), associe-o no switch exaustivo `Enemy.behaviorFor` e
+no contrato de entidades de `LevelLoader`/Tiled. Cada mapa exige exatamente um tipo marcado como chefe, cuja geometria é
+validada pelo próprio tipo. Acrescente a arte e os estados visuais em `WorldRenderer`/`GameAssets` ao introduzir um novo
+tipo. O TMX da fase escolhe qual chefe será criado; não há escolha implícita de um comportamento substituto.
+
+Essa base ainda contém decisões do primeiro chefe: `WorldRenderer` desenha o escudo do guardião para qualquer `boss()`,
+`CombatSystem` compartilha resistência ao recuo e resposta à aparada entre bosses, e `BossBehavior` aplica aceleração
+abaixo de meia vida. Há também estado de habilidades do guardião em `Enemy`. Ao integrar um segundo chefe com regras
+diferentes, separe essas políticas e a apresentação por tipo, preservando o primeiro. O teste com outro comportamento
+demonstra o ciclo compartilhado, não uma integração completa de outro boss em produção.
+
+O arquivo de [instruções para o modelo](GUIA_DE_PROMPTS_E_NOVAS_FASES.md) registra os pontos de extensão, a ficha de
+design de bosses e o fluxo para ataques especiais. As recomendações ali são direção de evolução; habilidades especiais,
+desbloqueios persistentes e novos formatos de fase ainda precisam de implementação explícita. Mantenha a entrada em
+`PlayerInput`, as regras em gameplay e os efeitos na apresentação; extraia sistemas pequenos conforme as mecânicas
+concretas forem adicionadas.

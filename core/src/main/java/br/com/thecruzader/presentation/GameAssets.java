@@ -32,10 +32,18 @@ public final class GameAssets implements Disposable {
     public final GameText texts;
     public final Texture white;
     public final TextureRegion[][] characters;
+    public static final java.util.List<String> ENEMY_SOUNDS = java.util.List.of(
+        "mace-lift", "mace-swing", "mace-impact", "spear-draw", "spear-thrust",
+        "oil-prime", "oil-throw", "pot-shatter", "fire-ignite");
+    public final TextureRegion[][] enemyAttacks;
     public final TextureRegion[][] deaths;
     public final TextureRegion[] templarDeath;
     public final TextureRegion[] angels;
     public final TextureRegion bow;
+    public final TextureRegion[] spearman;
+    public final TextureRegion spear;
+    public final TextureRegion[] shieldBearer, brute, oilThrower;
+    public final TextureRegion infantryShield, mace, oilPot;
     public final TextureRegion guardianShield;
     public final TextureRegion[] swords;
     public final TextureRegion[] shields;
@@ -48,10 +56,19 @@ public final class GameAssets implements Disposable {
 
         loadAssets();
         characters = TextureRegion.split(texture("characters"), 64, 80);
+        enemyAttacks = TextureRegion.split(texture("enemy-attacks"), 64, 80);
         deaths = TextureRegion.split(texture("deaths"), 96, 80);
         templarDeath = TextureRegion.split(texture("templar-death"), 128, 112)[0];
         angels = TextureRegion.split(texture("angels"), 96, 112)[0];
         bow = new TextureRegion(texture("bow"));
+        spearman = TextureRegion.split(texture("spearman"), 64, 80)[0];
+        spear = new TextureRegion(texture("spear"));
+        shieldBearer = TextureRegion.split(texture("shield-bearer"), 64, 80)[0];
+        brute = TextureRegion.split(texture("brute"), 64, 80)[0];
+        oilThrower = TextureRegion.split(texture("oil-thrower"), 64, 80)[0];
+        infantryShield = new TextureRegion(texture("infantry-shield"));
+        mace = new TextureRegion(texture("mace"));
+        oilPot = new TextureRegion(texture("oil-pot"));
         guardianShield = new TextureRegion(texture("guardian-shield"));
         swords = TextureRegion.split(texture("swords"), 40, 16)[0];
         shields = TextureRegion.split(texture("shields"), 24, 36)[0];
@@ -68,17 +85,22 @@ public final class GameAssets implements Disposable {
 
     private void loadAssets() {
         for (String file : new String[] {
-                "characters", "swords", "shields", "bandages", "sanctuary", "bow", "arrow",
-                "guardian-shield", "hearts", "ui-frame", "sky", "deaths", "templar-death", "angels",
+            "characters", "swords", "shields", "bandages", "sanctuary", "bow", "arrow", "spearman", "spear",
+            "shield-bearer", "brute", "oil-thrower", "infantry-shield", "mace", "oil-pot",
+            "enemy-attacks", "guardian-shield", "hearts", "ui-frame", "sky", "deaths", "templar-death", "angels", "environment",
                 "intro/chamber", "intro/pope", "intro/banner", "intro/kneeling",
                 "intro/marchers", "intro/march-sky", "intro/march-walls"
         }) {
             manager.load("sprites/" + file + ".png", Texture.class);
         }
-        for (String name : new String[] {"sword", "hit", "jump", "hurt", "chime"}) {
+        for (String name : new String[]{"sword", "hit", "jump", "hurt", "chime", "angelic"}) {
             manager.load("audio/" + name + ".wav", Sound.class);
         }
+        for (String name : ENEMY_SOUNDS) manager.load("audio/" + name + ".wav", Sound.class);
         manager.load("audio/ambience.wav", Music.class);
+        manager.load("audio/menu-chant.wav", Music.class);
+        manager.load("audio/boss-chant.wav", Music.class);
+        manager.load("audio/victory-chant.wav", Music.class);
         manager.load("audio/templar-requiem.wav", Music.class);
         manager.finishLoading();
     }
@@ -134,6 +156,18 @@ public final class GameAssets implements Disposable {
 
     public Music ambience() {
         return manager.get("audio/ambience.wav", Music.class);
+    }
+
+    public Music menuMusic() {
+        return manager.get("audio/menu-chant.wav", Music.class);
+    }
+
+    public Music bossMusic() {
+        return manager.get("audio/boss-chant.wav", Music.class);
+    }
+
+    public Music victoryMusic() {
+        return manager.get("audio/victory-chant.wav", Music.class);
     }
 
     public Music requiem() { return manager.get("audio/templar-requiem.wav", Music.class); }
