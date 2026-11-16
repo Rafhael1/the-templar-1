@@ -94,7 +94,7 @@ class JourneyTest {
         assertTrue(journey.unlockedAbilities().isEmpty());
         world.player().x = world.level().arena().x() + 8;
         world.update(GameWorld.STEP, PlayerInput.NONE);
-        world.guardian().health = 0;
+        world.boss().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         assertEquals(java.util.List.of(SpecialAbility.GOLDEN_STRIKE), journey.unlockedAbilities());
         assertEquals(GameWorld.State.PLAYING, world.state());

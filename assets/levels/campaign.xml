@@ -2,7 +2,8 @@
 <campaign>
     <level reward="GOLDEN_STRIKE" id="exiles-road" map="levels/exiles-road/maps/exiles-road.tmx" blendWidth="640"
            chapter="menu.chapter" title="menu.level" story="menu.story" travelObjective="hud.gate"
-           bossObjective="hud.guardian" bossName="hud.bossName" completionTitle="overlay.victory.title"
+           arenaNotice="notice.arena" bossObjective="hud.guardian" bossName="hud.bossName"
+           exitObjective="hud.gate" completionTitle="overlay.victory.title"
            completionText="overlay.victory.text">
     <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
       <light x="184" y="176" />
@@ -74,5 +75,59 @@
       <decoration kind="PENNANT" x="7312" y="96"/>
       <decoration kind="GRAVES" x="7450" y="160"/>
       <decoration kind="ARCH" x="7744" y="64"/>
+    </level>
+    <level id="constantinople" reward="BOW" map="levels/constantinople/maps/constantinople.tmx" blendWidth="384"
+           chapter="level.constantinople.chapter" title="level.constantinople.title" story="level.constantinople.story"
+           travelObjective="level.constantinople.travel" arenaNotice="level.constantinople.arena"
+           bossObjective="level.constantinople.fight" bossName="level.constantinople.boss"
+           exitObjective="level.constantinople.embark" completionTitle="level.constantinople.complete"
+           completionText="level.constantinople.victory">
+        <interior exterior="levels/constantinople/customs/exterior.png"
+                  background="levels/constantinople/customs/interior.png"
+                  foreground="levels/constantinople/customs/foreground.png"
+                  door="levels/constantinople/customs/door.png"
+                  doorFrame="levels/constantinople/customs/door-frame.png">
+            <light x="184" y="172"/>
+            <light x="356" y="172"/>
+            <light x="604" y="172"/>
+            <light x="776" y="172"/>
+        </interior>
+        <region start="0" texture="levels/constantinople/scenery/walls.png"
+                announcement="level.constantinople.chapter"/>
+        <region start="2048" texture="levels/constantinople/scenery/city.png" announcement="level.constantinople.city"/>
+        <region start="4352" texture="levels/constantinople/scenery/market.png"
+                announcement="level.constantinople.market"/>
+        <region start="6464" texture="levels/constantinople/scenery/harbor.png"
+                announcement="level.constantinople.harbor"/>
+        <conversation x="2504" y="64" text="level.constantinople.oath"
+                      sprite="levels/constantinople/envoys/alexios.png"/>
+        <conversation x="4544" y="64" text="level.constantinople.rivalry"
+                      sprite="levels/constantinople/envoys/delegate.png"/>
+        <conversation x="7184" y="64" text="level.constantinople.crossing"
+                      sprite="levels/constantinople/envoys/steward.png"/>
+        <decoration kind="FLAG" x="200" y="64" color="78476d"/>
+        <decoration kind="ARCH" x="360" y="64"/>
+        <decoration kind="BRAZIER" x="618" y="64"/>
+        <decoration kind="FLAG" x="980" y="160" color="78476d"/>
+        <decoration kind="TORCH" x="1260" y="160"/>
+        <decoration kind="CRATES" x="1704" y="96"/>
+        <decoration kind="WAGON" x="2016" y="64"/>
+        <decoration kind="ARCH" x="2440" y="64"/>
+        <decoration kind="BRAZIER" x="2584" y="64"/>
+        <decoration kind="FLAG" x="2860" y="128" color="78476d"/>
+        <decoration kind="TORCH" x="3460" y="160"/>
+        <decoration kind="FLAG" x="3890" y="128" color="78476d"/>
+        <decoration kind="PENNANT" x="4490" y="64"/>
+        <decoration kind="WAGON" x="4670" y="64"/>
+        <decoration kind="CRATES" x="5110" y="160"/>
+        <decoration kind="FLAG" x="5640" y="160" color="977156"/>
+        <decoration kind="CRATES" x="5830" y="160"/>
+        <decoration kind="TORCH" x="6220" y="96"/>
+        <decoration kind="CRATES" x="6504" y="64"/>
+        <decoration kind="FLAG" x="6808" y="128" color="557779"/>
+        <decoration kind="CRATES" x="7260" y="64"/>
+        <decoration kind="TORCH" x="7600" y="128"/>
+        <decoration kind="BRAZIER" x="7810" y="64"/>
+        <decoration kind="CRATES" x="8760" y="64"/>
   </level>
 </campaign>

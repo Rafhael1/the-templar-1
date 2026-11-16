@@ -9,9 +9,13 @@ import br.com.thecruzader.presentation.DisplaySettings;
 import br.com.thecruzader.presentation.GameAssets;
 import br.com.thecruzader.presentation.WindowMode;
 import br.com.thecruzader.screen.MenuScreen;
+import br.com.thecruzader.screen.DevelopmentScreen;
 import br.com.thecruzader.screen.PlayScreen;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 
 public final class CrusaderGame extends Game {
@@ -20,12 +24,27 @@ public final class CrusaderGame extends Game {
     private AudioPlayer audio;
     private final String campaignPath;
     private final WindowMode windowMode;
+    private final boolean developmentMode;
+    private boolean developmentMenuRequested;
+    private final InputAdapter developmentControls = new InputAdapter() {
+        @Override
+        public boolean keyDown(int key) {
+            if (key != Input.Keys.F2) return false;
+            if (!(getScreen() instanceof DevelopmentScreen)) developmentMenuRequested = true;
+            return true;
+        }
+    };
     private Campaign campaign;
     private Journey journey;
 
     public CrusaderGame(String campaignPath, WindowMode windowMode) {
+        this(campaignPath, windowMode, false);
+    }
+
+    public CrusaderGame(String campaignPath, WindowMode windowMode, boolean developmentMode) {
         this.campaignPath = java.util.Objects.requireNonNull(campaignPath);
         this.windowMode = java.util.Objects.requireNonNull(windowMode);
+        this.developmentMode = developmentMode;
     }
 
     public boolean fullscreen() {
@@ -46,7 +65,28 @@ public final class CrusaderGame extends Game {
         journey = new Journey(campaign);
         assets = new GameAssets();
         audio = new AudioPlayer(assets);
-        showMenu();
+        if (developmentMode) showDevelopmentMenu();
+        else showMenu();
+    }
+
+    @Override
+    public void render() {
+        if (developmentMenuRequested) {
+            developmentMenuRequested = false;
+            showDevelopmentMenu();
+        }
+        super.render();
+    }
+
+    private void showDevelopmentMenu() {
+        audio.startMenu();
+        replaceScreen(new DevelopmentScreen(this, assets));
+    }
+
+    public void startDevelopmentLevel(int index) {
+        if (!developmentMode) throw new IllegalStateException("Development mode is disabled");
+        journey = Journey.startingAt(campaign, index);
+        startGame();
     }
 
     public Language language() { return assets.texts.language(); }
@@ -79,6 +119,8 @@ public final class CrusaderGame extends Game {
     private void replaceScreen(Screen next) {
         Screen previous = getScreen();
         setScreen(next);
+        if (developmentMode)
+            Gdx.input.setInputProcessor(new InputMultiplexer(developmentControls, Gdx.input.getInputProcessor()));
         if (previous != null) previous.dispose();
     }
 

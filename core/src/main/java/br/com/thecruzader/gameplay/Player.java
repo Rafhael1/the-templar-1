@@ -11,10 +11,25 @@ public final class Player {
     private List<SpecialAbility> abilities = List.of();
     private final int[] charges = new int[2];
     SpecialAbility attackAbility;
+    private int nockedArrowSlot = -1;
 
     void equip(List<SpecialAbility> selected) {
         abilities = List.copyOf(selected);
         for (int i = 0; i < abilities.size(); i++) charges[i] = abilities.get(i).charges();
+    }
+
+    void equipUnlockedBow() {
+        if (abilities.contains(SpecialAbility.BOW) || abilities.size() == charges.length) return;
+        var loadout = new java.util.ArrayList<>(abilities);
+        charges[abilities.size()] = SpecialAbility.BOW.charges();
+        loadout.add(SpecialAbility.BOW);
+        abilities = List.copyOf(loadout);
+    }
+
+    void restoreLoadout(Player previous) {
+        equip(previous.abilities);
+        int bowSlot = abilities.indexOf(SpecialAbility.BOW);
+        if (bowSlot >= 0) charges[bowSlot] = previous.charges[bowSlot];
     }
 
     public List<SpecialAbility> abilities() {
@@ -29,6 +44,20 @@ public final class Player {
         return attack.running() && attackAbility == SpecialAbility.GOLDEN_STRIKE;
     }
 
+    public boolean drawingBow() {
+        return attack.running() && attackAbility == SpecialAbility.BOW;
+    }
+
+    boolean releaseArrow(List<Arrow> arrows) {
+        if (!drawingBow() || attack.phase() != Attack.Phase.ACTIVE || nockedArrowSlot < 0 || health <= 0)
+            return false;
+        double origin = x + WIDTH / 2;
+        arrows.add(new Arrow(origin, y + 32, origin + facing, y + 32, Arrow.Kind.PLAYER));
+        charges[nockedArrowSlot]--;
+        nockedArrowSlot = -1;
+        return true;
+    }
+
     double attackDamageMultiplier() {
         return attackAbility == null ? 1 : attackAbility.damageMultiplier();
     }
@@ -37,7 +66,8 @@ public final class Player {
         if (slot < 0 || slot >= abilities.size() || charges[slot] == 0
             || blocking || dodging() || !attack.start()) return false;
         attackAbility = abilities.get(slot);
-        charges[slot]--;
+        if (attackAbility == SpecialAbility.BOW) nockedArrowSlot = slot;
+        else charges[slot]--;
         attackBuffer = 0;
         attackDirection = AttackDirection.SIDE;
         bounced = false;

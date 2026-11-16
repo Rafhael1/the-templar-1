@@ -25,6 +25,16 @@ public final class Journey {
         this.rules = Objects.requireNonNull(rules);
     }
 
+    public static Journey startingAt(Campaign campaign, int levelIndex) {
+        Objects.checkIndex(levelIndex, campaign.levels().size());
+        var journey = new Journey(campaign);
+        journey.index = levelIndex;
+        for (int i = 0; i < levelIndex; i++)
+            journey.unlocked.add(campaign.levels().get(i).reward());
+        journey.selectionRequired = levelIndex > 0;
+        return journey;
+    }
+
     public List<SpecialAbility> unlockedAbilities() {
         return List.copyOf(unlocked);
     }
@@ -46,8 +56,9 @@ public final class Journey {
     public GameWorld enterLevel(LevelData data) {
         if (world != null) throw new IllegalStateException("Current level is already running");
         if (selectionRequired) throw new IllegalStateException("Choose abilities before entering this level");
-        SpecialAbility reward = currentLevel().reward();
-        world = new GameWorld(data, rules, equipped, () -> unlocked.add(reward));
+        LevelDefinition definition = currentLevel();
+        world = new GameWorld(data, rules, equipped, () -> unlocked.add(definition.reward()),
+            definition.reward());
         return world;
     }
     public void continueAfterVictory() {

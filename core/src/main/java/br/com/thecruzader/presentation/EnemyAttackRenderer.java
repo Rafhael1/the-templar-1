@@ -38,7 +38,9 @@ final class EnemyAttackRenderer {
             case SHIELD_BEARER -> 4;
             case ARCHER -> 5;
             case GUARDIAN -> 6;
+            case HARBOR_CAPTAIN -> -1;
         };
+        if (row < 0) return walking;
         if (enemy.stagger() > 0) return assets.enemyAttacks[row][18];
         int frame = phaseFrame(enemy);
         return frame < 0 ? walking : assets.enemyAttacks[row][frame];

@@ -2,6 +2,8 @@ package br.com.thecruzader.gameplay;
 
 import br.com.thecruzader.level.Bounds;
 
+import java.util.List;
+
 /**
  * First level boss: shield, committed dash, leap, then sword attack.
  */
@@ -11,7 +13,7 @@ final class GuardianBehavior extends BossBehavior {
     }
 
     @Override
-    boolean updateSkill(Enemy boss, double tempo) {
+    boolean updateSkill(Enemy boss, double tempo, List<Arrow> arrows) {
         if (boss.comboSword && boss.attack.phase() == Attack.Phase.RECOVERY) {
             boss.comboSword = false;
         }

@@ -164,7 +164,7 @@ class ExpandedCombatTest {
         Player player = new Player(new LevelData.Point(240, 64));
         var arrows = new ArrayList<>(List.of(new Arrow(100, 90, 400, 90)));
         var events = new ArrayList<GameEvent>();
-        new ProjectileSystem().update(arrows, player, new CollisionWorld(level(new Bounds(200, 64, 1, 120))),
+        new ProjectileSystem().update(arrows, player, List.of(), new CollisionWorld(level(new Bounds(200, 64, 1, 120))),
                 false, .5, events);
         assertTrue(arrows.isEmpty());
         assertEquals(player.maxHealth(), player.health());
@@ -179,7 +179,7 @@ class ExpandedCombatTest {
             player.facing = facing;
             var arrows = new ArrayList<>(List.of(new Arrow(100, 90, 400, 90)));
             var events = new ArrayList<GameEvent>();
-            new ProjectileSystem().update(arrows, player, new CollisionWorld(level()), false, .5, events);
+            new ProjectileSystem().update(arrows, player, List.of(), new CollisionWorld(level()), false, .5, events);
             assertTrue(arrows.isEmpty());
             assertEquals(facing < 0 ? player.maxHealth() : player.maxHealth() - 1, player.health());
             assertEquals(List.of(facing < 0 ? GameEvent.BLOCK : GameEvent.HURT), events);
@@ -191,7 +191,7 @@ class ExpandedCombatTest {
         Player player = new Player(new LevelData.Point(1000, 64));
         var arrows = new ArrayList<>(List.of(new Arrow(100, 300, 500, 300)));
         arrows.getFirst().life = .01;
-        new ProjectileSystem().update(arrows, player, new CollisionWorld(level()), false, .02, new ArrayList<>());
+        new ProjectileSystem().update(arrows, player, List.of(), new CollisionWorld(level()), false, .02, new ArrayList<>());
         assertTrue(arrows.isEmpty());
     }
 

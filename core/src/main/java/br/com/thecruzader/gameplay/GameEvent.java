@@ -6,6 +6,7 @@ public enum GameEvent {
     JUMP,
     SWING,
     SPECIAL_SWING,
+    BOW_SHOT, CAPTAIN_DRAW, CAPTAIN_SHOT,
     HIT,
     BLOCK,
     PARRY,

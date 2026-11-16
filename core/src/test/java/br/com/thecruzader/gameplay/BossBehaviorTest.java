@@ -21,7 +21,7 @@ class BossBehaviorTest {
         }
 
         @Override
-        boolean updateSkill(Enemy enemy, double tempo) {
+        boolean updateSkill(Enemy enemy, double tempo, java.util.List<Arrow> arrows) {
             return false;
         }
 

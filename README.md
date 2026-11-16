@@ -1,7 +1,7 @@
 # O Templário
 
 Jogo simples de ação e plataforma 2D em **Java 21 + libGDX**, com um cavaleiro templário como protagonista. O protótipo
-tem uma fase completa, arte própria e ambientação fictícia nas Cruzadas. A versão de build está em `gameVersion`, no
+tem duas fases, arte própria e ambientação fictícia nas Cruzadas. A versão de build está em `gameVersion`, no
 `gradle.properties`. A infraestrutura de campanha permite registrar novas fases sem duplicar as regras do jogo.
 
 ## Jogar no Mac deste computador
@@ -28,6 +28,7 @@ aplicativo, mas o indicador de Game Mode ainda não foi confirmado.
 | L ou X (segurar)                 | Bloquear com o escudo                                              |
 | Shift ou K                       | Esquiva                                                            |
 | Q / E                            | Usar especiais equipados                                           |
+| F                                | Abrir ou fechar uma conversa histórica                             |
 | Esc                              | Pausar / continuar                                                 |
 | M                                | Ativar / desativar som                                             |
 | R ou Enter após morrer           | Retornar ao início ou ao santuário                                 |
@@ -74,11 +75,19 @@ Possui **três cargas por tentativa**, restauradas na morte e ao iniciar uma fas
 mesmo sem acertar ou contra um escudo. Não pode começar durante outro ataque, bloqueio ou esquiva. Usa o alcance e o
 ciclo da espada lateral, respeita defesas e mantém o multiplicador de contra-ataque após aparada.
 
-A campanha de produção ainda contém somente a primeira fase. O desbloqueio ocorre nela; seleção e uso na fase
-seguinte são exercitados pela campanha de duas fases dos testes. As capturas estão em
-`lwjgl3/build/screenshots/38-special-selection.png` e `38-golden-strike.png`.
+Derrotar o Capitão do Porto desbloqueia **Arco e flecha** e o equipa no próximo espaço livre. O disparo segue a direção
+do personagem e causa **0,7 vez** o dano da espada comum. Cada fase fornece **três flechas**. Uma flecha é gasta ao
+disparar, mesmo quando erra, e a munição restante é mantida após morrer.
 
 ## Objetivo e conteúdo
+
+Na fase **Às portas de Constantinopla (1096–1097)**, atravesse as muralhas, o bairro imperial, o mercado e o porto.
+Use **F** perto dos personagens para abrir conversas opcionais sobre os juramentos a Aleixo I, a divergência de
+Raimundo de Toulouse e a travessia para a Ásia Menor. Ao chegar à alfândega, enfrente o Capitão do Porto em um
+duelo fictício. A linha vermelha avisa onde passará a flecha pesada, que atravessa a guarda e tira dois corações.
+Salte, esquive ou apare no momento do impacto. Após o duelo, siga até o embarque.
+As conversas se baseiam nos [relatos da chegada a Constantinopla](https://sourcebooks.fordham.edu/source/cde-atcp.asp)
+e no [livro XI da Alexíada](https://sourcebooks.fordham.edu/basis/AnnaComnena-Alexiad11.asp).
 
 Abra a passagem para os peregrinos. Atravesse a estrada, enfrente doze sentinelas, quatro arqueiros, três lanceiros,
 três escudeiros, dois brutos e dois lançadores de óleo, ative o santuário e derrote o guardião para abrir o portão
@@ -92,6 +101,15 @@ A história usa as Cruzadas como cenário de ficção, com soldados muçulmanos 
 ## Desenvolver
 
 Requisitos: **JDK 21 instalado**; a toolchain do Gradle usa JDK 21. Importe a pasta raiz no IntelliJ IDEA como projeto Gradle. Use sempre o Wrapper incluído.
+
+Durante o desenvolvimento, abra o seletor de fases com:
+
+```sh
+./gradlew :lwjgl3:run --args=--dev
+```
+
+Escolha com **W/S**, setas ou mouse. **F2** volta ao seletor durante a partida. Cada seleção começa uma sessão
+nova na fase escolhida, com as recompensas das fases anteriores disponíveis na tela de especiais.
 
 ```sh
 ./gradlew :lwjgl3:run
@@ -263,7 +281,8 @@ tools/       gerador dos assets originais e suas dependências
 
 Leia `docs/ARQUITETURA.md` para o fluxo de atualização e a divisão das responsabilidades. Assets gerados estão versionáveis e prontos para uso. Para reproduzir os arquivos originais, use `tools/generate_assets.py` em um ambiente Python com `tools/requirements.txt` instalado. **Esse script regrava os assets compartilhados e específicos de exiles-road; por padrão, não escreve mapas.** Para gerar também o mapa original, passe um destino explícito: `python tools/generate_assets.py --map-output assets/levels/exiles-road/maps/exiles-road.tmx`. Essa opção sobrescreve o arquivo indicado.
 
-O conteúdo de produção permanece uma fase. O registro ordenado em `assets/levels/campaign.xml` está pronto para receber mais mapas; não há inventário, árvore de habilidades, controle/gamepad ou persistência em disco. Um segundo mapa pequeno existe somente nos recursos de teste para verificar a progressão.
+O registro ordenado em `assets/levels/campaign.xml` inclui a Estrada dos Exilados e Constantinopla. Um mapa pequeno nos
+recursos de teste exercita a progressão de forma isolada.
 
 
 A nova jornada começa com uma abertura animada em pixel art, com três cenas sobre o chamado de Urbano II, com ENTER/ESPAÇO/clique para avançar e ESC para pular. O protagonista templário é uma licença de ficção histórica; a ordem surgiu depois da Primeira Cruzada. O diálogo é original, não uma citação histórica.

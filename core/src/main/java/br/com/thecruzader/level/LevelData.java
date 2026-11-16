@@ -21,7 +21,8 @@ public record LevelData(
 
     public enum EnemyKind {
         SENTINEL(30, 48, false), ARCHER(30, 48, false), SPEARMAN(30, 48, false), SHIELD_BEARER(30, 48, false),
-        BRUTE(30, 48, false), OIL_THROWER(30, 48, false), GUARDIAN(42, 68, true);
+        BRUTE(30, 48, false), OIL_THROWER(30, 48, false), GUARDIAN(42, 68, true),
+        HARBOR_CAPTAIN(42, 68, true);
         public final double width, height;
         public final boolean boss;
 

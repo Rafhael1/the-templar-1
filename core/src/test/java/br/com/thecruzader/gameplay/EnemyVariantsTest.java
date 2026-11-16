@@ -291,7 +291,7 @@ class EnemyVariantsTest {
                     for (int tick = 0; tick < 180 && world.oilPots().isEmpty(); tick++)
                         world.update(GameWorld.STEP, PlayerInput.NONE);
                     assertFalse(world.oilPots().isEmpty());
-                    world.guardian().health = 0;
+                    world.boss().health = 0;
                     world.update(GameWorld.STEP, PlayerInput.NONE);
                 }
             }

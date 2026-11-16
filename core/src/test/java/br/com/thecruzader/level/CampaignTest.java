@@ -23,6 +23,10 @@ class CampaignTest {
                     assertTrue(assets.child(region.texturePath()).exists());
                     assertFalse(text.text(region.announcementKey()).isBlank());
                 }
+                for (var conversation : level.conversations()) {
+                    assertTrue(assets.child(conversation.spritePath()).exists());
+                    conversation.textKeys().forEach(key -> assertFalse(text.text(key).isBlank()));
+                }
             }
         }
     }
@@ -45,11 +49,11 @@ class CampaignTest {
     @Test void unorderedRegionsAndOverlappingBlendsFail() {
         var base = campaign.levels().getFirst();
         assertThrows(IllegalArgumentException.class, () -> new LevelDefinition("bad", base.mapPath(), 640, base.texts(),
-            List.of(new LevelDefinition.Region(100, "texture", "key")), List.of(), base.interior(), base.reward()));
+            List.of(new LevelDefinition.Region(100, "texture", "key")), List.of(), base.interior(), base.reward(), List.of()));
         assertThrows(IllegalArgumentException.class, () -> new LevelDefinition("bad", base.mapPath(), 640, base.texts(),
-            List.of(new LevelDefinition.Region(0, "texture", "key"), new LevelDefinition.Region(200, "texture", "key")), List.of(), base.interior(), base.reward()));
+            List.of(new LevelDefinition.Region(0, "texture", "key"), new LevelDefinition.Region(200, "texture", "key")), List.of(), base.interior(), base.reward(), List.of()));
         assertThrows(IllegalArgumentException.class, () -> new LevelDefinition("bad", base.mapPath(), Double.NaN,
-            base.texts(), base.regions(), List.of(), base.interior(), base.reward()));
+            base.texts(), base.regions(), List.of(), base.interior(), base.reward(), List.of()));
     }
     @Test void invalidNumericStateFailsBeforeSimulation() {
         assertThrows(IllegalArgumentException.class, () -> new LevelData.Point(Double.NaN, 0));

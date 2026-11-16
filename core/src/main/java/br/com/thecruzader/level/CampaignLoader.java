@@ -19,6 +19,7 @@ public final class CampaignLoader {
             if (!level.getName().equals("level")) throw new IllegalArgumentException("Unknown campaign element: " + level.getName());
             var regions = new ArrayList<LevelDefinition.Region>();
             var decorations = new ArrayList<LevelDefinition.Decoration>();
+            var conversations = new ArrayList<LevelDefinition.Conversation>();
             LevelDefinition.Interior interior = null;
             for (int j = 0; j < level.getChildCount(); j++) {
                 var child = level.getChild(j);
@@ -36,6 +37,9 @@ public final class CampaignLoader {
                     }
                     case "region" -> regions.add(new LevelDefinition.Region(child.getFloatAttribute("start"),
                             child.getAttribute("texture"), child.getAttribute("announcement")));
+                    case "conversation" ->
+                        conversations.add(new LevelDefinition.Conversation(child.getFloatAttribute("x"),
+                            child.getFloatAttribute("y"), child.getAttribute("text"), child.getAttribute("sprite")));
                     case "decoration" -> {
                         var kind = LevelDefinition.DecorationKind.valueOf(child.getAttribute("kind"));
                         int rgb = 0;
@@ -52,11 +56,12 @@ public final class CampaignLoader {
             }
             if (interior == null) throw new IllegalArgumentException("Level requires interior: " + level.getAttribute("id"));
             var texts = new LevelDefinition.TextKeys(level.getAttribute("chapter"), level.getAttribute("title"),
-                    level.getAttribute("story"), level.getAttribute("travelObjective"), level.getAttribute("bossObjective"),
-                    level.getAttribute("bossName"), level.getAttribute("completionTitle"), level.getAttribute("completionText"));
+                level.getAttribute("story"), level.getAttribute("travelObjective"), level.getAttribute("arenaNotice"),
+                level.getAttribute("bossObjective"), level.getAttribute("bossName"), level.getAttribute("exitObjective"),
+                level.getAttribute("completionTitle"), level.getAttribute("completionText"));
             levels.add(new LevelDefinition(level.getAttribute("id"), level.getAttribute("map"),
                 level.getFloatAttribute("blendWidth"), texts, regions, decorations, interior,
-                SpecialAbility.valueOf(level.getAttribute("reward"))));
+                SpecialAbility.valueOf(level.getAttribute("reward")), conversations));
         }
         return new Campaign(levels);
     }

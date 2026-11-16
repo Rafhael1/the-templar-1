@@ -52,6 +52,17 @@
       ]
     },
     {
+      "color": "#ff86cbd0",
+      "drawFill": true,
+      "id": 17,
+      "members": [],
+      "name": "harbor_captain",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
+    },
+    {
       "color": "#ffc8a773",
       "drawFill": true,
       "id": 5,

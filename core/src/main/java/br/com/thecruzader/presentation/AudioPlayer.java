@@ -59,6 +59,8 @@ public final class AudioPlayer {
                         case FIRE_IGNITE -> "fire-ignite";
                         case JUMP -> "jump";
                         case SWING, SPECIAL_SWING -> "sword";
+                        case BOW_SHOT, CAPTAIN_SHOT -> "spear-thrust";
+                        case CAPTAIN_DRAW -> "spear-draw";
                         case HIT, BLOCK -> "hit";
                         case PARRY -> "chime";
                         case HURT -> "hurt";
@@ -68,6 +70,7 @@ public final class AudioPlayer {
                     };
             float volume = switch (event) {
                 case BOSS_DEFEATED -> .55f;
+                case CAPTAIN_SHOT -> .7f;
                 case PARRY, SPEAR_THRUST, POT_SHATTER -> .4f;
                 case MACE_IMPACT -> .5f;
                 case HURT -> .60f;
@@ -75,7 +78,12 @@ public final class AudioPlayer {
                 case FIRE_IGNITE -> .35f;
                 default -> .28f;
             };
-            assets.sound(sound).play(volume, event == GameEvent.SPECIAL_SWING ? .7f : event == GameEvent.PARRY ? 1.35f : 1, 0);
+            float pitch = switch (event) {
+                case SPECIAL_SWING, CAPTAIN_SHOT -> .7f;
+                case PARRY -> 1.35f;
+                default -> 1;
+            };
+            assets.sound(sound).play(volume, pitch, 0);
         }
     }
 

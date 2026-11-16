@@ -1,8 +1,13 @@
 package br.com.thecruzader.desktop;
 
 import br.com.thecruzader.CrusaderGame;
+import br.com.thecruzader.gameplay.GameWorld;
+import br.com.thecruzader.gameplay.SpecialAbility;
 import br.com.thecruzader.i18n.Language;
+import br.com.thecruzader.input.PlayerInput;
+import br.com.thecruzader.level.LevelData.EnemyKind;
 import br.com.thecruzader.screen.PlayScreen;
+import br.com.thecruzader.screen.SpecialSelectionScreen;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -18,7 +23,7 @@ final class SmokeTest extends ApplicationAdapter {
     private int frame;
     private Language originalLanguage;
     private boolean rendering;
-    private int heavyWindup;
+    private int heavyWindup, shotWindup;
 
     SmokeTest(String output, br.com.thecruzader.presentation.WindowMode windowMode) {
         this.output = output;
@@ -212,6 +217,8 @@ final class SmokeTest extends ApplicationAdapter {
             capture("21-english-pause.png");
             System.out.println("LANGUAGE_SMOKE_PASS: PT/EN options, menus, instructions, cutscene, HUD and saved preference");
             checkCampaignTransition();
+            checkConstantinople();
+            checkDevelopmentSelector();
             game.setLanguage(originalLanguage);
             game.showMenu();
             Gdx.input.getInputProcessor().keyDown(Input.Keys.UP);
@@ -219,6 +226,127 @@ final class SmokeTest extends ApplicationAdapter {
             game.render();
             System.out.println("MENU_SMOKE_PASS: instructions, options, sound toggle, window sizes, new game and quit");
         }
+    }
+
+    private void checkConstantinople() {
+        game.setLanguage(Language.PT);
+        game.startJourney();
+        game.startGame();
+        completeWorld(((PlayScreen) game.getScreen()).world());
+        game.getScreen().render(0);
+        tap(Input.Keys.ENTER);
+        game.getScreen().render(0);
+        if (!(game.getScreen() instanceof SpecialSelectionScreen))
+            throw new IllegalStateException("Constantinople did not open its special selection");
+        tap(Input.Keys.ENTER);
+        tap(Input.Keys.DOWN);
+        tap(Input.Keys.ENTER);
+        game.getScreen().render(0);
+        var play = (PlayScreen) game.getScreen();
+        var world = play.world();
+        if (!game.journey().currentLevel().id().equals("constantinople"))
+            throw new IllegalStateException("Campaign did not enter Constantinople");
+        var definition = game.journey().currentLevel();
+        var stops = definition.conversations();
+        int stop = 0;
+        boolean arena = false, aimed = false, shot = false;
+        for (int tick = 0; tick < 150 * 120 && world.state() == GameWorld.State.PLAYING
+            && !world.bossDefeated(); tick++) {
+            world.update(GameWorld.STEP, routeInput(world));
+            if (stop < stops.size() && world.player().x() >= stops.get(stop).x() - 40) {
+                play.render(0);
+                if (stop != 1) {
+                    tap(Input.Keys.F);
+                    double time = world.time();
+                    play.render(.1f);
+                    if (!play.readingConversation() || world.time() != time)
+                        throw new IllegalStateException("Historical conversation did not open or freeze the road");
+                    capture(stop == 0 ? "39-constantinople-audience.png" : "39-constantinople-harbor.png");
+                    tap(Input.Keys.F);
+                    play.render(0);
+                    if (play.readingConversation())
+                        throw new IllegalStateException("Historical conversation did not close");
+                } else {
+                    capture("39-constantinople-market.png");
+                }
+                stop++;
+            }
+            if (world.arenaEntered() && !arena) {
+                for (int frame = 0; frame < 8; frame++) play.render(.05f);
+                capture("39-constantinople-captain.png");
+                arena = true;
+            }
+            if (arena && !aimed && world.boss().state() == br.com.thecruzader.gameplay.Enemy.State.SHOT_WINDUP) {
+                play.render(0);
+                capture("39-constantinople-heavy-aim.png");
+                aimed = true;
+            }
+            if (!shot && world.arrows().stream().anyMatch(arrow -> arrow.heavy()
+                && Math.abs(arrow.x() - world.boss().x()) > 40)) {
+                play.render(0);
+                capture("39-constantinople-heavy-arrow.png");
+                shot = true;
+            }
+        }
+        if (stop != stops.size() || !world.checkpoint() || !aimed || !shot || !world.bossDefeated()
+            || !world.player().abilities().contains(SpecialAbility.BOW))
+            throw new IllegalStateException("Constantinople route failed at x=" + world.player().x()
+                + ", y=" + world.player().y() + ", hearts=" + world.player().health()
+                + ", boss=" + world.boss().health() + ", stops=" + stop + ", aim=" + aimed + ", shot=" + shot);
+        play.render(0);
+        while (world.bossReleaseActive()) world.update(GameWorld.STEP, PlayerInput.NONE);
+        tap(Input.Keys.E);
+        play.render(.075f);
+        if (!world.player().drawingBow()) throw new IllegalStateException("Bow did not start in the second slot");
+        capture("39-constantinople-bow.png");
+        play.render(.1f);
+        if (world.player().specialCharges(1) != 2 || world.arrows().isEmpty())
+            throw new IllegalStateException("Bow did not consume one charge or spawn a projectile");
+        completeWorld(world);
+        play.render(0);
+        capture("39-constantinople-victory.png");
+        System.out.println("CONSTANTINOPLE_SMOKE_PASS: full road, optional historical conversations, heavy arrow, bow reward and crossing");
+    }
+
+    private void checkDevelopmentSelector() {
+        var dev = new CrusaderGame(br.com.thecruzader.level.CampaignLoader.PATH, windowMode, true);
+        dev.create();
+        try {
+            if (!(dev.getScreen() instanceof br.com.thecruzader.screen.DevelopmentScreen))
+                throw new IllegalStateException("Dev launch did not open its level selector");
+            dev.getScreen().render(0);
+            capture("40-dev-level-select.png");
+            tap(Input.Keys.DOWN);
+            tap(Input.Keys.ENTER);
+            dev.getScreen().render(0);
+            if (!(dev.getScreen() instanceof SpecialSelectionScreen)
+                || !dev.journey().unlockedAbilities().equals(java.util.List.of(SpecialAbility.GOLDEN_STRIKE)))
+                throw new IllegalStateException("Dev stage two lacks the normal unlocked loadout");
+            tap(Input.Keys.DOWN);
+            tap(Input.Keys.ENTER);
+            dev.getScreen().render(0);
+            if (!dev.journey().currentLevel().id().equals("constantinople")
+                || ((PlayScreen) dev.getScreen()).world().level().width() != 8960)
+                throw new IllegalStateException("Dev selector did not load the production second stage");
+            tap(Input.Keys.F2);
+            dev.render();
+            if (!(dev.getScreen() instanceof br.com.thecruzader.screen.DevelopmentScreen))
+                throw new IllegalStateException("F2 did not return to the dev selector");
+            tap(Input.Keys.ENTER);
+            dev.getScreen().render(0);
+            if (!(dev.getScreen() instanceof PlayScreen) || !dev.journey().currentLevel().id().equals("exiles-road"))
+                throw new IllegalStateException("Dev selector failed to reload stage one");
+            if (!dev.journey().unlockedAbilities().isEmpty())
+                throw new IllegalStateException("Dev selection leaked rewards from the previous session");
+            System.out.println("DEV_SELECTOR_SMOKE_PASS: selection from the manifest, normal loadout, F2 and fresh replay");
+        } finally {
+            dev.dispose();
+        }
+    }
+
+    private void tap(int key) {
+        Gdx.input.getInputProcessor().keyDown(key);
+        Gdx.input.getInputProcessor().keyUp(key);
     }
 
     private void captureEnemyPursuit() {
@@ -372,6 +500,7 @@ final class SmokeTest extends ApplicationAdapter {
             || target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP_WINDUP);
         heavyWindup = preparingHeavy ? heavyWindup + (world.hitStopped() ? 0 : 1) : 0;
         double warningDuration = heavy && target.state() == br.com.thecruzader.gameplay.Enemy.State.DASH_WINDUP ? .45 : .50;
+        if (target != null && target.kind() == EnemyKind.HARBOR_CAPTAIN) warningDuration = .52;
         if (target != null && target.health() <= target.maxHealth() / 2) warningDuration *= .8;
         boolean timedParry = preparingHeavy && heavyWindup * br.com.thecruzader.gameplay.GameWorld.STEP >= warningDuration - .07
             && Math.abs(target.x() - player.x()) < 80 && !player.attack().running();
@@ -397,7 +526,16 @@ final class SmokeTest extends ApplicationAdapter {
                         && solid.x() >= player.x() + br.com.thecruzader.gameplay.Player.WIDTH
                         && solid.x() - (player.x() + br.com.thecruzader.gameplay.Player.WIDTH) < 85
                         && solid.top() - player.y() < 160);
-        return new br.com.thecruzader.input.PlayerInput(direction, jump, attack, dodge, false, block, -1);
+        boolean aiming = target != null && target.state() == br.com.thecruzader.gameplay.Enemy.State.SHOT_WINDUP;
+        shotWindup = aiming ? shotWindup + (world.hitStopped() ? 0 : 1) : 0;
+        if (aiming && player.grounded()) {
+            double aimDuration = target.health() <= target.maxHealth() / 2 ? .78 * .8 : .78;
+            jump |= shotWindup * GameWorld.STEP >= aimDuration - .15
+                && Math.abs(target.x() - player.x()) < 430;
+        }
+        int special = target != null && target.kind() == EnemyKind.HARBOR_CAPTAIN && attack
+            && player.specialCharges(0) > 0 ? 0 : -1;
+        return new PlayerInput(direction, jump, attack, dodge, false, block, special);
     }
 
     private void captureLevelTour() {

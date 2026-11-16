@@ -21,7 +21,7 @@ public final class GameWorld {
 
     private final LevelData level;
     private final GameRules rules;
-    private final List<SpecialAbility> abilities;
+    private final SpecialAbility bossReward;
     private final Runnable onBossDefeated;
     private final CollisionWorld collision;
     private final MovementSystem movement = new MovementSystem();
@@ -34,7 +34,7 @@ public final class GameWorld {
     private final List<CombatEffect> effects = new ArrayList<>();
     private final List<CombatEffect> effectView = Collections.unmodifiableList(effects);
     private Player player;
-    private Enemy guardian;
+    private Enemy boss;
     private final Bounds shrine, arenaEntrance;
     private State state = State.PLAYING;
     private boolean checkpoint, paused, arenaEntered, bossDefeated;
@@ -60,7 +60,12 @@ public final class GameWorld {
     }
 
     GameWorld(LevelData level, GameRules rules, List<SpecialAbility> abilities, Runnable onBossDefeated) {
-        this.abilities = List.copyOf(abilities);
+        this(level, rules, abilities, onBossDefeated, SpecialAbility.GOLDEN_STRIKE);
+    }
+
+    GameWorld(LevelData level, GameRules rules, List<SpecialAbility> abilities, Runnable onBossDefeated,
+              SpecialAbility bossReward) {
+        this.bossReward = Objects.requireNonNull(bossReward);
         this.onBossDefeated = Objects.requireNonNull(onBossDefeated);
         this.rules = Objects.requireNonNull(rules);
         this.level = Objects.requireNonNull(level);
@@ -77,7 +82,7 @@ public final class GameWorld {
     private void populate() {
         enemies.clear();
         level.enemies().forEach(spawn -> enemies.add(new Enemy(spawn)));
-        guardian = enemies.stream().filter(Enemy::boss).findFirst().orElseThrow();
+        boss = enemies.stream().filter(Enemy::boss).findFirst().orElseThrow();
     }
 
     public void update(double dt, PlayerInput input) {
@@ -138,7 +143,8 @@ public final class GameWorld {
             player.attackBuffer = .14;
             player.bufferedDown = input.down();
         }
-        if (input.specialSlot() >= 0 && player.startSpecial(input.specialSlot())) events.add(GameEvent.SPECIAL_SWING);
+        if (input.specialSlot() >= 0 && player.startSpecial(input.specialSlot()) && !player.drawingBow())
+            events.add(GameEvent.SPECIAL_SWING);
         if (player.attackBuffer > 0 && !player.blocking && !player.dodging() && player.attack.start()) {
             player.attackAbility = null;
             player.attackBuffer = 0;
@@ -159,16 +165,18 @@ public final class GameWorld {
             emitEnemyCue(enemy, previous);
         }
         combat.resolve(player, enemies, events);
-        if (arenaEntered && !bossDefeated && guardian.health <= 0) {
+        if (player.releaseArrow(arrows)) events.add(GameEvent.BOW_SHOT);
+        projectiles.update(arrows, player, enemies, collision, gateLocked(), dt, events);
+        if (arenaEntered && !bossDefeated && boss.health <= 0) {
             bossDefeated = true;
             onBossDefeated.run();
+            if (bossReward == SpecialAbility.BOW) player.equipUnlockedBow();
             arrows.clear();
             oilPots.clear();
             effects.clear();
             events.add(GameEvent.BOSS_DEFEATED);
         }
         bodies.resolve(player, enemies, collision, gateLocked(), dt);
-        projectiles.update(arrows, player, collision, gateLocked(), dt, events);
         oilSystem.update(oilPots, player, collision, gateLocked(), dt, events, effects);
         for (int i = firstEvent; i < events.size(); i++) {
             if (events.get(i) == GameEvent.HIT) hitStop = Math.max(hitStop, .035);
@@ -213,6 +221,8 @@ public final class GameWorld {
                 : enemy.state() == Enemy.State.ATTACK ? GameEvent.SPEAR_THRUST : null;
             case OIL_THROWER -> enemy.state() == Enemy.State.WINDUP ? GameEvent.OIL_PRIME
                 : enemy.state() == Enemy.State.ATTACK ? GameEvent.OIL_THROW : null;
+            case HARBOR_CAPTAIN -> enemy.state() == Enemy.State.SHOT_WINDUP ? GameEvent.CAPTAIN_DRAW
+                : enemy.state() == Enemy.State.SHOT_RELEASE ? GameEvent.CAPTAIN_SHOT : null;
             default -> null;
         };
         if (cue == null) return;
@@ -227,7 +237,7 @@ public final class GameWorld {
     }
 
     private void enterArena() {
-        if (arenaEntered || guardian.health <= 0 || player.x < level.arena().x()
+        if (arenaEntered || boss.health <= 0 || player.x < level.arena().x()
                 || player.x >= level.arena().right()) return;
         arenaEntered = true;
         collision.setArenaClosed(true);
@@ -258,15 +268,19 @@ public final class GameWorld {
     public boolean insideArena() { return level.insideArena(player.x()); }
     public boolean arenaEntered() { return arenaEntered; }
     public boolean arenaLocked() { return arenaEntered && gateLocked(); }
-    public Enemy guardian() { return guardian; }
+
+    public Enemy boss() {
+        return boss;
+    }
     public boolean bossDefeated() { return bossDefeated; }
     public double bossReleaseElapsed() { return bossReleaseElapsed; }
     public boolean bossReleaseActive() { return bossDefeated && bossReleaseElapsed < BossRelease.DURATION; }
 
     public void respawn() {
         if (state != State.DEAD) throw new IllegalStateException("Respawn requires a dead player");
+        Player previous = player;
         player = new Player(checkpoint ? level.checkpoint() : level.spawn(), rules);
-        player.equip(abilities);
+        player.restoreLoadout(previous);
         populate();
         arenaEntered = false;
         bossDefeated = false;

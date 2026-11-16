@@ -3,7 +3,8 @@
 As [instruções para o modelo](GUIA_DE_PROMPTS_E_NOVAS_FASES.md) orientam a execução de pedidos de fases, bosses e
 mecânicas. Este documento detalha o contrato técnico dos mapas.
 
-O jogo mantém regras compartilhadas e conteúdo de fase separado. A campanha de produção tem uma fase completa; novas fases são registradas em `assets/levels/campaign.xml`, na ordem em que devem ser jogadas. Não é necessário alterar `GameWorld`, duplicar telas ou trocar uma constante Java.
+O jogo mantém regras compartilhadas e conteúdo de fase separado. Novas fases são registradas em
+`assets/levels/campaign.xml` na ordem em que devem ser jogadas.
 
 O conteúdo exclusivo de cada fase fica em `assets/levels/<id>/`: `maps/` para TMX, `scenery/` para fundos e `chapel/` para fachada/interior/portas. `assets/levels/campaign.xml` registra os caminhos completos. Novas imagens e sons exclusivos devem permanecer dentro da pasta da fase, usando subpastas com nomes claros. Recursos reutilizados (personagens, bandagens, santuário, céu, áudio comum, fontes, UI, tiles e classes do Tiled) permanecem nas pastas compartilhadas. A fase de teste segue a mesma organização dentro de `core/src/test/resources/levels/test-road/`, sem duplicar as texturas de produção que reutiliza.
 
@@ -26,7 +27,7 @@ O contrato atual é intencionalmente horizontal:
 | `spawn`                                                                   | 1          | Corpo do jogador livre de terreno e antes da entrada da arena             |
 | `checkpoint`                                                              | 1          | Corpo do jogador livre de terreno e antes da entrada da arena             |
 | `sentinel`, `archer`, `spearman`, `shield_bearer`, `brute`, `oil_thrower` | 0 ou mais  | Corpos livres de terreno e antes da entrada da arena                      |
-| `guardian`                                                                | 1          | Corpo inteiro dentro da arena, sobre seu piso                             |
+| `guardian` ou `harbor_captain`                                            | 1 no total | Corpo inteiro dentro da arena, sobre seu piso                             |
 | `bandage`                                                                 | 1 ou mais  | Área livre de terreno/portões; representa bandagens                       |
 | `arena`                                                                   | 1          | Piso plano e livre; largura entre 70 e 896 pixels; altura mínima de 240   |
 | `gate`                                                                    | 1          | X coincide com a borda direita da arena; mesmo piso; altura mínima de 176 |
@@ -48,7 +49,8 @@ Acrescente um `<level>` ao manifesto. IDs devem ser únicos; todos os atributos 
 <level reward="GOLDEN_STRIKE" id="new-road" map="levels/new-road/maps/new-road.tmx" blendWidth="200"
        chapter="level.newRoad.chapter" title="level.newRoad.title"
        story="level.newRoad.story" travelObjective="level.newRoad.travel"
-       bossObjective="level.newRoad.fight" bossName="level.newRoad.boss"
+       arenaNotice="level.newRoad.arena" bossObjective="level.newRoad.fight"
+       bossName="level.newRoad.boss" exitObjective="level.newRoad.exit"
        completionTitle="level.newRoad.complete" completionText="level.newRoad.victory">
     <region start="0" texture="levels/new-road/scenery/region-0.png"
             announcement="level.newRoad.region.0" />
@@ -66,10 +68,15 @@ Acrescente um `<level>` ao manifesto. IDs devem ser únicos; todos os atributos 
 </level>
 ```
 
-`reward` é obrigatório e corresponde a um valor implementado de `SpecialAbility`. Atualmente existe
-`GOLDEN_STRIKE`, a recompensa do primeiro chefe. Novas recompensas exigem implementação de sua mecânica,
-traduções e testes antes de serem declaradas. `Journey` mantém os desbloqueios e exige confirmar até dois especiais
-antes de entrar em fases posteriores à primeira; `GameWorld` restaura as cargas da seleção no respawn.
+`reward` é obrigatório e corresponde a um valor implementado de `SpecialAbility`. As recompensas são
+`GOLDEN_STRIKE` e `BOW`. `Journey` mantém os desbloqueios e pede a seleção de até dois especiais antes das
+fases posteriores à primeira. O arco entra no espaço livre ao derrotar o chefe que o concede. As três flechas
+são repostas no início da próxima fase, enquanto as cargas do Golpe Dourado também são repostas no respawn.
+
+Uma fase pode incluir `<conversation x="424" y="64" text="level.newRoad.oath" sprite="levels/new-road/envoy.png" />`.
+Posicione os personagens sobre o piso, antes da arena. A tecla **F** abre a conversa quando o jogador se aproxima.
+O atributo `text` é o prefixo dos textos `.title` e `.body`. As conversas são opcionais.
+`tools/generate_constantinople.py` recria o TMX e as imagens de Constantinopla.
 
 A primeira região começa em zero. Os limites seguintes ficam em ordem, dentro da largura do mapa e separados por pelo menos `blendWidth`, para que as transições não se sobreponham. Use texturas de cenário com o formato visual 960 × 540. Uma textura pode servir a várias regiões da mesma fase e é carregada uma vez por bundle.
 
@@ -85,6 +92,10 @@ O interior fica centrado na arena; seu piso está 64 pixels acima da base da ima
 Cruzar a entrada troca fachada/estrada pelo interior com fade de 0,3 segundo, durante o qual a simulação fica suspensa. A pausa congela o fade. Inimigos, flechas e coletas são desenhados apenas na vista correspondente. A derrota do guardião inicia a descida de dois anjos junto aos portões autorados no mapa. O atlas é compartilhado por todas as fases; as posições são derivadas da entrada/saída e da altura do piso. As portas abrem entre 1,8 e 3,2 segundos e a ascensão termina em 4,6 segundos, quando o controle retorna. O relógio da simulação sincroniza arte e colisões, pausa congela a sequência e respawn a reinicia. O interior permanece visível até atravessar uma saída. Voltar pela entrada permite rever a fachada e reentrar sem reiniciar o encontro; o respawn sincroniza a vista com o checkpoint. `tools/generate_chapel.py` regenera somente as cinco imagens da capela.
 
 ## 3. Traduzir os textos e incluir as imagens
+
+Mantenha um roteiro por fase em [História e diálogos](narrativa/). Registre a sinopse, as falas, o contexto
+em que aparecem no jogo e as referências para a revisão histórica externa. Atualize o roteiro quando mudar os
+textos em `assets/i18n/`.
 
 Crie todas as chaves nos dois arquivos `assets/i18n/messages_pt.properties` e `messages_en.properties`. Use UTF-8, `\n` para quebras de linha e `GameText.format` para valores dinâmicos. A fonte precisa conter os caracteres usados; `GameTextTest` verifica os catálogos.
 

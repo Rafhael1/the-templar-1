@@ -2,6 +2,7 @@ package br.com.thecruzader.desktop;
 
 import br.com.thecruzader.CrusaderGame;
 import br.com.thecruzader.GameVersion;
+import br.com.thecruzader.level.CampaignLoader;
 import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
@@ -19,13 +20,15 @@ public final class DesktopLauncher {
         }
         ApplicationListener app;
         DesktopWindowMode windowMode = new DesktopWindowMode();
-        if (args.length == 0) app = new CrusaderGame(br.com.thecruzader.level.CampaignLoader.PATH, windowMode);
+        if (args.length == 0) app = new CrusaderGame(CampaignLoader.PATH, windowMode);
+        else if (args.length == 1 && args[0].equals("--dev"))
+            app = new CrusaderGame(CampaignLoader.PATH, windowMode, true);
         else if (args.length == 2 && args[0].equals("--smoke")) app = new SmokeTest(args[1], windowMode);
         else if (args.length == 1 && args[0].equals("--profile")) app = new PerformanceTest(false);
         else if (args.length == 1 && args[0].equals("--profile-paced")) app = new PerformanceTest(true);
         else
             throw new IllegalArgumentException(
-                "Usage: O Templário [--version | --smoke screenshot-directory | --profile | --profile-paced]");
+                "Usage: O Templário [--dev | --version | --smoke screenshot-directory | --profile | --profile-paced]");
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
         config.setTitle(CrusaderGame.TITLE);
         config.setWindowIcon("branding/icon-128.png", "branding/icon-64.png",

@@ -26,6 +26,9 @@ public final class Hud implements Disposable {
     private final ProgressBar dodge;
     private final Label specials;
     private final Label objective, bandageCount, sound, message, overlayTitle, overlayText;
+    private final Label conversationTitle, conversationBody;
+    private final Table conversationPanel, promptPanel;
+    private LevelDefinition.Conversation displayedConversation;
     private final Table overlay, bossPanel;
     private final ProgressBar bossHealth;
     private double messageTime;
@@ -118,6 +121,36 @@ public final class Hud implements Disposable {
         bossPanel.setVisible(false);
         stage.addActor(bossPanel);
 
+        conversationPanel = new Table();
+        conversationPanel.setFillParent(true);
+        conversationPanel.top().padTop(144);
+        Table conversationCard = new Table();
+        conversationCard.setBackground(assets.frame);
+        conversationCard.pad(18, 24, 18, 24);
+        conversationTitle = conversationLine(conversationCard, 8);
+        conversationTitle.setColor(GameAssets.GOLD);
+        conversationBody = conversationLine(conversationCard, 10);
+        Label conversationHint = conversationLine(conversationCard, 0);
+        conversationHint.setText(assets.texts.text("conversation.close"));
+        conversationHint.setColor(GameAssets.GOLD);
+        conversationPanel.add(conversationCard);
+        conversationPanel.setVisible(false);
+        stage.addActor(conversationPanel);
+
+        promptPanel = new Table();
+        promptPanel.setFillParent(true);
+        promptPanel.bottom().padBottom(20);
+        Label talkPrompt = new Label(assets.texts.text("conversation.open"), assets.skin);
+        talkPrompt.setColor(GameAssets.GOLD);
+        talkPrompt.setFontScale(.85f * GameAssets.UI_FONT_SCALE);
+        Table promptCard = new Table();
+        promptCard.setBackground(assets.frame);
+        promptCard.pad(8, 16, 8, 16);
+        promptCard.add(talkPrompt);
+        promptPanel.add(promptCard);
+        promptPanel.setVisible(false);
+        stage.addActor(promptPanel);
+
         overlay = new Table();
         overlay.setFillParent(true);
         overlay.setBackground(assets.panel(new Color(.03f, .04f, .08f, .88f)));
@@ -138,10 +171,29 @@ public final class Hud implements Disposable {
         card.row();
         overlayText = new Label("", assets.skin);
         overlayText.setAlignment(Align.center);
-        card.add(overlayText);
+        overlayText.setWrap(true);
+        card.add(overlayText).width(510);
         overlay.add(card).width(590);
         overlay.setVisible(false);
         stage.addActor(overlay);
+    }
+
+    private Label conversationLine(Table card, int bottomPadding) {
+        Label label = new Label("", assets.skin);
+        label.setWrap(true);
+        label.setFontScale(.9f * GameAssets.UI_FONT_SCALE);
+        card.add(label).width(590).left().padBottom(bottomPadding).row();
+        return label;
+    }
+
+    public void showConversation(LevelDefinition.Conversation nearby, LevelDefinition.Conversation open) {
+        promptPanel.setVisible(nearby != null && open == null);
+        conversationPanel.setVisible(open != null);
+        if (open == displayedConversation) return;
+        displayedConversation = open;
+        if (open == null) return;
+        conversationTitle.setText(assets.texts.text(open.textKey() + ".title"));
+        conversationBody.setText(assets.texts.text(open.textKey() + ".body"));
     }
 
     public void announce(String key) {
@@ -149,7 +201,13 @@ public final class Hud implements Disposable {
         messageTime = 4;
     }
 
-    public void announceReward(SpecialAbility reward) {
+    public void announceReward(SpecialAbility reward, Player player) {
+        int slot = player.abilities().indexOf(reward);
+        if (reward == SpecialAbility.BOW && slot >= 0) {
+            message.setText(assets.texts.format("special.bow.unlocked", slot == 0 ? "Q" : "E"));
+            messageTime = 7;
+            return;
+        }
         message.setText(assets.texts.format("special.unlocked", assets.texts.text(reward.textKey())));
         messageTime = 4;
     }
@@ -169,9 +227,10 @@ public final class Hud implements Disposable {
         dodge.setValue((float) (1 - player.dodgeCooldown() / Player.DODGE_COOLDOWN));
         sound.setText(muted ? assets.texts.text("hud.muted") : "");
         objective.setText(assets.texts.text(world.bossReleaseActive() ? "hud.angels" : world.arenaLocked()
-                ? definition.texts().bossObjective() : definition.texts().travelObjective()));
-        bossPanel.setVisible(world.arenaLocked() && world.guardian().health() > 0);
-        bossHealth.setValue((float) world.guardian().health() / world.guardian().maxHealth());
+            ? definition.texts().bossObjective() : world.bossDefeated()
+            ? definition.texts().exitObjective() : definition.texts().travelObjective()));
+        bossPanel.setVisible(world.arenaLocked() && world.boss().health() > 0);
+        bossHealth.setValue((float) world.boss().health() / world.boss().maxHealth());
         int count = world.collectedBandageCount();
         if (count != lastBandageCount) {
             lastBandageCount = count;
@@ -179,7 +238,7 @@ public final class Hud implements Disposable {
         }
         if (!world.paused()) messageTime = Math.max(0, messageTime - delta);
         message.setVisible(messageTime > 0);
-        message.getColor().a = (float) Math.min(1, Math.min((4 - messageTime) / .35, messageTime / .6));
+        message.getColor().a = (float) Math.max(0, Math.min(1, messageTime / .6));
         overlay.setVisible(world.paused() || world.state() == GameWorld.State.WON
                 || (world.state() == GameWorld.State.DEAD && deathElapsed >= TemplarDeathAnimation.DURATION));
         String overlayKey = world.paused() ? "pause" : world.state() == GameWorld.State.DEAD ? "death"

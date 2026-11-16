@@ -11,7 +11,7 @@ public final class Enemy {
         WINDUP,
         ATTACK,
         RECOVER,
-        BLOCK, DASH_WINDUP, DASH, JUMP_WINDUP, JUMP,
+        BLOCK, DASH_WINDUP, DASH, JUMP_WINDUP, JUMP, SHOT_WINDUP, SHOT_RELEASE,
         DEAD
     }
 
@@ -58,6 +58,7 @@ public final class Enemy {
             case BRUTE -> new BruteBehavior();
             case OIL_THROWER -> new OilThrowerBehavior();
             case GUARDIAN -> new GuardianBehavior();
+            case HARBOR_CAPTAIN -> new HarborCaptainBehavior();
         };
     }
 

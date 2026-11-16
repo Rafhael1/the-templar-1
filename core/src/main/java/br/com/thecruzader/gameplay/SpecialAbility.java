@@ -4,7 +4,8 @@ package br.com.thecruzader.gameplay;
  * Boss rewards. Each entry defines an implemented ability, with localized presentation keys.
  */
 public enum SpecialAbility {
-    GOLDEN_STRIKE(3, 2.5, "special.goldenStrike");
+    GOLDEN_STRIKE(3, 2.5, "special.goldenStrike"),
+    BOW(3, .7, "special.bow");
 
     private final int charges;
     private final double damageMultiplier;

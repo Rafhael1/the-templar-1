@@ -194,13 +194,15 @@ class BodyCollisionTest {
             assertTrue(world.player().x() + Player.WIDTH <= enemy.x() + .001);
         }
     }
-    @Test void dodgePassesThroughSentinelsArchersAndGuardianOnEitherSide() {
+
+    @Test
+    void dodgePassesThroughEveryEnemyKindOnEitherSide() {
         for (LevelData.EnemyKind kind : LevelData.EnemyKind.values()) {
             for (int direction : new int[] {-1, 1}) {
                 double playerX = direction == 1 ? 140 : 230;
-                LevelData base = level(List.of(), kind == LevelData.EnemyKind.GUARDIAN ? 180 : 2700);
-                var enemies = new ArrayList<>(base.enemies());
-                if (kind != LevelData.EnemyKind.GUARDIAN) enemies.add(new LevelData.Spawn(180, 64, kind));
+                LevelData base = level(List.of(), 2700);
+                var targetSpawn = new LevelData.Spawn(180, 64, kind);
+                var enemies = kind.boss ? List.of(targetSpawn) : List.of(targetSpawn, base.enemies().getFirst());
                 GameWorld world = new GameWorld(new LevelData(base.width(), base.height(),
                         new LevelData.Point(playerX, 64), base.checkpoint(), base.bandages(), base.gate(),
                         base.exit(), base.arena(), base.solids(), enemies));

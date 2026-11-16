@@ -36,7 +36,7 @@ class SceneryTransitionTest {
                 new br.com.thecruzader.level.LevelDefinition.Region(900, "b", "second"),
                 new br.com.thecruzader.level.LevelDefinition.Region(1500, "c", "third"));
         var different = new SceneryTransition(new br.com.thecruzader.level.LevelDefinition(
-            "different", "map", 200, level.texts(), regions, java.util.List.of(), level.interior(), level.reward()));
+            "different", "map", 200, level.texts(), regions, java.util.List.of(), level.interior(), level.reward(), java.util.List.of()));
         assertEquals(0, different.regionAt(899));
         assertEquals(1, different.regionAt(900));
         assertEquals(2, different.regionAt(2000));

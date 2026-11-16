@@ -2,6 +2,7 @@ package br.com.thecruzader.presentation;
 
 import br.com.thecruzader.gameplay.*;
 import br.com.thecruzader.level.Bounds;
+import br.com.thecruzader.level.LevelData.EnemyKind;
 import br.com.thecruzader.level.LevelDefinition;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -16,6 +17,8 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 
 public final class WorldRenderer implements Disposable {
     private static final Color GOLDEN_BLADE = new Color(1, .85f, .24f, 1);
+    private static final Color HEAVY_ARROW = Color.valueOf("ffd082");
+    private static final Color AIM_LINE = Color.valueOf("e35746b0");
     private static final Color STONE_SHADOW = Color.valueOf("655864");
     private static final Color STONE = Color.valueOf("807167");
     private static final Color WOOD_SHADOW = Color.valueOf("54444b");
@@ -47,6 +50,7 @@ public final class WorldRenderer implements Disposable {
     private final EnemyAttackRenderer enemyAttacks;
     private final TemplarDeathAnimation templarDeath;
     private final AngelReleaseAnimation angels;
+    private final TextureRegion[] captainFrames;
 
     public float cameraX() { return camera.position.x; }
     public float deathElapsed() { return playerDeath; }
@@ -72,6 +76,8 @@ public final class WorldRenderer implements Disposable {
         enemyAttacks = new EnemyAttackRenderer(assets);
         templarDeath = new TemplarDeathAnimation(assets);
         angels = new AngelReleaseAnimation(assets);
+        captainFrames = level.data().enemies().stream().anyMatch(spawn -> spawn.kind() == EnemyKind.HARBOR_CAPTAIN)
+            ? TextureRegion.split(level.texture(LevelResources.CAPTAIN_ATLAS), 80, 96)[0] : new TextureRegion[0];
         scenery = new Texture[level.definition().regions().size()];
         for (int region = 0; region < scenery.length; region++) {
             scenery[region] = level.scenery(region);
@@ -149,7 +155,9 @@ public final class WorldRenderer implements Disposable {
             Enemy enemy = world.enemies().get(i);
             if (world.level().insideArena(enemy.x()) != interior) continue;
             if (enemy.x() < left - 140 || enemy.x() > left + 1100) continue;
-            if (enemy.health() > 0) drawEnemy(enemy, world.time(), alpha);
+            if (enemy.health() > 0) drawEnemy(enemy, world, alpha);
+            else if (enemy.kind() == EnemyKind.HARBOR_CAPTAIN && enemyDeaths[i] < 2.2f)
+                drawCaptainDeath(world, enemy, enemyDeaths[i]);
             else if (enemyDeaths[i] < 2.2f)
                 drawDeath(world, enemy.x(), enemy.y(), enemy.facing(), enemy.boss() ? 1.3f : 1,
                     deathRow(enemy), enemyDeaths[i], true);
@@ -159,9 +167,14 @@ public final class WorldRenderer implements Disposable {
         }
         for (var arrow : world.arrows()) {
             if (world.level().insideArena(arrow.x()) != interior) continue;
-            batch.setColor(Color.WHITE);
+            float scale = arrow.heavy() ? 2 : 1;
+            if (arrow.heavy()) {
+                double trailingX = arrow.angle() == 0 ? arrow.x() - 40 : arrow.x() + 12;
+                rect(trailingX, arrow.y() - 1, 28, 2, AIM_LINE);
+            }
+            batch.setColor(arrow.heavy() ? HEAVY_ARROW : Color.WHITE);
             batch.draw(assets.texture("arrow"), (float) arrow.x() - 8, (float) arrow.y() - 3,
-                    8, 3, 16, 6, 1, 1, (float) arrow.angle(), 0, 0, 16, 6, false, false);
+                8, 3, 16, 6, scale, scale, (float) arrow.angle(), 0, 0, 16, 6, false, false);
         }
         drawOil(world, interior);
         enemyAttacks.effects(batch, world, left, interior);
@@ -243,6 +256,12 @@ public final class WorldRenderer implements Disposable {
         double x = world.level().checkpoint().x(), y = world.level().checkpoint().y();
         if (!interior) {
             batch.setColor(Color.WHITE);
+            for (var conversation : level.definition().conversations()) {
+                double speakerX = conversation.x();
+                if (speakerX < left - 60 || speakerX > left + 1020) continue;
+                batch.draw(level.texture(conversation.spritePath()), (float) speakerX - 24,
+                    (float) conversation.y(), 48, 72);
+            }
             batch.draw(assets.texture("sanctuary"), (float) Math.round(x - 32), (float) Math.round(y), 96, 128);
             if (world.checkpoint()) {
                 flame(x - 10, y + 40, world.time());
@@ -330,7 +349,7 @@ public final class WorldRenderer implements Disposable {
         int row =
             hurt ? 5 : p.dodging()
                         ? 4
-                        : p.attack().running()
+                : p.attack().running() && !p.drawingBow()
                                 ? 3
                                 : !p.grounded() ? 2 : Math.abs(p.speed()) > 1 ? 1 : 0;
         int frame = (int) (time * (row == 1 ? 12 : 5)) % 8;
@@ -356,6 +375,10 @@ public final class WorldRenderer implements Disposable {
         sprite(assets.characters[row][frame], x - 18, y - 10, 64, 80, p.facing());
         double handX = x + (p.facing() > 0 ? 29 : -1);
         double handY = y + 27;
+        if (p.drawingBow() && !hurt) {
+            drawPlayerBow(p, x, y);
+            return;
+        }
         float angle = -90;
         if (p.attack().running()) {
             angle = p.attackDirection() == Player.AttackDirection.DOWN ? -90
@@ -382,6 +405,18 @@ public final class WorldRenderer implements Disposable {
 
     }
 
+    private void drawPlayerBow(Player player, double x, double y) {
+        float handX = (float) Math.round(x + Player.WIDTH / 2 + player.facing() * 14);
+        float handY = (float) Math.round(y + 32);
+        batch.setColor(Color.WHITE);
+        batch.draw(assets.bow, handX - 10, handY - 18, 10, 18, 20, 36, player.facing(), 1, 0);
+        if (player.attack().phase() == Attack.Phase.WINDUP) {
+            float pull = (float) (player.attack().phaseProgress() * 8);
+            batch.draw(assets.texture("arrow"), handX - 8 - player.facing() * pull, handY - 3,
+                8, 3, 16, 6, player.facing(), 1, 0, 0, 0, 16, 6, false, false);
+        }
+    }
+
     private void drawDamageEdges(float left, float bottom, float strength) {
         for (int i = 0; i < 4; i++) {
             float inset = i * 6;
@@ -397,6 +432,7 @@ public final class WorldRenderer implements Disposable {
         return switch (enemy.kind()) {
             case SENTINEL -> 1;
             case GUARDIAN -> 2;
+            case HARBOR_CAPTAIN -> throw new IllegalStateException("Captain has separate death poses");
             case ARCHER -> 3;
             case SPEARMAN -> 4;
             case SHIELD_BEARER -> 5;
@@ -409,6 +445,7 @@ public final class WorldRenderer implements Disposable {
         return switch (enemy.kind()) {
             case SENTINEL -> assets.characters[6][frame];
             case GUARDIAN -> assets.characters[7][frame];
+            case HARBOR_CAPTAIN -> captainFrames[frame];
             case ARCHER -> assets.characters[8][frame];
             case SPEARMAN -> assets.spearman[frame];
             case SHIELD_BEARER -> assets.shieldBearer[frame];
@@ -424,22 +461,34 @@ public final class WorldRenderer implements Disposable {
         }
     }
 
-    private void drawEnemy(Enemy e, double time, float alpha) {
+    private void drawEnemy(Enemy e, GameWorld world, float alpha) {
+        double time = world.time();
         double x = e.interpolatedX(alpha), y = e.interpolatedY(alpha);
+        boolean captain = e.kind() == EnemyKind.HARBOR_CAPTAIN;
         boolean warning = e.state() == Enemy.State.WINDUP
-                || e.state() == Enemy.State.DASH_WINDUP || e.state() == Enemy.State.JUMP_WINDUP;
+            || e.state() == Enemy.State.DASH_WINDUP || e.state() == Enemy.State.JUMP_WINDUP
+            || e.state() == Enemy.State.SHOT_WINDUP;
         boolean heavy = e.heavyAttack();
+        if (e.state() == Enemy.State.SHOT_WINDUP) drawCaptainAim(e, world);
         batch.setColor(
-            e.flash() > 0 ? Color.SALMON : warning && heavy ? HEAVY_WARNING : warning ? WINDUP : Color.WHITE);
+            e.flash() > 0 ? Color.SALMON : !captain && warning ? (heavy ? HEAVY_WARNING : WINDUP) : Color.WHITE);
         float scale = e.boss() ? 1.3f : 1;
         boolean moving = Math.abs(e.x() - e.interpolatedX(0)) + Math.abs(e.y() - e.interpolatedY(0)) > .01;
-        sprite(
-            enemyAttacks.pose(e, enemyFrame(e, moving ? (int) (time * 7) % 8 : 0)),
-                x - 17,
-                y - 10,
-                64 * scale,
-                80 * scale,
-                e.facing());
+        if (captain) {
+            int pose = switch (e.state()) {
+                case WINDUP, DASH_WINDUP -> 3;
+                case ATTACK -> 4;
+                case DASH -> 5;
+                case SHOT_WINDUP -> 6;
+                case SHOT_RELEASE -> 7;
+                case RECOVER -> 8;
+                default -> moving ? 1 + (int) (time * 9) % 2 : 0;
+            };
+            sprite(enemyFrame(e, pose), x + e.width() / 2 - 40, y - 8, 80, 96, e.facing());
+        } else {
+            sprite(enemyAttacks.pose(e, enemyFrame(e, moving ? (int) (time * 7) % 8 : 0)),
+                x - 17, y - 10, 64 * scale, 80 * scale, e.facing());
+        }
         rect(x, y + (e.boss() ? 93 : 72), 34, 3, HEALTH_BACK);
         rect(
                 x,
@@ -473,23 +522,39 @@ public final class WorldRenderer implements Disposable {
             }
         } else if (e.archer()) {
             enemyAttacks.bow(batch, e, x, y);
-        } else {
+        } else if (!captain) {
             enemyAttacks.sword(batch, e, x, y, scale);
         }
         if (e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.SHIELD_BEARER) {
             enemyAttacks.shield(batch, e, x, y);
         }
-        if (e.boss()) {
+        if (e.kind() == EnemyKind.GUARDIAN) {
             batch.setColor(Color.WHITE);
             sprite(assets.guardianShield,
                     x + (e.blocking() ? (e.facing() > 0 ? 29 : -20)
                             : (e.facing() > 0 ? -11 : 24)), y + 13, 32, 40, e.facing());
             if (e.blocking()) rect(x + 6, y + 96, 28, 3, GameAssets.GOLD);
-            if (e.state() == Enemy.State.DASH)
-                rect(x - e.facing() * 18, y + 10, 12, 38,
-                        DASH_TRAIL);
         }
+        if (e.state() == Enemy.State.DASH)
+            rect(x - e.facing() * 18, y + 10, 12, 38, DASH_TRAIL);
 
+    }
+
+    private void drawCaptainAim(Enemy captain, GameWorld world) {
+        double start = captain.x() + captain.width() / 2 + captain.facing() * 22;
+        double end = captain.facing() > 0 ? world.level().arena().right() : world.level().arena().x();
+        double left = Math.min(start, end), right = Math.max(start, end);
+        for (double x = left; x < right; x += 24)
+            rect(x, captain.aimY() - 1, Math.min(12, right - x), 2, AIM_LINE);
+        rect(start - 3, captain.aimY() - 3, 6, 6, HEAVY_ARROW);
+    }
+
+    private void drawCaptainDeath(GameWorld world, Enemy captain, float elapsed) {
+        double y = Math.max(floorBelow(world, captain.x(), captain.y()), captain.y() - 725 * elapsed * elapsed);
+        batch.setColor(1, 1, 1, Math.min(1, 2.2f - elapsed));
+        sprite(captainFrames[elapsed < .16f ? 8 : 9], captain.x() + captain.width() / 2 - 40,
+            y - 8, 80, 96, captain.facing());
+        batch.setColor(Color.WHITE);
     }
 
     private void shield(Player p, double playerX, double playerY) {

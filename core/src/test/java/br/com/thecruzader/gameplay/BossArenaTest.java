@@ -27,8 +27,8 @@ class BossArenaTest {
         world.player().invulnerable = 100;
         for (int tick = 0; tick < 150; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
         assertFalse(world.arenaLocked());
-        assertEquals(8576, world.guardian().x(), .001);
-        assertEquals(0, world.guardian().attack.sequence());
+        assertEquals(8576, world.boss().x(), .001);
+        assertEquals(0, world.boss().attack.sequence());
         world.drainEvents();
         world.player().x = world.level().arena().x();
         world.update(GameWorld.STEP, PlayerInput.NONE);
@@ -36,7 +36,7 @@ class BossArenaTest {
         assertEquals(1, world.drainEvents().stream().filter(e -> e == GameEvent.ARENA_START).count());
         for (int tick = 0; tick < 120; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
         assertFalse(world.drainEvents().contains(GameEvent.ARENA_START));
-        assertNotEquals(Enemy.State.PATROL, world.guardian().state());
+        assertNotEquals(Enemy.State.PATROL, world.boss().state());
     }
     @Test void playerCannotWalkDashOrJumpOutOfEitherGate() {
         LevelData level = level();
@@ -81,7 +81,8 @@ class BossArenaTest {
         Player player = new Player(new LevelData.Point(level.arena().x() + 60, 64));
         var arrows = new ArrayList<>(List.of(new Arrow(level.arenaEntrance().x() - 24, 96,
                 player.x(), 96)));
-        for (int tick = 0; tick < 90; tick++) new ProjectileSystem().update(arrows, player, collision,
+        for (int tick = 0; tick < 90; tick++)
+            new ProjectileSystem().update(arrows, player, List.of(), collision,
                 true, GameWorld.STEP, new ArrayList<>());
         assertTrue(arrows.isEmpty());
         assertEquals(GameRules.DEFAULT.playerHearts(), player.health());
@@ -89,7 +90,7 @@ class BossArenaTest {
     @Test void defeatingGuardianOpensBothEndsAndAllowsVictory() {
         GameWorld world = entered();
         world.drainEvents();
-        world.guardian().health = 0;
+        world.boss().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         assertTrue(world.arenaLocked());
         assertTrue(world.gateLocked());
@@ -145,7 +146,7 @@ class BossArenaTest {
 
     @Test void angelsKeepBothGatesClosedUntilOpeningFinishesAndHoldCombatUntilTheyAscend() {
         GameWorld world = entered();
-        world.guardian().health = 0;
+        world.boss().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         double x = world.player().x();
         var input = new PlayerInput(1, true, true, true, false, false, -1);
@@ -166,7 +167,7 @@ class BossArenaTest {
 
     @Test void pausingStopsTheReleaseClockAndGateOpeningEventsOccurOnce() {
         GameWorld world = entered();
-        world.guardian().health = 0;
+        world.boss().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         for (int tick = 0; tick < 120; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
         double elapsed = world.bossReleaseElapsed();
@@ -185,7 +186,7 @@ class BossArenaTest {
 
     @Test void respawnClearsAnInterruptedAngelSequence() {
         GameWorld world = entered();
-        world.guardian().health = 0;
+        world.boss().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         world.player().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);

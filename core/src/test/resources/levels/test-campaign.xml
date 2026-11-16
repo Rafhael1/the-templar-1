@@ -2,7 +2,8 @@
 <campaign>
     <level reward="GOLDEN_STRIKE" id="exiles-road" map="levels/exiles-road/maps/exiles-road.tmx" blendWidth="640"
            chapter="menu.chapter" title="menu.level" story="menu.story" travelObjective="hud.gate"
-           bossObjective="hud.guardian" bossName="hud.bossName" completionTitle="overlay.victory.title"
+           arenaNotice="notice.arena" bossObjective="hud.guardian" bossName="hud.bossName"
+           exitObjective="hud.gate" completionTitle="overlay.victory.title"
            completionText="overlay.victory.text">
     <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
       <light x="184" y="176" />
@@ -58,7 +59,8 @@
   </level>
     <level reward="GOLDEN_STRIKE" id="test-road" map="levels/test-road/maps/test-road.tmx" blendWidth="128"
            chapter="menu.chapter" title="menu.level" story="menu.story" travelObjective="hud.gate"
-           bossObjective="hud.guardian" bossName="hud.bossName" completionTitle="overlay.victory.title"
+           arenaNotice="notice.arena" bossObjective="hud.guardian" bossName="hud.bossName"
+           exitObjective="hud.gate" completionTitle="overlay.victory.title"
            completionText="overlay.victory.text">
     <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
       <light x="184" y="176" />

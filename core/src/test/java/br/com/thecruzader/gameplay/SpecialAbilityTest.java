@@ -123,7 +123,7 @@ class SpecialAbilityTest {
     @Test
     void specialPressDuringHitStopSurvivesUntilSimulationResumes() {
         GameWorld world = world();
-        Enemy enemy = world.guardian();
+        Enemy enemy = world.boss();
         world.player().x = 2010;
         world.player().previousX = 2010;
         enemy.x = 2050;

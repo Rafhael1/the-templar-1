@@ -22,7 +22,7 @@ abstract class BossBehavior extends EnemyBehavior {
         boss.alertTime = visible ? 2 : Math.max(0, boss.alertTime - dt);
         boss.actionTime = Math.max(0, boss.actionTime - dt);
         double tempo = boss.health <= boss.maxHealth() / 2 ? 0.8 : 1;
-        if (updateSkill(boss, tempo)) return;
+        if (updateSkill(boss, tempo, arrows)) return;
         if (boss.state == Enemy.State.RECOVER && !boss.attack.running() && boss.actionTime > 0) return;
         if (boss.attack.running()) {
             boss.updateAttackState();
@@ -42,7 +42,7 @@ abstract class BossBehavior extends EnemyBehavior {
         if (boss.grounded) selectSkill(boss, tempo);
     }
 
-    abstract boolean updateSkill(Enemy boss, double tempo);
+    abstract boolean updateSkill(Enemy boss, double tempo, List<Arrow> arrows);
 
     abstract void selectSkill(Enemy boss, double tempo);
 

@@ -132,7 +132,7 @@ class DynamicCombatTest {
         player.parryWindow = .12;
         var arrows = new ArrayList<>(List.of(new Arrow(100, 90, 400, 90)));
         var events = new ArrayList<GameEvent>();
-        new ProjectileSystem().update(arrows, player, new CollisionWorld(level()), false, .5, events);
+        new ProjectileSystem().update(arrows, player, List.of(), new CollisionWorld(level()), false, .5, events);
         assertTrue(arrows.isEmpty());
         assertEquals(List.of(GameEvent.PARRY), events);
         assertEquals(player.maxHealth(), player.health());

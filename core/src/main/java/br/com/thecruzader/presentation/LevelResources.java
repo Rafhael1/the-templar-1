@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.Disposable;
 
 /** A screen owns this bundle. Map geometry and graphics always use the same definition/path. */
 public final class LevelResources implements Disposable {
+    static final String CAPTAIN_ATLAS = "levels/constantinople/boss/captain.png";
     private final AssetManager manager = new AssetManager();
     private final LevelDefinition definition;
     private final LevelData data;
@@ -31,8 +32,15 @@ public final class LevelResources implements Disposable {
                 assets.texts.text(region.announcementKey());
                 if (!manager.contains(region.texturePath())) manager.load(region.texturePath(), Texture.class);
             }
+            for (var conversation : definition.conversations()) {
+                conversation.textKeys().forEach(assets.texts::text);
+                if (!manager.contains(conversation.spritePath()))
+                    manager.load(conversation.spritePath(), Texture.class);
+            }
             for (String path : definition.interior().textures())
                 if (!manager.contains(path)) manager.load(path, Texture.class);
+            if (data.enemies().stream().anyMatch(spawn -> spawn.kind() == LevelData.EnemyKind.HARBOR_CAPTAIN))
+                manager.load(CAPTAIN_ATLAS, Texture.class);
             manager.finishLoading();
         } catch (RuntimeException error) {
             manager.dispose();

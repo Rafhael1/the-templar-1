@@ -8,16 +8,30 @@ import java.util.Objects;
 /** Authored content belonging to one level; coordinates use the simulation's upward Y axis. */
 public record LevelDefinition(String id, String mapPath, double blendWidth, TextKeys texts,
                               List<Region> regions, List<Decoration> decorations, Interior interior,
-                              SpecialAbility reward) {
+                              SpecialAbility reward, List<Conversation> conversations) {
+    public record Conversation(double x, double y, String textKey, String spritePath) {
+        public Conversation {
+            if (!Double.isFinite(x) || !Double.isFinite(y) || x < 0 || y < 0)
+                throw new IllegalArgumentException("Invalid conversation position");
+            requireText(textKey);
+            requireText(spritePath);
+        }
+
+        public List<String> textKeys() {
+            return List.of(textKey + ".title", textKey + ".body");
+        }
+    }
     public record TextKeys(String chapter, String title, String story, String travelObjective,
-            String bossObjective, String bossName, String completionTitle, String completionText) {
+                           String arenaNotice, String bossObjective, String bossName, String exitObjective,
+                           String completionTitle, String completionText) {
         public TextKeys {
-            for (String key : List.of(chapter, title, story, travelObjective, bossObjective,
-                    bossName, completionTitle, completionText)) requireText(key);
+            for (String key : List.of(chapter, title, story, travelObjective, arenaNotice, bossObjective,
+                bossName, exitObjective, completionTitle, completionText))
+                requireText(key);
         }
         public List<String> keys() {
-            return List.of(chapter, title, story, travelObjective, bossObjective, bossName,
-                    completionTitle, completionText);
+            return List.of(chapter, title, story, travelObjective, arenaNotice, bossObjective, bossName,
+                exitObjective, completionTitle, completionText);
         }
     }
     public record Region(double start, String texturePath, String announcementKey) {
@@ -60,6 +74,7 @@ public record LevelDefinition(String id, String mapPath, double blendWidth, Text
             throw new IllegalArgumentException("Blend width must be finite and positive");
         regions = List.copyOf(regions);
         decorations = List.copyOf(decorations);
+        conversations = List.copyOf(conversations);
         if (regions.isEmpty() || regions.getFirst().start() != 0)
             throw new IllegalArgumentException("Regions must begin at zero");
         for (int i = 1; i < regions.size(); i++)
@@ -72,6 +87,12 @@ public record LevelDefinition(String id, String mapPath, double blendWidth, Text
         for (Decoration decoration : decorations)
             if (decoration.x() >= data.width() || decoration.y() >= LevelValidator.VIEW_HEIGHT)
                 throw new IllegalArgumentException("Decoration outside visible map: " + id);
+        for (Conversation conversation : conversations) {
+            if (conversation.x() >= data.arenaEntrance().x() || conversation.y() + 72 > LevelValidator.VIEW_HEIGHT
+                || data.solids().stream().noneMatch(s -> s.top() == conversation.y()
+                && conversation.x() >= s.x() && conversation.x() < s.right()))
+                throw new IllegalArgumentException("Conversation must stand on the road: " + id);
+        }
     }
     private static void requireText(String text) {
         if (text == null || text.isBlank()) throw new IllegalArgumentException("Content names must not be blank");

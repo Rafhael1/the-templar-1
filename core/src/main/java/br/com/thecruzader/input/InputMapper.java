@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.IntSet;
 public final class InputMapper extends InputAdapter {
     private final IntSet held = new IntSet();
     private int specialSlot = -1;
+    private boolean interact;
     private boolean jump, attack, dodge, pause, restart, mute;
 
     @Override
@@ -17,6 +18,7 @@ public final class InputMapper extends InputAdapter {
             case Input.Keys.SPACE, Input.Keys.W, Input.Keys.UP -> jump = true;
             case Input.Keys.Q -> specialSlot = 0;
             case Input.Keys.E -> specialSlot = 1;
+            case Input.Keys.F -> interact = true;
             case Input.Keys.J, Input.Keys.Z -> attack = true;
             case Input.Keys.SHIFT_LEFT, Input.Keys.SHIFT_RIGHT, Input.Keys.K -> dodge = true;
             case Input.Keys.ESCAPE -> pause = true;
@@ -65,9 +67,16 @@ public final class InputMapper extends InputAdapter {
         return result;
     }
 
+    public boolean takeInteract() {
+        boolean result = interact;
+        interact = false;
+        return result;
+    }
+
     public void clear() {
         held.clear();
         specialSlot = -1;
+        interact = false;
         jump = false;
         attack = false;
         dodge = false;
