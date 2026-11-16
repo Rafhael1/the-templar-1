@@ -71,7 +71,7 @@ class ExpandedCombatTest {
                 base.bandages(), base.gate(), base.exit(), base.arena(), base.solids(),
                 List.of(base.enemies().getFirst(), new LevelData.Spawn(300, 64, LevelData.EnemyKind.ARCHER))));
         for (int tick = 0; tick < 240 && world.arrows().isEmpty(); tick++)
-            world.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true));
+            world.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true, -1));
         assertFalse(world.arrows().isEmpty());
         world.player().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);

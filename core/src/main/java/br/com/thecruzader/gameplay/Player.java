@@ -3,9 +3,46 @@ package br.com.thecruzader.gameplay;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
 
+import java.util.List;
+
 public final class Player {
     public static final double WIDTH = LevelData.PLAYER_WIDTH, HEIGHT = LevelData.PLAYER_HEIGHT, DODGE_COOLDOWN = 1.4;
     private final int maxHealth;
+    private List<SpecialAbility> abilities = List.of();
+    private final int[] charges = new int[2];
+    SpecialAbility attackAbility;
+
+    void equip(List<SpecialAbility> selected) {
+        abilities = List.copyOf(selected);
+        for (int i = 0; i < abilities.size(); i++) charges[i] = abilities.get(i).charges();
+    }
+
+    public List<SpecialAbility> abilities() {
+        return abilities;
+    }
+
+    public int specialCharges(int slot) {
+        return charges[slot];
+    }
+
+    public boolean goldenStrike() {
+        return attack.running() && attackAbility == SpecialAbility.GOLDEN_STRIKE;
+    }
+
+    double attackDamageMultiplier() {
+        return attackAbility == null ? 1 : attackAbility.damageMultiplier();
+    }
+
+    boolean startSpecial(int slot) {
+        if (slot < 0 || slot >= abilities.size() || charges[slot] == 0
+            || blocking || dodging() || !attack.start()) return false;
+        attackAbility = abilities.get(slot);
+        charges[slot]--;
+        attackBuffer = 0;
+        attackDirection = AttackDirection.SIDE;
+        bounced = false;
+        return true;
+    }
     double previousX, previousY;
     double x, y, vx, vy, invulnerable, dodge, dodgeCooldown, coyote, jumpBuffer;
     int facing = 1, health;

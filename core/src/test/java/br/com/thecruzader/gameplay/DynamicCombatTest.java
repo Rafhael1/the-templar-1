@@ -26,7 +26,7 @@ class DynamicCombatTest {
     }
 
     private PlayerInput input(boolean attack, boolean dodge, boolean block) {
-        return new PlayerInput(0, false, attack, dodge, false, block);
+        return new PlayerInput(0, false, attack, dodge, false, block, -1);
     }
 
     @Test
@@ -145,7 +145,7 @@ class DynamicCombatTest {
         player.attack.start();
         player.attack.update(.34);
         player.y = 180;
-        world.update(GameWorld.STEP, new PlayerInput(0, false, true, false, true, false));
+        world.update(GameWorld.STEP, new PlayerInput(0, false, true, false, true, false, -1));
         assertEquals(1, player.attack.sequence());
         for (int i = 0; i < 13; i++) world.update(GameWorld.STEP, PlayerInput.NONE);
         assertEquals(2, player.attack.sequence());
@@ -382,7 +382,7 @@ class DynamicCombatTest {
         assertTrue(world.hitStopped());
         assertEquals(time, world.time());
         world.setPaused(false);
-        world.update(GameWorld.STEP, new PlayerInput(0, true, false, false, false, false));
+        world.update(GameWorld.STEP, new PlayerInput(0, true, false, false, false, false, -1));
         while (world.hitStopped()) world.update(GameWorld.STEP, PlayerInput.NONE);
         assertEquals(time, world.time());
         world.update(GameWorld.STEP, PlayerInput.NONE);

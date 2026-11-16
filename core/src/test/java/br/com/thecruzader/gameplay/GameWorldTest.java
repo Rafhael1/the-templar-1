@@ -37,7 +37,7 @@ class GameWorldTest {
     void renderedPositionInterpolatesBetweenSimulationStepsAndResetsOnRespawn() {
         GameWorld w = world();
         double start = w.player().x();
-        w.update(STEP, new PlayerInput(1, false, false, false, false, false));
+        w.update(STEP, new PlayerInput(1, false, false, false, false, false, -1));
         assertEquals(start, w.player().interpolatedX(0), .001);
         assertEquals(w.player().x(), w.player().interpolatedX(1), .001);
         assertEquals((start + w.player().x()) / 2, w.player().interpolatedX(.5), .001);
@@ -52,7 +52,7 @@ class GameWorldTest {
     void jumpFromGroundReturnsToGround() {
         GameWorld w = world();
         w.update(STEP, PlayerInput.NONE);
-        w.update(STEP, new PlayerInput(0, true, false, false, false, false));
+        w.update(STEP, new PlayerInput(0, true, false, false, false, false, -1));
         assertTrue(w.player().y() > 64);
         advance(w, 130, PlayerInput.NONE);
         assertEquals(64, w.player().y(), .001);
@@ -63,10 +63,10 @@ class GameWorldTest {
     void airborneJumpCannotResetVerticalVelocity() {
         GameWorld w = world();
         w.update(STEP, PlayerInput.NONE);
-        w.update(STEP, new PlayerInput(0, true, false, false, false, false));
+        w.update(STEP, new PlayerInput(0, true, false, false, false, false, -1));
         advance(w, 10, PlayerInput.NONE);
         double velocity = w.player().vy;
-        w.update(STEP, new PlayerInput(0, true, false, false, false, false));
+        w.update(STEP, new PlayerInput(0, true, false, false, false, false, -1));
         assertTrue(w.player().vy < velocity);
     }
 
@@ -75,8 +75,8 @@ class GameWorldTest {
         GameWorld w = terrainWorld();
         w.player().x = 390;
         w.update(STEP, PlayerInput.NONE);
-        w.update(STEP, new PlayerInput(1, true, false, false, false, false));
-        advance(w, 62, new PlayerInput(1, false, false, false, false, false));
+        w.update(STEP, new PlayerInput(1, true, false, false, false, false, -1));
+        advance(w, 62, new PlayerInput(1, false, false, false, false, false, -1));
         advance(w, 30, PlayerInput.NONE);
         assertTrue(w.player().x() > 420);
         assertEquals(160, w.player().y(), .001);
@@ -88,17 +88,17 @@ class GameWorldTest {
         w.player().health = 1;
         w.player().x = 390;
         w.update(STEP, PlayerInput.NONE);
-        w.update(STEP, new PlayerInput(1, true, false, false, false, false));
-        advance(w, 92, new PlayerInput(1, false, false, false, false, false));
+        w.update(STEP, new PlayerInput(1, true, false, false, false, false, -1));
+        advance(w, 92, new PlayerInput(1, false, false, false, false, false, -1));
         assertEquals(160, w.player().y(), .001);
-        w.update(STEP, new PlayerInput(1, true, false, false, false, false));
-        advance(w, 100, new PlayerInput(1, false, false, false, false, false));
+        w.update(STEP, new PlayerInput(1, true, false, false, false, false, -1));
+        advance(w, 100, new PlayerInput(1, false, false, false, false, false, -1));
         assertTrue(w.collectedBandageCount() > 0, "Bandage must be reachable through the platform route");
         assertEquals(224, w.player().y(), .001);
-        w.update(STEP, new PlayerInput(1, true, false, false, false, false));
-        advance(w, 110, new PlayerInput(1, false, false, false, false, false));
+        w.update(STEP, new PlayerInput(1, true, false, false, false, false, -1));
+        advance(w, 110, new PlayerInput(1, false, false, false, false, false, -1));
         assertEquals(160, w.player().y(), .001);
-        advance(w, 80, new PlayerInput(1, false, false, false, false, false));
+        advance(w, 80, new PlayerInput(1, false, false, false, false, false, -1));
         advance(w, 80, PlayerInput.NONE);
         assertEquals(64, w.player().y(), .001);
     }
@@ -121,7 +121,7 @@ class GameWorldTest {
                                 solids,
                                 base.enemies()));
         w.update(STEP, PlayerInput.NONE);
-        w.update(STEP, new PlayerInput(0, true, false, false, false, false));
+        w.update(STEP, new PlayerInput(0, true, false, false, false, false, -1));
         for (int i = 0; i < 50; i++) {
             w.update(STEP, PlayerInput.NONE);
             assertTrue(w.player().y() + Player.HEIGHT <= 140.001);
@@ -172,7 +172,7 @@ class GameWorldTest {
         e.facing = -1;
         e.attack.start();
         e.attack.update(.60);
-        w.update(STEP, new PlayerInput(0, false, false, true, false, false));
+        w.update(STEP, new PlayerInput(0, false, false, true, false, false, -1));
         assertEquals(p.maxHealth(), p.health());
         assertTrue(p.dodging());
         assertTrue(p.invulnerable() > 0);
@@ -196,10 +196,10 @@ class GameWorldTest {
     @Test
     void dodgeCooldownRejectsRepeatedRequests() {
         GameWorld w = world();
-        w.update(STEP, new PlayerInput(0, false, false, true, false, false));
+        w.update(STEP, new PlayerInput(0, false, false, true, false, false, -1));
         advance(w, 30, PlayerInput.NONE);
         double before = w.player().dodgeCooldown();
-        w.update(STEP, new PlayerInput(0, false, false, true, false, false));
+        w.update(STEP, new PlayerInput(0, false, false, true, false, false, -1));
         assertFalse(w.player().dodging());
         assertTrue(w.player().dodgeCooldown() < before);
     }
@@ -253,11 +253,11 @@ class GameWorldTest {
     void gatePhysicallyBlocksExitUntilGuardianDies() {
         GameWorld w = world();
         w.player().x = w.level().gate().x() - 50;
-        advance(w, 100, new PlayerInput(1, false, false, false, false, false));
+        advance(w, 100, new PlayerInput(1, false, false, false, false, false, -1));
         assertTrue(w.player().bounds().right() <= w.level().gate().x());
         assertEquals(GameWorld.State.PLAYING, w.state());
         w.enemies().stream().filter(Enemy::boss).findFirst().orElseThrow().health = 0;
-        advance(w, 700, new PlayerInput(1, false, false, false, false, false));
+        advance(w, 700, new PlayerInput(1, false, false, false, false, false, -1));
         assertEquals(GameWorld.State.WON, w.state());
     }
 
@@ -265,7 +265,7 @@ class GameWorldTest {
     void pauseAndTerminalStatesFreezeSimulation() {
         GameWorld w = world();
         w.setPaused(true);
-        advance(w, 20, new PlayerInput(1, true, true, true, false, false));
+        advance(w, 20, new PlayerInput(1, true, true, true, false, false, -1));
         assertEquals(0, w.time());
         assertEquals(w.level().spawn().x(), w.player().x());
         w.setPaused(false);
@@ -279,7 +279,7 @@ class GameWorldTest {
     @Test
     void eventsAreDeliveredOnlyOnce() {
         GameWorld w = world();
-        w.update(STEP, new PlayerInput(0, false, true, false, false, false));
+        w.update(STEP, new PlayerInput(0, false, true, false, false, false, -1));
         assertTrue(w.drainEvents().contains(GameEvent.SWING));
         assertTrue(w.drainEvents().isEmpty());
     }
@@ -296,7 +296,7 @@ class GameWorldTest {
     void directionAndAttackOnSameStepUseTheRequestedFacing() {
         GameWorld w = world();
         w.player().facing = -1;
-        w.update(STEP, new PlayerInput(1, false, true, false, false, false));
+        w.update(STEP, new PlayerInput(1, false, true, false, false, false, -1));
         assertEquals(1, w.player().facing());
         assertEquals(Attack.Phase.WINDUP, w.player().attack().phase());
     }
@@ -362,7 +362,7 @@ class GameWorldTest {
                             && solid.x() >= p.x() + Player.WIDTH
                             && solid.x() - (p.x() + Player.WIDTH) < 85
                     && solid.top() - p.y() < 160);
-            w.update(STEP, new PlayerInput(direction, jump, attack, dodge, false, block));
+            w.update(STEP, new PlayerInput(direction, jump, attack, dodge, false, block, -1));
         }
         assertEquals(
                 GameWorld.State.WON,

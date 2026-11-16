@@ -5,6 +5,7 @@ public enum GameEvent {
     OIL_PRIME, OIL_THROW, POT_SHATTER, FIRE_IGNITE,
     JUMP,
     SWING,
+    SPECIAL_SWING,
     HIT,
     BLOCK,
     PARRY,

@@ -1,5 +1,7 @@
 package br.com.thecruzader.presentation;
 
+import br.com.thecruzader.gameplay.SpecialAbility;
+
 import br.com.thecruzader.gameplay.GameWorld;
 import br.com.thecruzader.gameplay.Player;
 import br.com.thecruzader.level.LevelDefinition;
@@ -22,6 +24,7 @@ public final class Hud implements Disposable {
     private final Image[] hearts;
     private final Image shield;
     private final ProgressBar dodge;
+    private final Label specials;
     private final Label objective, bandageCount, sound, message, overlayTitle, overlayText;
     private final Table overlay, bossPanel;
     private final ProgressBar bossHealth;
@@ -82,6 +85,11 @@ public final class Hud implements Disposable {
         top.add(goal).height(58).right();
         root.add(top).growX();
         root.row();
+        specials = new Label("", assets.skin);
+        specials.setFontScale(.7f * GameAssets.UI_FONT_SCALE);
+        specials.setColor(GameAssets.GOLD);
+        root.add(specials).left().padTop(8);
+        root.row();
         message = new Label("", assets.skin);
         message.setColor(GameAssets.GOLD);
         message.setAlignment(Align.center);
@@ -141,8 +149,20 @@ public final class Hud implements Disposable {
         messageTime = 4;
     }
 
+    public void announceReward(SpecialAbility reward) {
+        message.setText(assets.texts.format("special.unlocked", assets.texts.text(reward.textKey())));
+        messageTime = 4;
+    }
+
     public void render(GameWorld world, float delta, boolean muted, float deathElapsed) {
         Player player = world.player();
+        StringBuilder specialText = new StringBuilder();
+        for (int slot = 0; slot < player.abilities().size(); slot++) {
+            if (slot > 0) specialText.append("     ");
+            specialText.append(assets.texts.format("special.hud", slot == 0 ? "Q" : "E",
+                assets.texts.text(player.abilities().get(slot).textKey()), player.specialCharges(slot), player.abilities().get(slot).charges()));
+        }
+        specials.setText(specialText);
         for (int i = 0; i < hearts.length; i++)
             hearts[i].setDrawable(assets.hearts[i < player.health() ? 0 : 1]);
         shield.setColor(player.blocking() ? GameAssets.GOLD : SHIELD_IDLE);

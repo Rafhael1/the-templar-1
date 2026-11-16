@@ -1,11 +1,14 @@
 package br.com.thecruzader.level;
 
+import br.com.thecruzader.gameplay.SpecialAbility;
+
 import java.util.List;
 import java.util.Objects;
 
 /** Authored content belonging to one level; coordinates use the simulation's upward Y axis. */
 public record LevelDefinition(String id, String mapPath, double blendWidth, TextKeys texts,
-        List<Region> regions, List<Decoration> decorations, Interior interior) {
+                              List<Region> regions, List<Decoration> decorations, Interior interior,
+                              SpecialAbility reward) {
     public record TextKeys(String chapter, String title, String story, String travelObjective,
             String bossObjective, String bossName, String completionTitle, String completionText) {
         public TextKeys {
@@ -48,6 +51,7 @@ public record LevelDefinition(String id, String mapPath, double blendWidth, Text
         }
     }
     public LevelDefinition {
+        Objects.requireNonNull(reward);
         requireText(id);
         requireText(mapPath);
         Objects.requireNonNull(texts);

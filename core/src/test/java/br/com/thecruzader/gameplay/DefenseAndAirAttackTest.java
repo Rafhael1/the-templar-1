@@ -23,10 +23,10 @@ class DefenseAndAirAttackTest {
     void simultaneousJumpAndDownAttackLocksDirection() {
         GameWorld w = world();
         w.update(GameWorld.STEP, PlayerInput.NONE);
-        w.update(GameWorld.STEP, new PlayerInput(0, true, true, false, true, false));
+        w.update(GameWorld.STEP, new PlayerInput(0, true, true, false, true, false, -1));
         assertFalse(w.player().grounded());
         assertEquals(Player.AttackDirection.DOWN, w.player().attackDirection());
-        w.update(GameWorld.STEP, new PlayerInput(-1, false, true, false, false, false));
+        w.update(GameWorld.STEP, new PlayerInput(-1, false, true, false, false, false, -1));
         assertEquals(Player.AttackDirection.DOWN, w.player().attackDirection());
         assertEquals(1, w.player().attack().sequence());
     }
@@ -35,7 +35,7 @@ class DefenseAndAirAttackTest {
     void groundedDownInputUsesSideAttack() {
         GameWorld w = world();
         w.update(GameWorld.STEP, PlayerInput.NONE);
-        w.update(GameWorld.STEP, new PlayerInput(0, false, true, false, true, false));
+        w.update(GameWorld.STEP, new PlayerInput(0, false, true, false, true, false, -1));
         assertEquals(Player.AttackDirection.SIDE, w.player().attackDirection());
     }
 
@@ -92,15 +92,15 @@ class DefenseAndAirAttackTest {
     @Test
     void blockingSlowsMovementPreventsAttackAndDodgeAndEndsOnRelease() {
         GameWorld w = world();
-        w.update(GameWorld.STEP, new PlayerInput(1, false, true, true, false, true));
+        w.update(GameWorld.STEP, new PlayerInput(1, false, true, true, false, true, -1));
         assertTrue(w.player().blocking());
         assertEquals(70, w.player().speed());
         assertFalse(w.player().attack().running());
         assertFalse(w.player().dodging());
-        w.update(GameWorld.STEP, new PlayerInput(1, false, true, false, false, false));
+        w.update(GameWorld.STEP, new PlayerInput(1, false, true, false, false, false, -1));
         assertFalse(w.player().blocking());
         assertTrue(w.player().attack().running());
-        w.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true));
+        w.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true, -1));
         assertFalse(w.player().blocking());
     }
 
@@ -108,12 +108,12 @@ class DefenseAndAirAttackTest {
     void shieldCanBlockInAirButCannotInterruptDodge() {
         GameWorld w = world();
         w.update(GameWorld.STEP, PlayerInput.NONE);
-        w.update(GameWorld.STEP, new PlayerInput(0, true, false, false, false, true));
+        w.update(GameWorld.STEP, new PlayerInput(0, true, false, false, false, true, -1));
         assertFalse(w.player().grounded());
         assertTrue(w.player().blocking());
-        w.update(GameWorld.STEP, new PlayerInput(0, false, false, true, false, false));
+        w.update(GameWorld.STEP, new PlayerInput(0, false, false, true, false, false, -1));
         assertTrue(w.player().dodging());
-        w.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true));
+        w.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true, -1));
         assertFalse(w.player().blocking());
     }
 }

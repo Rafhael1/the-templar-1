@@ -4,6 +4,7 @@ import br.com.thecruzader.gameplay.*;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelDefinition;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -14,6 +15,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
 public final class WorldRenderer implements Disposable {
+    private static final Color GOLDEN_BLADE = new Color(1, .85f, .24f, 1);
     private static final Color STONE_SHADOW = Color.valueOf("655864");
     private static final Color STONE = Color.valueOf("807167");
     private static final Color WOOD_SHADOW = Color.valueOf("54444b");
@@ -364,7 +366,18 @@ public final class WorldRenderer implements Disposable {
                 handY = y + 7;
             }
         }
-        sword(handX, handY, angle, 1, false);
+        if (p.goldenStrike()) {
+            batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE);
+            batch.setColor(1, .76f, .16f, .65f);
+            batch.draw(assets.swords[0], (float) Math.round(handX) - 9,
+                (float) Math.round(handY) - 10, 9, 10, 44, 20, 1, 1, angle);
+            batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            double bladeX = handX + Math.cos(Math.toRadians(angle)) * 27;
+            double bladeY = handY + Math.sin(Math.toRadians(angle)) * 27;
+            rect(bladeX - 4, bladeY, 9, 1, GOLDEN_BLADE);
+            rect(bladeX, bladeY - 4, 1, 9, Color.WHITE);
+        }
+        sword(handX, handY, angle, p.goldenStrike());
         shield(p, x, y);
 
     }
@@ -504,12 +517,13 @@ public final class WorldRenderer implements Disposable {
         }
     }
 
-    private void sword(double x, double y, float angle, float scale, boolean enemy) {
+    private void sword(double x, double y, float angle, boolean golden) {
         // Keep the sprite's pixel scale constant across attack phases.
         // The grip sits at the hand; cardinal rotations preserve the pixel grid.
+        batch.setColor(golden ? GOLDEN_BLADE : Color.WHITE);
+        batch.draw(assets.swords[0], (float) Math.round(x) - 7,
+            (float) Math.round(y) - 8, 7, 8, 40, 16, 1, 1, angle);
         batch.setColor(Color.WHITE);
-        batch.draw(assets.swords[enemy ? 1 : 0], (float) Math.round(x) - 7,
-                (float) Math.round(y) - 8, 7, 8, 40, 16, scale, scale, angle);
     }
 
     private void sprite(

@@ -244,7 +244,7 @@ final class SmokeTest extends ApplicationAdapter {
             capture("27-platform-pursuit-before.png");
             for (int tick = 0; tick < 1200; tick++) {
                 world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-                        new br.com.thecruzader.input.PlayerInput(0, false, false, false, false, true));
+                    new br.com.thecruzader.input.PlayerInput(0, false, false, false, false, true, -1));
                 if (!noticed && enemy.state() == br.com.thecruzader.gameplay.Enemy.State.NOTICE) {
                     renderer.render(world, .016f, 1);
                     hud.render(world, .016f, false, 0);
@@ -284,10 +284,27 @@ final class SmokeTest extends ApplicationAdapter {
             capture("25-next-level-prompt.png");
             Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
             campaignGame.getScreen().render(0);
+            if (!(campaignGame.getScreen() instanceof br.com.thecruzader.screen.SpecialSelectionScreen))
+                throw new IllegalStateException("Level two must ask for specials");
+            campaignGame.getScreen().render(0);
+            capture("38-special-selection.png");
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.DOWN);
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
+            campaignGame.getScreen().render(0);
             var second = ((PlayScreen) campaignGame.getScreen()).world();
+            if (second.player().abilities().size() != 1 || second.player().specialCharges(0) != 3)
+                throw new IllegalStateException("Selected special was not equipped");
+            Gdx.input.getInputProcessor().keyDown(Input.Keys.Q);
+            second.update(br.com.thecruzader.gameplay.GameWorld.STEP,
+                ((br.com.thecruzader.input.InputMapper) Gdx.input.getInputProcessor()).consume());
+            if (!second.player().goldenStrike() || second.player().specialCharges(0) != 2)
+                throw new IllegalStateException("Golden strike activation failed");
+            campaignGame.getScreen().render(0);
+            capture("38-golden-strike.png");
             if (!campaignGame.journey().currentLevel().id().equals("test-road")
                     || second == first || second.level().width() != 1920
-                    || second.time() != 0 || second.checkpoint() || second.collectedBandageCount() != 0
+                || second.checkpoint() || second.collectedBandageCount() != 0
                     || second.arenaEntered() || !second.gateLocked())
                 throw new IllegalStateException("Campaign transition did not create a fresh second level");
             campaignGame.getScreen().render(0);
@@ -380,7 +397,7 @@ final class SmokeTest extends ApplicationAdapter {
                         && solid.x() >= player.x() + br.com.thecruzader.gameplay.Player.WIDTH
                         && solid.x() - (player.x() + br.com.thecruzader.gameplay.Player.WIDTH) < 85
                         && solid.top() - player.y() < 160);
-        return new br.com.thecruzader.input.PlayerInput(direction, jump, attack, dodge, false, block);
+        return new br.com.thecruzader.input.PlayerInput(direction, jump, attack, dodge, false, block, -1);
     }
 
     private void captureLevelTour() {
@@ -517,7 +534,7 @@ final class SmokeTest extends ApplicationAdapter {
             for (int settle = 0; settle < 12; settle++) renderer.render(arenaWorld, .1f, 1);
             float lockedCamera = renderer.cameraX();
             arenaWorld.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-                    new br.com.thecruzader.input.PlayerInput(1, true, false, true, false, false));
+                new br.com.thecruzader.input.PlayerInput(1, true, false, true, false, false, -1));
             renderer.render(arenaWorld, .1f, 1);
             if (renderer.cameraX() != lockedCamera)
                 throw new IllegalStateException("Arena camera followed the player");
@@ -542,7 +559,7 @@ final class SmokeTest extends ApplicationAdapter {
             var enemyWorld = visualWorld(level, 100, java.util.List.of(sentinel, guardian));
             for (int tick = 0; tick < 800 && enemyWorld.enemies().getFirst().health() > 0; tick++)
                 enemyWorld.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-                        new br.com.thecruzader.input.PlayerInput(0, false, true, false, false, false));
+                    new br.com.thecruzader.input.PlayerInput(0, false, true, false, false, false, -1));
             if (enemyWorld.enemies().getFirst().health() != 0)
                 throw new IllegalStateException("Enemy death setup failed");
             for (int phase = 0; phase < 10; phase++) {
@@ -612,7 +629,7 @@ final class SmokeTest extends ApplicationAdapter {
         for (int tick = 0; tick < 12000 && world.state() == br.com.thecruzader.gameplay.GameWorld.State.PLAYING; tick++)
             world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
                     new br.com.thecruzader.input.PlayerInput(world.player().x() < 1800 ? 1 : 0,
-                        tick % 90 == 0, false, false, false, false));
+                        tick % 90 == 0, false, false, false, false, -1));
         if (world.state() != br.com.thecruzader.gameplay.GameWorld.State.DEAD)
             throw new IllegalStateException("Death input setup failed at " + world.player().x() + "," + world.player().y()
                 + ", health=" + world.player().health() + ", paused=" + world.paused());
@@ -718,7 +735,7 @@ final class SmokeTest extends ApplicationAdapter {
         renderer.render(outside, 0, 1);
         for (int tick = 0; tick < 120 && !outside.insideArena(); tick++)
             outside.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-                    new br.com.thecruzader.input.PlayerInput(1, false, false, true, false, false));
+                new br.com.thecruzader.input.PlayerInput(1, false, false, true, false, false, -1));
         if (!outside.insideArena()) throw new IllegalStateException("Chapel entry failed");
         renderer.render(outside, .016f, 1);
         if (!renderer.interiorVisible() || renderer.transitionOpacity() != 1)
@@ -759,7 +776,7 @@ final class SmokeTest extends ApplicationAdapter {
             if (world.enemies().getFirst().state() == br.com.thecruzader.gameplay.Enemy.State.WINDUP)
                 windup++;
             world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-                new br.com.thecruzader.input.PlayerInput(0, false, false, false, false, windup >= 42));
+                new br.com.thecruzader.input.PlayerInput(0, false, false, false, false, windup >= 42, -1));
         }
         if (world.player().parryFlash() == 0 || world.enemies().getFirst().stagger() == 0
             || !world.hitStopped()) throw new IllegalStateException("Timed parry failed");
@@ -771,7 +788,7 @@ final class SmokeTest extends ApplicationAdapter {
         if (frameHash() != frozen) throw new IllegalStateException("Paused combat effects moved");
         world.setPaused(false);
         world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-            new br.com.thecruzader.input.PlayerInput(0, false, true, false, false, false));
+            new br.com.thecruzader.input.PlayerInput(0, false, true, false, false, false, -1));
         for (int tick = 0; tick < 60 && world.enemies().getFirst().health() == 3; tick++)
             world.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
         if (world.enemies().getFirst().health() != 2) throw new IllegalStateException("Parry counterattack failed");
@@ -785,7 +802,7 @@ final class SmokeTest extends ApplicationAdapter {
             level.checkpoint(), level.bandages(), level.gate(), level.exit(), level.arena(), level.solids(),
             java.util.List.of(sentinel, guardian)));
         airborne.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-            new br.com.thecruzader.input.PlayerInput(0, false, true, false, true, false));
+            new br.com.thecruzader.input.PlayerInput(0, false, true, false, true, false, -1));
         for (int tick = 0; tick < 60 && airborne.enemies().getFirst().health() == 3; tick++)
             airborne.update(br.com.thecruzader.gameplay.GameWorld.STEP, br.com.thecruzader.input.PlayerInput.NONE);
         if (airborne.enemies().getFirst().health() != 2 || airborne.player().grounded()
@@ -837,7 +854,7 @@ final class SmokeTest extends ApplicationAdapter {
         var captured = java.util.EnumSet.noneOf(br.com.thecruzader.gameplay.Enemy.State.class);
         for (int tick = 0; tick < 250; tick++) {
             world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-                new br.com.thecruzader.input.PlayerInput(0, false, false, false, false, true));
+                new br.com.thecruzader.input.PlayerInput(0, false, false, false, false, true, -1));
             var state = world.enemies().getFirst().state();
             if ((state == br.com.thecruzader.gameplay.Enemy.State.WINDUP
                 || state == br.com.thecruzader.gameplay.Enemy.State.ATTACK
@@ -851,7 +868,7 @@ final class SmokeTest extends ApplicationAdapter {
         var defeated = visualWorld(level, 180, java.util.List.of(spear, guardian));
         for (int tick = 0; tick < 600 && defeated.enemies().getFirst().health() > 0; tick++)
             defeated.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-                new br.com.thecruzader.input.PlayerInput(0, false, true, false, false, false));
+                new br.com.thecruzader.input.PlayerInput(0, false, true, false, false, false, -1));
         if (defeated.enemies().getFirst().health() != 0)
             throw new IllegalStateException("Spearman could not be defeated");
         renderer.render(defeated, .1f, 1);
@@ -883,7 +900,7 @@ final class SmokeTest extends ApplicationAdapter {
                 for (int tick = 0; tick < 400 && world.state() == br.com.thecruzader.gameplay.GameWorld.State.PLAYING; tick++) {
                     int direction = oil && !world.oilPots().isEmpty() ? -1 : 0;
                     world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
-                        new br.com.thecruzader.input.PlayerInput(direction, false, false, false, false, !oil));
+                        new br.com.thecruzader.input.PlayerInput(direction, false, false, false, false, !oil, -1));
                     var state = world.enemies().getFirst().state();
                     if ((state == br.com.thecruzader.gameplay.Enemy.State.WINDUP
                         || state == br.com.thecruzader.gameplay.Enemy.State.ATTACK
@@ -933,7 +950,7 @@ final class SmokeTest extends ApplicationAdapter {
             for (int tick = 0; tick < 280 && world.state() == br.com.thecruzader.gameplay.GameWorld.State.PLAYING; tick++) {
                 world.update(br.com.thecruzader.gameplay.GameWorld.STEP,
                     new br.com.thecruzader.input.PlayerInput(oil && !world.oilPots().isEmpty() ? -1 : 0,
-                        false, false, false, false, !oil));
+                        false, false, false, false, !oil, -1));
                 var events = world.drainEvents();
                 heard.addAll(events);
                 audio.play(events);

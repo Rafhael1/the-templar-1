@@ -1,7 +1,9 @@
 package br.com.thecruzader.presentation;
 
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SceneryTransitionTest {
     private final br.com.thecruzader.level.LevelDefinition level = br.com.thecruzader.level.CampaignLoader.load(
@@ -34,7 +36,7 @@ class SceneryTransitionTest {
                 new br.com.thecruzader.level.LevelDefinition.Region(900, "b", "second"),
                 new br.com.thecruzader.level.LevelDefinition.Region(1500, "c", "third"));
         var different = new SceneryTransition(new br.com.thecruzader.level.LevelDefinition(
-                "different", "map", 200, level.texts(), regions, java.util.List.of(), level.interior()));
+            "different", "map", 200, level.texts(), regions, java.util.List.of(), level.interior(), level.reward()));
         assertEquals(0, different.regionAt(899));
         assertEquals(1, different.regionAt(900));
         assertEquals(2, different.regionAt(2000));

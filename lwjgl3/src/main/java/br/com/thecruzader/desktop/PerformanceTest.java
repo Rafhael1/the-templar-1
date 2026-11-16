@@ -86,7 +86,7 @@ final class PerformanceTest extends ApplicationAdapter {
         double displacement = world.player().x() - anchors[scene];
         int direction = displacement > 180 ? -1 : displacement < -180 ? 1 : (local / 90 % 2 == 0 ? 1 : -1);
         var input = new PlayerInput(direction, local % 50 == 0, local % 25 == 0,
-            local % 110 == 0, false, local % 90 > 65);
+            local % 110 == 0, false, local % 90 > 65, -1);
         world.update(GameWorld.STEP, input);
         world.update(GameWorld.STEP, PlayerInput.NONE);
         world.drainEvents();

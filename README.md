@@ -27,6 +27,7 @@ aplicativo, mas o indicador de Game Mode ainda não foi confirmado.
 | S ou seta para baixo + J/Z no ar | Golpe para baixo                                                   |
 | L ou X (segurar)                 | Bloquear com o escudo                                              |
 | Shift ou K                       | Esquiva                                                            |
+| Q / E                            | Usar especiais equipados                                           |
 | Esc                              | Pausar / continuar                                                 |
 | M                                | Ativar / desativar som                                             |
 | R ou Enter após morrer           | Retornar ao início ou ao santuário                                 |
@@ -57,6 +58,25 @@ errados deixam uma recuperação de 0,45–0,50 segundo com dano normal. Abaixo 
 golpe de espada com preparação visível e uma janela de recuperação completa. O aviso sobre o inimigo indica a preparação
 do ataque. A esquiva oferece invulnerabilidade breve e tem recarga de 1,4 segundo entre ativações. Perder o foco da
 janela pausa a partida; pressione Esc para continuar.
+
+## Especiais e recompensas
+
+Cada fase declara sua recompensa de chefe no atributo obrigatório `reward` do manifesto. Derrotar o primeiro
+chefe desbloqueia **Golpe Dourado**. O desbloqueio permanece na jornada, inclusive após morrer, e reinicia ao começar
+uma nova campanha. Não há salvamento em disco.
+
+Antes de entrar em cada fase a partir da segunda, escolha até dois especiais. A ordem de seleção define os botões **Q**
+e **E**; selecione novamente para remover, e confirme em **Iniciar fase**. A primeira fase começa sem especiais.
+O HUD mostra os especiais equipados e suas cargas.
+
+Golpe Dourado faz a espada brilhar durante o ataque e causa **2,5 vezes** o dano da espada comum, sem arredondamento.
+Possui **três cargas por tentativa**, restauradas na morte e ao iniciar uma fase. Cada ativação consome uma carga,
+mesmo sem acertar ou contra um escudo. Não pode começar durante outro ataque, bloqueio ou esquiva. Usa o alcance e o
+ciclo da espada lateral, respeita defesas e mantém o multiplicador de contra-ataque após aparada.
+
+A campanha de produção ainda contém somente a primeira fase. O desbloqueio ocorre nela; seleção e uso na fase
+seguinte são exercitados pela campanha de duas fases dos testes. As capturas estão em
+`lwjgl3/build/screenshots/38-special-selection.png` e `38-golden-strike.png`.
 
 ## Objetivo e conteúdo
 

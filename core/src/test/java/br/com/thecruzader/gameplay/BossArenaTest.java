@@ -100,7 +100,7 @@ class BossArenaTest {
         assertFalse(world.bossReleaseActive());
         assertEquals(1, world.drainEvents().stream().filter(e -> e == GameEvent.GATES_OPEN).count());
         for (int tick = 0; tick < 60; tick++) world.update(GameWorld.STEP,
-                new PlayerInput(-1, false, false, true, false, false));
+            new PlayerInput(-1, false, false, true, false, false, -1));
         assertTrue(world.player().x() < world.arenaEntrance().x());
         assertFalse(world.insideArena());
         world.player().x = world.level().arena().x() + 8;
@@ -111,7 +111,7 @@ class BossArenaTest {
         world.player().x = world.level().gate().right() + 2;
         assertFalse(world.insideArena());
         for (int tick = 0; tick < 120; tick++) world.update(GameWorld.STEP,
-                new PlayerInput(1, false, false, false, false, false));
+            new PlayerInput(1, false, false, false, false, false, -1));
         assertEquals(GameWorld.State.WON, world.state());
     }
     @Test void deathAndRespawnResetTheEncounterAndReopenTheEntrance() {
@@ -131,7 +131,7 @@ class BossArenaTest {
         world.player().x = world.arenaEntrance().right() - 12;
         world.player().invulnerable = 100;
         for (int tick = 0; tick < 60; tick++) world.update(GameWorld.STEP,
-                new PlayerInput(-1, false, false, false, false, false));
+            new PlayerInput(-1, false, false, false, false, false, -1));
         assertTrue(world.player().x() < world.arenaEntrance().x());
     }
     @Test void pausedWorldDoesNotStartTheFight() {
@@ -148,7 +148,7 @@ class BossArenaTest {
         world.guardian().health = 0;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         double x = world.player().x();
-        var input = new PlayerInput(1, true, true, true, false, false);
+        var input = new PlayerInput(1, true, true, true, false, false, -1);
         for (int tick = 0; tick < 360; tick++) world.update(GameWorld.STEP, input);
         assertTrue(world.gateLocked());
         assertTrue(world.arenaLocked());
@@ -160,7 +160,7 @@ class BossArenaTest {
         assertEquals(x, world.player().x());
         for (int tick = 0; tick < 150; tick++) world.update(GameWorld.STEP, PlayerInput.NONE);
         assertFalse(world.bossReleaseActive());
-        world.update(GameWorld.STEP, new PlayerInput(1, false, false, false, false, false));
+        world.update(GameWorld.STEP, new PlayerInput(1, false, false, false, false, false, -1));
         assertTrue(world.player().x() > x);
     }
 

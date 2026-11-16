@@ -28,7 +28,8 @@ public final class Enemy {
     int nextMove;
     boolean shotFired;
     final Attack attack;
-    int health, facing = -1;
+    double health;
+    int facing = -1;
     long lastPlayerAttack = -1;
     boolean hitPlayer;
     State state = State.PATROL;
@@ -77,7 +78,7 @@ public final class Enemy {
         return facing;
     }
 
-    public int health() {
+    public double health() {
         return health;
     }
 

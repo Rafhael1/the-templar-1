@@ -30,14 +30,26 @@ class CampaignTest {
         assertThrows(IllegalArgumentException.class, () -> new Campaign(List.of()));
         assertThrows(IllegalArgumentException.class, () -> new Campaign(List.of(campaign.levels().getFirst(), campaign.levels().getFirst())));
     }
+
+    @Test
+    void rewardNamesAndDescriptionsExistInBothLanguages() {
+        var texts = new br.com.thecruzader.i18n.GameText(assets.child("i18n"), br.com.thecruzader.i18n.Language.PT);
+        for (var language : br.com.thecruzader.i18n.Language.values()) {
+            texts.setLanguage(language);
+            for (var ability : br.com.thecruzader.gameplay.SpecialAbility.values()) {
+                assertFalse(texts.text(ability.textKey()).isBlank());
+                assertFalse(texts.text(ability.textKey() + ".description").isBlank());
+            }
+        }
+    }
     @Test void unorderedRegionsAndOverlappingBlendsFail() {
         var base = campaign.levels().getFirst();
         assertThrows(IllegalArgumentException.class, () -> new LevelDefinition("bad", base.mapPath(), 640, base.texts(),
-                List.of(new LevelDefinition.Region(100, "texture", "key")), List.of(), base.interior()));
+            List.of(new LevelDefinition.Region(100, "texture", "key")), List.of(), base.interior(), base.reward()));
         assertThrows(IllegalArgumentException.class, () -> new LevelDefinition("bad", base.mapPath(), 640, base.texts(),
-                List.of(new LevelDefinition.Region(0, "texture", "key"), new LevelDefinition.Region(200, "texture", "key")), List.of(), base.interior()));
+            List.of(new LevelDefinition.Region(0, "texture", "key"), new LevelDefinition.Region(200, "texture", "key")), List.of(), base.interior(), base.reward()));
         assertThrows(IllegalArgumentException.class, () -> new LevelDefinition("bad", base.mapPath(), Double.NaN,
-                base.texts(), base.regions(), List.of(), base.interior()));
+            base.texts(), base.regions(), List.of(), base.interior(), base.reward()));
     }
     @Test void invalidNumericStateFailsBeforeSimulation() {
         assertThrows(IllegalArgumentException.class, () -> new LevelData.Point(Double.NaN, 0));

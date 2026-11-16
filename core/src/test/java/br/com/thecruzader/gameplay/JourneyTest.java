@@ -22,6 +22,12 @@ class JourneyTest {
         assertEquals(7, first.player().health());
         complete(first);
         journey.continueAfterVictory();
+        assertTrue(journey.selectionRequired());
+        assertEquals(java.util.List.of(SpecialAbility.GOLDEN_STRIKE), journey.unlockedAbilities());
+        assertThrows(IllegalStateException.class, () -> journey.enterLevel(first.level()));
+        assertThrows(IllegalArgumentException.class, () -> journey.selectAbilities(
+            java.util.List.of(SpecialAbility.GOLDEN_STRIKE, SpecialAbility.GOLDEN_STRIKE)));
+        journey.selectAbilities(java.util.List.of(SpecialAbility.GOLDEN_STRIKE));
         GameWorld second = journey.enterLevel(LevelLoader.load(testAssets.child(journey.currentLevel().mapPath())));
         assertEquals(7, second.player().maxHealth());
         assertEquals(7, second.player().health());
@@ -45,6 +51,12 @@ class JourneyTest {
         assertEquals("test-road", journey.currentLevel().id());
         assertFalse(journey.hasNextLevel());
         assertThrows(IllegalStateException.class, journey::continueAfterVictory);
+        assertTrue(journey.selectionRequired());
+        assertEquals(java.util.List.of(SpecialAbility.GOLDEN_STRIKE), journey.unlockedAbilities());
+        assertThrows(IllegalStateException.class, () -> journey.enterLevel(first.level()));
+        assertThrows(IllegalArgumentException.class, () -> journey.selectAbilities(
+            java.util.List.of(SpecialAbility.GOLDEN_STRIKE, SpecialAbility.GOLDEN_STRIKE)));
+        journey.selectAbilities(java.util.List.of(SpecialAbility.GOLDEN_STRIKE));
         GameWorld second = journey.enterLevel(LevelLoader.load(testAssets.child(journey.currentLevel().mapPath())));
         assertNotSame(first, second);
         assertNotSame(first.player(), second.player());
@@ -69,7 +81,28 @@ class JourneyTest {
         GameWorld restarted = journey.enterLevel(first.level());
         assertEquals(GameWorld.State.PLAYING, restarted.state());
         assertFalse(restarted.checkpoint());
+        assertTrue(journey.unlockedAbilities().isEmpty());
+        assertTrue(restarted.player().abilities().isEmpty());
         assertEquals(0, restarted.collectedBandageCount());
+    }
+
+    @Test
+    void bossRewardUnlocksBeforeExitAndSurvivesDeathInTheSameLevel() {
+        Journey journey = new Journey(campaign);
+        GameWorld world = journey.enterLevel(LevelLoader.load(assets.child(journey.currentLevel().mapPath())));
+        assertTrue(world.player().abilities().isEmpty());
+        assertTrue(journey.unlockedAbilities().isEmpty());
+        world.player().x = world.level().arena().x() + 8;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        world.guardian().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertEquals(java.util.List.of(SpecialAbility.GOLDEN_STRIKE), journey.unlockedAbilities());
+        assertEquals(GameWorld.State.PLAYING, world.state());
+        world.player().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        world.respawn();
+        assertEquals(java.util.List.of(SpecialAbility.GOLDEN_STRIKE), journey.unlockedAbilities());
+        assertTrue(world.player().abilities().isEmpty());
     }
 
     private static void complete(GameWorld world) {
@@ -128,7 +161,7 @@ class JourneyTest {
                             && solid.x() >= player.x() + Player.WIDTH
                             && solid.x() - (player.x() + Player.WIDTH) < 85
                             && solid.top() - player.y() < 160);
-            world.update(GameWorld.STEP, new PlayerInput(direction, jump, attack, dodge, false, block));
+            world.update(GameWorld.STEP, new PlayerInput(direction, jump, attack, dodge, false, block, -1));
 
         }
         assertEquals(GameWorld.State.WON, world.state(), "Failed at x=" + world.player().x());

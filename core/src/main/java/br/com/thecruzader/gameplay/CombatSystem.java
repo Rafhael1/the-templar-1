@@ -37,7 +37,7 @@ final class CombatSystem {
             events.add(GameEvent.BLOCK);
             return;
         }
-        enemy.health = Math.max(0, enemy.health - (enemy.vulnerable() ? 2 : 1));
+        enemy.health = Math.max(0, enemy.health - (enemy.vulnerable() ? 2 : 1) * player.attackDamageMultiplier());
         enemy.riposteReady = false;
         enemy.impactDirection = player.attackDirection == Player.AttackDirection.DOWN ? 0 : player.facing;
         if (!enemy.boss() && enemy.health > 0) {

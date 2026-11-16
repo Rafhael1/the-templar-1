@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.IntSet;
 /** Keeps fast presses until a simulation step consumes them, even at high render rates. */
 public final class InputMapper extends InputAdapter {
     private final IntSet held = new IntSet();
+    private int specialSlot = -1;
     private boolean jump, attack, dodge, pause, restart, mute;
 
     @Override
@@ -14,6 +15,8 @@ public final class InputMapper extends InputAdapter {
         if (!held.add(key)) return true;
         switch (key) {
             case Input.Keys.SPACE, Input.Keys.W, Input.Keys.UP -> jump = true;
+            case Input.Keys.Q -> specialSlot = 0;
+            case Input.Keys.E -> specialSlot = 1;
             case Input.Keys.J, Input.Keys.Z -> attack = true;
             case Input.Keys.SHIFT_LEFT, Input.Keys.SHIFT_RIGHT, Input.Keys.K -> dodge = true;
             case Input.Keys.ESCAPE -> pause = true;
@@ -36,7 +39,8 @@ public final class InputMapper extends InputAdapter {
                         - (held.contains(Input.Keys.A) || held.contains(Input.Keys.LEFT) ? 1 : 0);
         PlayerInput result = new PlayerInput(direction, jump, attack, dodge,
                 held.contains(Input.Keys.S) || held.contains(Input.Keys.DOWN),
-                held.contains(Input.Keys.L) || held.contains(Input.Keys.X));
+            held.contains(Input.Keys.L) || held.contains(Input.Keys.X), specialSlot);
+        specialSlot = -1;
         jump = false;
         attack = false;
         dodge = false;
@@ -63,6 +67,7 @@ public final class InputMapper extends InputAdapter {
 
     public void clear() {
         held.clear();
+        specialSlot = -1;
         jump = false;
         attack = false;
         dodge = false;

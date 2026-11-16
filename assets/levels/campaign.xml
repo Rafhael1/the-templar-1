@@ -1,6 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <campaign>
-  <level id="exiles-road" map="levels/exiles-road/maps/exiles-road.tmx" blendWidth="640" chapter="menu.chapter" title="menu.level" story="menu.story" travelObjective="hud.gate" bossObjective="hud.guardian" bossName="hud.bossName" completionTitle="overlay.victory.title" completionText="overlay.victory.text">
+    <level reward="GOLDEN_STRIKE" id="exiles-road" map="levels/exiles-road/maps/exiles-road.tmx" blendWidth="640"
+           chapter="menu.chapter" title="menu.level" story="menu.story" travelObjective="hud.gate"
+           bossObjective="hud.guardian" bossName="hud.bossName" completionTitle="overlay.victory.title"
+           completionText="overlay.victory.text">
     <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
       <light x="184" y="176" />
       <light x="356" y="176" />

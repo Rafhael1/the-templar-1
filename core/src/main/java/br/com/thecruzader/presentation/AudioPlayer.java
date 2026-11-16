@@ -58,7 +58,7 @@ public final class AudioPlayer {
                         case POT_SHATTER -> "pot-shatter";
                         case FIRE_IGNITE -> "fire-ignite";
                         case JUMP -> "jump";
-                        case SWING -> "sword";
+                        case SWING, SPECIAL_SWING -> "sword";
                         case HIT, BLOCK -> "hit";
                         case PARRY -> "chime";
                         case HURT -> "hurt";
@@ -75,7 +75,7 @@ public final class AudioPlayer {
                 case FIRE_IGNITE -> .35f;
                 default -> .28f;
             };
-            assets.sound(sound).play(volume, event == GameEvent.PARRY ? 1.35f : 1, 0);
+            assets.sound(sound).play(volume, event == GameEvent.SPECIAL_SWING ? .7f : event == GameEvent.PARRY ? 1.35f : 1, 0);
         }
     }
 

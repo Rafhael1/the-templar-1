@@ -189,7 +189,7 @@ class BodyCollisionTest {
                 List.of(new LevelData.Spawn(180, 64, LevelData.EnemyKind.SENTINEL), base.enemies().getFirst())));
         Enemy enemy = world.enemies().getFirst();
         for (int tick = 0; tick < 150; tick++) {
-            world.update(GameWorld.STEP, new PlayerInput(1, false, false, false, false, false));
+            world.update(GameWorld.STEP, new PlayerInput(1, false, false, false, false, false, -1));
             assertFalse(world.player().bounds().overlaps(enemy.bounds()));
             assertTrue(world.player().x() + Player.WIDTH <= enemy.x() + .001);
         }
@@ -208,7 +208,7 @@ class BodyCollisionTest {
                 double before = target.x();
                 target.attack.start(); // Committed attacks keep autonomous retreat out of this collision check.
                 for (int tick = 0; tick < 24; tick++)
-                    world.update(GameWorld.STEP, new PlayerInput(direction, false, false, tick == 0, false, false));
+                    world.update(GameWorld.STEP, new PlayerInput(direction, false, false, tick == 0, false, false, -1));
                 assertEquals(playerX + direction * 100, world.player().x(), .001);
                 assertEquals(before, target.x(), .001, "Dodge must not push enemies");
                 assertEquals(GameRules.DEFAULT.playerHearts(), world.player().health());
@@ -219,12 +219,12 @@ class BodyCollisionTest {
         Bounds wall = new Bounds(160, 64, 32, 200);
         GameWorld wallWorld = new GameWorld(level(List.of(wall), 2700));
         for (int tick = 0; tick < 24; tick++)
-            wallWorld.update(GameWorld.STEP, new PlayerInput(1, false, false, tick == 0, false, false));
+            wallWorld.update(GameWorld.STEP, new PlayerInput(1, false, false, tick == 0, false, false, -1));
         assertEquals(wall.x() - Player.WIDTH, wallWorld.player().x(), .001);
         GameWorld gateWorld = new GameWorld(level(List.of(), 2700));
         gateWorld.player().x = gateWorld.level().gate().x() - 45;
         for (int tick = 0; tick < 24; tick++)
-            gateWorld.update(GameWorld.STEP, new PlayerInput(1, false, false, tick == 0, false, false));
+            gateWorld.update(GameWorld.STEP, new PlayerInput(1, false, false, tick == 0, false, false, -1));
         assertEquals(gateWorld.level().gate().x() - Player.WIDTH, gateWorld.player().x(), .001);
     }
     @Test void collisionReturnsWhenDodgeEndsInsideABody() {

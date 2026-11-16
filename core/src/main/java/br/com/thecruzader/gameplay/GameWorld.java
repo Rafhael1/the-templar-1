@@ -5,6 +5,7 @@ import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -20,16 +21,18 @@ public final class GameWorld {
 
     private final LevelData level;
     private final GameRules rules;
+    private final List<SpecialAbility> abilities;
+    private final Runnable onBossDefeated;
     private final CollisionWorld collision;
     private final MovementSystem movement = new MovementSystem();
     private final EnemySystem enemySystem;
     private final CombatSystem combat = new CombatSystem();
     private final BodyCollisionSystem bodies = new BodyCollisionSystem();
     private final List<Enemy> enemies = new ArrayList<>();
-    private final List<Enemy> enemyView = java.util.Collections.unmodifiableList(enemies);
+    private final List<Enemy> enemyView = Collections.unmodifiableList(enemies);
     private final List<GameEvent> events = new ArrayList<>();
     private final List<CombatEffect> effects = new ArrayList<>();
-    private final List<CombatEffect> effectView = java.util.Collections.unmodifiableList(effects);
+    private final List<CombatEffect> effectView = Collections.unmodifiableList(effects);
     private Player player;
     private Enemy guardian;
     private final Bounds shrine, arenaEntrance;
@@ -37,9 +40,9 @@ public final class GameWorld {
     private boolean checkpoint, paused, arenaEntered, bossDefeated;
     private final boolean[] collectedBandages;
     private final List<Arrow> arrows = new ArrayList<>();
-    private final List<Arrow> arrowView = java.util.Collections.unmodifiableList(arrows);
+    private final List<Arrow> arrowView = Collections.unmodifiableList(arrows);
     private final List<OilPot> oilPots = new ArrayList<>();
-    private final List<OilPot> oilPotView = java.util.Collections.unmodifiableList(oilPots);
+    private final List<OilPot> oilPotView = Collections.unmodifiableList(oilPots);
     private final OilSystem oilSystem = new OilSystem();
     private final ProjectileSystem projectiles = new ProjectileSystem();
     private double time;
@@ -52,6 +55,13 @@ public final class GameWorld {
     }
 
     public GameWorld(LevelData level, GameRules rules) {
+        this(level, rules, List.of(), () -> {
+        });
+    }
+
+    GameWorld(LevelData level, GameRules rules, List<SpecialAbility> abilities, Runnable onBossDefeated) {
+        this.abilities = List.copyOf(abilities);
+        this.onBossDefeated = Objects.requireNonNull(onBossDefeated);
         this.rules = Objects.requireNonNull(rules);
         this.level = Objects.requireNonNull(level);
         collectedBandages = new boolean[level.bandages().size()];
@@ -60,6 +70,7 @@ public final class GameWorld {
         arenaEntrance = level.arenaEntrance();
         shrine = new Bounds(level.checkpoint().x() - 20, level.checkpoint().y(), 60, 80);
         player = new Player(level.spawn(), rules);
+        player.equip(abilities);
         populate();
     }
 
@@ -127,7 +138,9 @@ public final class GameWorld {
             player.attackBuffer = .14;
             player.bufferedDown = input.down();
         }
+        if (input.specialSlot() >= 0 && player.startSpecial(input.specialSlot())) events.add(GameEvent.SPECIAL_SWING);
         if (player.attackBuffer > 0 && !player.blocking && !player.dodging() && player.attack.start()) {
+            player.attackAbility = null;
             player.attackBuffer = 0;
             player.bounced = false;
             player.attackDirection = player.bufferedDown && !player.grounded
@@ -148,6 +161,7 @@ public final class GameWorld {
         combat.resolve(player, enemies, events);
         if (arenaEntered && !bossDefeated && guardian.health <= 0) {
             bossDefeated = true;
+            onBossDefeated.run();
             arrows.clear();
             oilPots.clear();
             effects.clear();
@@ -233,7 +247,7 @@ public final class GameWorld {
         return new PlayerInput(current.direction(), pending.jump() || current.jump(),
             pending.attack() || current.attack(), pending.dodge() || current.dodge(),
             current.attack() ? current.down() : pending.attack() ? pending.down() : current.down(),
-            current.block());
+            current.block(), current.specialSlot() >= 0 ? current.specialSlot() : pending.specialSlot());
     }
 
     public boolean hitStopped() {
@@ -252,6 +266,7 @@ public final class GameWorld {
     public void respawn() {
         if (state != State.DEAD) throw new IllegalStateException("Respawn requires a dead player");
         player = new Player(checkpoint ? level.checkpoint() : level.spawn(), rules);
+        player.equip(abilities);
         populate();
         arenaEntered = false;
         bossDefeated = false;

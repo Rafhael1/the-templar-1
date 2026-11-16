@@ -1,5 +1,7 @@
 package br.com.thecruzader.level;
 
+import br.com.thecruzader.gameplay.SpecialAbility;
+
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.XmlReader;
 import java.util.ArrayList;
@@ -53,7 +55,8 @@ public final class CampaignLoader {
                     level.getAttribute("story"), level.getAttribute("travelObjective"), level.getAttribute("bossObjective"),
                     level.getAttribute("bossName"), level.getAttribute("completionTitle"), level.getAttribute("completionText"));
             levels.add(new LevelDefinition(level.getAttribute("id"), level.getAttribute("map"),
-                    level.getFloatAttribute("blendWidth"), texts, regions, decorations, interior));
+                level.getFloatAttribute("blendWidth"), texts, regions, decorations, interior,
+                SpecialAbility.valueOf(level.getAttribute("reward"))));
         }
         return new Campaign(levels);
     }

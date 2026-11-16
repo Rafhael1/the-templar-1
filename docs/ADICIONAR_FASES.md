@@ -45,7 +45,7 @@ O carregamento rejeita formatos e posições incompatíveis, mas não prova que 
 Acrescente um `<level>` ao manifesto. IDs devem ser únicos; todos os atributos abaixo são obrigatórios. Caminhos são internos aos recursos de `assets/` e não dependem do diretório de execução do aplicativo.
 
 ```xml
-<level id="new-road" map="levels/new-road/maps/new-road.tmx" blendWidth="200"
+<level reward="GOLDEN_STRIKE" id="new-road" map="levels/new-road/maps/new-road.tmx" blendWidth="200"
        chapter="level.newRoad.chapter" title="level.newRoad.title"
        story="level.newRoad.story" travelObjective="level.newRoad.travel"
        bossObjective="level.newRoad.fight" bossName="level.newRoad.boss"
@@ -65,6 +65,11 @@ Acrescente um `<level>` ao manifesto. IDs devem ser únicos; todos os atributos 
     </interior>
 </level>
 ```
+
+`reward` é obrigatório e corresponde a um valor implementado de `SpecialAbility`. Atualmente existe
+`GOLDEN_STRIKE`, a recompensa do primeiro chefe. Novas recompensas exigem implementação de sua mecânica,
+traduções e testes antes de serem declaradas. `Journey` mantém os desbloqueios e exige confirmar até dois especiais
+antes de entrar em fases posteriores à primeira; `GameWorld` restaura as cargas da seleção no respawn.
 
 A primeira região começa em zero. Os limites seguintes ficam em ordem, dentro da largura do mapa e separados por pelo menos `blendWidth`, para que as transições não se sobreponham. Use texturas de cenário com o formato visual 960 × 540. Uma textura pode servir a várias regiões da mesma fase e é carregada uma vez por bundle.
 

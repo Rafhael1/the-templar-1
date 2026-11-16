@@ -168,7 +168,7 @@ public final class MenuScreen extends ScreenAdapter {
         instructions.row();
         instructions.add(label("instructions.goal",
                 .85f, GameAssets.GOLD)).colspan(2).padBottom(20);
-        String[] controls = {"move", "jump", "attack", "downAttack", "block", "dodge", "pause", "respawn"};
+        String[] controls = {"move", "jump", "attack", "downAttack", "block", "dodge", "special", "pause", "respawn"};
         for (String control : controls) {
             instructions.row();
             instructions.add(label("instructions." + control + ".keys", .85f, GameAssets.GOLD))

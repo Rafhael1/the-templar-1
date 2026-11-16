@@ -88,7 +88,7 @@ public final class PlayScreen extends ScreenAdapter {
             if (event == GameEvent.CHECKPOINT)
                 hud.announce("notice.checkpoint");
             if (event == GameEvent.ARENA_START) hud.announce("notice.arena");
-            if (event == GameEvent.BOSS_DEFEATED) hud.announce("notice.bossDefeated");
+            if (event == GameEvent.BOSS_DEFEATED) hud.announceReward(level.definition().reward());
             if (event == GameEvent.GATES_OPEN) hud.announce("notice.gatesOpen");
             if (event == GameEvent.BANDAGE)
                 hud.announce("notice.bandage");

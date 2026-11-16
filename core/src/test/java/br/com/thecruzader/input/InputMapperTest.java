@@ -8,6 +8,23 @@ import org.junit.jupiter.api.Test;
 
 class InputMapperTest {
     @Test
+    void specialPressIsConsumedOnceAndClearedWithFocus() {
+        InputMapper input = new InputMapper();
+        input.keyDown(Input.Keys.Q);
+        input.keyUp(Input.Keys.Q);
+        assertEquals(0, input.consume().specialSlot());
+        assertEquals(-1, input.consume().specialSlot());
+        input.keyDown(Input.Keys.E);
+        assertEquals(1, input.consume().specialSlot());
+        input.keyDown(Input.Keys.E);
+        assertEquals(-1, input.consume().specialSlot());
+        input.keyUp(Input.Keys.E);
+        input.keyDown(Input.Keys.E);
+        input.clear();
+        assertEquals(PlayerInput.NONE, input.consume());
+    }
+
+    @Test
     void tapBetweenStepsIsNotLost() {
         InputMapper input = new InputMapper();
         input.keyDown(Input.Keys.J);
