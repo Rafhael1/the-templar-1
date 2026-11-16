@@ -100,6 +100,7 @@ public final class PlayScreen extends ScreenAdapter {
             input.consume();
         }
         List<GameEvent> events = world.drainEvents();
+        if (events.contains(GameEvent.VICTORY)) game.saveVictory();
         audio.play(events);
         SpecialAbility reward = level.definition().reward();
         for (GameEvent event : events) {

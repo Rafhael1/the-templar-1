@@ -6,7 +6,9 @@ import br.com.thecruzader.level.LevelDefinition;
 
 import java.util.*;
 
-/** Campaign progress stays in memory; each level starts a fresh world. */
+/**
+ * Campaign progress; each level starts a fresh world.
+ */
 public final class Journey {
     private final Campaign campaign;
     private final GameRules rules;
@@ -37,6 +39,12 @@ public final class Journey {
 
     public List<SpecialAbility> unlockedAbilities() {
         return List.copyOf(unlocked);
+    }
+
+    public String completedLevelId() {
+        if (world == null || world.state() != GameWorld.State.WON)
+            throw new IllegalStateException("Saving progress requires victory");
+        return currentLevel().id();
     }
 
     public boolean selectionRequired() {

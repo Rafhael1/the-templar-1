@@ -28,12 +28,14 @@ final class SmokeTest extends ApplicationAdapter {
     SmokeTest(String output, br.com.thecruzader.presentation.WindowMode windowMode) {
         this.output = output;
         this.windowMode = windowMode;
-        game = new CrusaderGame(br.com.thecruzader.level.CampaignLoader.PATH, windowMode);
+        game = new CrusaderGame(br.com.thecruzader.level.CampaignLoader.PATH, windowMode, false,
+            java.nio.file.Path.of(output, "smoke-progress.properties"));
     }
 
     @Override
     public void create() {
         Gdx.files.absolute(output).mkdirs();
+        Gdx.files.absolute(java.nio.file.Path.of(output, "smoke-progress.properties").toString()).delete();
         game.create();
         originalLanguage = game.language();
         game.setLanguage(Language.PT);
@@ -401,7 +403,8 @@ final class SmokeTest extends ApplicationAdapter {
     }
 
     private void checkCampaignTransition() {
-        CrusaderGame campaignGame = new CrusaderGame("levels/test-campaign.xml", windowMode);
+        CrusaderGame campaignGame = new CrusaderGame("levels/test-campaign.xml", windowMode, false,
+            java.nio.file.Path.of(output, "test-campaign-progress.properties"));
         campaignGame.create();
         try {
             campaignGame.startJourney();
@@ -409,6 +412,13 @@ final class SmokeTest extends ApplicationAdapter {
             var first = ((PlayScreen) campaignGame.getScreen()).world();
             completeWorld(first);
             campaignGame.getScreen().render(0);
+            var reloaded = new br.com.thecruzader.persistence.JourneySave(
+                java.nio.file.Path.of(output, "test-campaign-progress.properties"), "levels/test-campaign.xml",
+                campaignGame.campaign()).load().orElseThrow();
+            if (!campaignGame.hasSavedJourney() || !reloaded.currentLevel().id().equals("test-road")
+                || !reloaded.selectionRequired()
+                || !reloaded.unlockedAbilities().contains(SpecialAbility.GOLDEN_STRIKE))
+                throw new IllegalStateException("Victory did not persist the next level and unlocked reward");
             capture("25-next-level-prompt.png");
             Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
             campaignGame.getScreen().render(0);

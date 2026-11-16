@@ -33,7 +33,7 @@ public final class MenuScreen extends ScreenAdapter {
     private final List<Runnable> actions = new ArrayList<>();
     private Page page = Page.MAIN;
     private int selected;
-    private boolean startRequested, quitRequested;
+    private boolean startRequested, resumeRequested, quitRequested;
     private final InputAdapter keyboard = new InputAdapter() {
         @Override
         public boolean keyDown(int key) {
@@ -150,7 +150,11 @@ public final class MenuScreen extends ScreenAdapter {
         menu.row();
         menu.add(label("menu.motto", .9f, GameAssets.PAPER)).padBottom(24);
         menu.row();
-        menu.add(button(assets.texts.text("menu.newGame"), () -> startRequested = true)).width(244).height(46);
+        if (game.hasSavedJourney()) {
+            menu.add(button(assets.texts.text("menu.continue"), () -> resumeRequested = true)).width(244).height(46);
+            menu.row();
+        }
+        menu.add(button(assets.texts.text("menu.newGame"), () -> startRequested = true)).width(244).height(46).padTop(8);
         menu.row();
         menu.add(button(assets.texts.text("menu.instructions"), () -> open(Page.INSTRUCTIONS))).width(244).height(46).padTop(8);
         menu.row();
@@ -246,6 +250,10 @@ public final class MenuScreen extends ScreenAdapter {
     @Override
     public void render(float delta) {
         if (quitRequested) { Gdx.app.exit(); return; }
+        if (resumeRequested) {
+            game.resumeJourney();
+            return;
+        }
         if (startRequested) { game.startJourney(); return; }
         if (page == Page.OPTIONS) {
             boolean fullscreen = game.fullscreen();

@@ -371,6 +371,17 @@ As portas de entrada e saída bloqueiam tanto o templário quanto as investidas/
 No Tiled, o retângulo obrigatório `arena` na camada `entities` define a área: sua borda direita coincide com o portão de saída. O portão de entrada é derivado da borda esquerda. As escadas finais ficam antes da arena, sem sentinelas ou arqueiros no espaço de combate. As capturas `28-chapel-*.png` mostram fachada, transição, interior e respawn. O manifesto exige texturas e luzes de interior por fase; o guia de novas fases documenta o formato. `tools/generate_chapel.py` regenera somente `assets/levels/exiles-road/chapel/`.
 O ícone do aplicativo e da janela usa o elmo e o escudo do templário, em pixel art. No macOS, `MacDockIcon` aplica a imagem diretamente ao Dock durante a criação da janela, inclusive ao executar pelo Gradle ou pela IDE. Os arquivos PNG, ICNS (macOS) e ICO (Windows) ficam em `assets/branding/`. Para reproduzir somente o ícone, execute `tools/generate_icon.py` com Pillow instalado.
 
+## Salvamento automático
+
+Ao concluir uma fase, o jogo salva automaticamente em `~/.o-templario/progress.properties`, antes de pressionar
+Enter para avançar. Ao reabrir o jogo, **CONTINUAR** retoma no início da fase seguinte, com os poderes anteriores
+desbloqueados e a seleção de habilidades disponível. Vida, inimigos e itens começam no estado inicial da fase.
+O progresso dentro de uma fase, incluindo o santuário, não é salvo em disco.
+
+**NOVA JORNADA** apaga o progresso salvo. A vitória na última fase registra o fim da campanha; Enter inicia uma
+nova jornada. O arquivo é gravado e substituído atomicamente, e erros de leitura ou gravação são reportados.
+O modo `--dev` não lê nem altera esse arquivo, e o smoke test usa arquivos próprios no diretório de capturas.
+
 ## Desenvolvimento de novas fases
 
 Ao pedir novas fases, bosses ou mecânicas, referencie
