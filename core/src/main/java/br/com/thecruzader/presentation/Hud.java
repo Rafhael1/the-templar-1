@@ -1,13 +1,13 @@
 package br.com.thecruzader.presentation;
 
-import br.com.thecruzader.gameplay.SpecialAbility;
-
 import br.com.thecruzader.gameplay.GameWorld;
 import br.com.thecruzader.gameplay.Player;
+import br.com.thecruzader.gameplay.SpecialAbility;
 import br.com.thecruzader.level.LevelDefinition;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ProgressBar;
@@ -18,22 +18,34 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 
 public final class Hud implements Disposable {
     private static final Color SHIELD_IDLE = Color.valueOf("66717a");
-    private int lastBandageCount = -1;
+
     private final Stage stage = new Stage(new FitViewport(960, 540));
     private final GameAssets assets;
+    private final LevelDefinition definition;
+    private final boolean hasNextLevel;
     private final Image[] hearts;
     private final Image shield;
     private final ProgressBar dodge;
     private final Label specials;
-    private final Label objective, bandageCount, sound, message, overlayTitle, overlayText;
-    private final Label conversationTitle, conversationBody;
-    private final Table conversationPanel, promptPanel;
-    private LevelDefinition.Conversation displayedConversation;
-    private final Table overlay, bossPanel;
+    private final Label objective;
+    private final Label bandageCount;
+    private final Label sound;
+    private final Label messageTitle;
+    private final Label message;
+    private final Label overlayTitle;
+    private final Label overlayText;
+    private final Table messagePanel;
+    private final Label conversationTitle;
+    private final Label conversationBody;
+    private final Table conversationPanel;
+    private final Table promptPanel;
+    private final Table overlay;
+    private final Table bossPanel;
     private final ProgressBar bossHealth;
+
+    private int lastBandageCount = -1;
     private double messageTime;
-    private final LevelDefinition definition;
-    private final boolean hasNextLevel;
+    private LevelDefinition.Conversation displayedConversation;
 
     public Hud(GameAssets assets, LevelDefinition definition, boolean hasNextLevel, Player player) {
         hearts = new Image[player.maxHealth()];
@@ -92,13 +104,29 @@ public final class Hud implements Disposable {
         specials.setFontScale(.7f * GameAssets.UI_FONT_SCALE);
         specials.setColor(GameAssets.GOLD);
         root.add(specials).left().padTop(8);
-        root.row();
+
+        messagePanel = new Table();
+        messagePanel.setFillParent(true);
+        messagePanel.bottom().padBottom(76);
+        messagePanel.setTouchable(Touchable.disabled);
+        Table messageCard = new Table();
+        messageCard.setBackground(assets.frame);
+        messageCard.pad(16, 24, 18, 24);
+        messageTitle = new Label("", assets.skin);
+        messageTitle.setColor(GameAssets.GOLD);
+        messageTitle.setAlignment(Align.center);
+        messageTitle.setWrap(true);
+        messageTitle.setFontScale(1.05f * GameAssets.UI_FONT_SCALE);
+        messageCard.add(messageTitle).width(512).padBottom(10).row();
+        messageCard.add(new Image(assets.panel(GameAssets.GOLD))).width(48).height(2).padBottom(10).row();
         message = new Label("", assets.skin);
-        message.setColor(GameAssets.GOLD);
         message.setAlignment(Align.center);
         message.setWrap(true);
-        message.setFontScale(.9f * GameAssets.UI_FONT_SCALE);
-        root.add(message).width(760).height(48).padTop(8);
+        message.setFontScale(.85f * GameAssets.UI_FONT_SCALE);
+        messageCard.add(message).width(512);
+        messagePanel.add(messageCard).width(560);
+        messagePanel.setVisible(false);
+        stage.addActor(messagePanel);
 
         bossPanel = new Table();
         bossPanel.setFillParent(true);
@@ -197,64 +225,111 @@ public final class Hud implements Disposable {
     }
 
     public void announce(String key) {
-        message.setText(assets.texts.text(key));
-        messageTime = 4;
+        showMessage(assets.texts.text("notice.title"), assets.texts.text(key), 4);
+    }
+
+    private void showMessage(String title, String body, double duration) {
+        messageTitle.setText(title);
+        message.setText(body);
+        messageTime = duration;
     }
 
     public void announceReward(SpecialAbility reward, Player player) {
         int slot = player.abilities().indexOf(reward);
         if (reward == SpecialAbility.BOW && slot >= 0) {
-            message.setText(assets.texts.format("special.bow.unlocked", slot == 0 ? "Q" : "E"));
-            messageTime = 7;
+            showMessage(assets.texts.text("special.bow.unlocked"),
+                assets.texts.format("special.bow.unlocked.hint", slot == 0 ? "Q" : "E"), 7);
             return;
         }
-        message.setText(assets.texts.format("special.unlocked", assets.texts.text(reward.textKey())));
-        messageTime = 4;
+        showMessage(assets.texts.format("special.unlocked", assets.texts.text(reward.textKey())),
+            assets.texts.text("special.unlocked.hint"), 4);
     }
 
     public void render(GameWorld world, float delta, boolean muted, float deathElapsed) {
         Player player = world.player();
-        StringBuilder specialText = new StringBuilder();
-        for (int slot = 0; slot < player.abilities().size(); slot++) {
-            if (slot > 0) specialText.append("     ");
-            specialText.append(assets.texts.format("special.hud", slot == 0 ? "Q" : "E",
-                assets.texts.text(player.abilities().get(slot).textKey()), player.specialCharges(slot), player.abilities().get(slot).charges()));
-        }
-        specials.setText(specialText);
-        for (int i = 0; i < hearts.length; i++)
-            hearts[i].setDrawable(assets.hearts[i < player.health() ? 0 : 1]);
-        shield.setColor(player.blocking() ? GameAssets.GOLD : SHIELD_IDLE);
-        dodge.setValue((float) (1 - player.dodgeCooldown() / Player.DODGE_COOLDOWN));
-        sound.setText(muted ? assets.texts.text("hud.muted") : "");
-        objective.setText(assets.texts.text(world.bossReleaseActive() ? "hud.angels" : world.arenaLocked()
-            ? definition.texts().bossObjective() : world.bossDefeated()
-            ? definition.texts().exitObjective() : definition.texts().travelObjective()));
-        bossPanel.setVisible(world.arenaLocked() && world.boss().health() > 0);
-        bossHealth.setValue((float) world.boss().health() / world.boss().maxHealth());
-        int count = world.collectedBandageCount();
-        if (count != lastBandageCount) {
-            lastBandageCount = count;
-            bandageCount.setText(assets.texts.format("hud.bandageCount", count, world.level().bandages().size()));
-        }
-        if (!world.paused()) messageTime = Math.max(0, messageTime - delta);
-        message.setVisible(messageTime > 0);
-        message.getColor().a = (float) Math.max(0, Math.min(1, messageTime / .6));
-        overlay.setVisible(world.paused() || world.state() == GameWorld.State.WON
-                || (world.state() == GameWorld.State.DEAD && deathElapsed >= TemplarDeathAnimation.DURATION));
-        String overlayKey = world.paused() ? "pause" : world.state() == GameWorld.State.DEAD ? "death"
-                : world.state() == GameWorld.State.WON ? "victory" : "pause";
-        boolean won = world.state() == GameWorld.State.WON;
-        overlayTitle.setText(assets.texts.text(won ? definition.texts().completionTitle()
-                : "overlay." + overlayKey + ".title"));
-        overlayText.setText(assets.texts.text(won ? (hasNextLevel ? "overlay.levelComplete.text"
-                : definition.texts().completionText()) : "overlay." + overlayKey + ".text"));
+        updateSpecials(player);
+        updateVitals(player, muted);
+        updateWorldIndicators(world);
+        updateMessage(world, delta);
+        updateOverlay(world, deathElapsed);
+
         stage.getViewport().apply();
         stage.act(Math.min(delta, .1f));
         stage.draw();
     }
 
-    public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
+    private void updateSpecials(Player player) {
+        StringBuilder specialText = new StringBuilder();
+        for (int slot = 0; slot < player.abilities().size(); slot++) {
+            if (slot > 0) specialText.append("     ");
+            SpecialAbility ability = player.abilities().get(slot);
+            specialText.append(assets.texts.format("special.hud", slot == 0 ? "Q" : "E",
+                assets.texts.text(ability.textKey()), player.specialCharges(slot), ability.charges()));
+        }
+        specials.setText(specialText);
+    }
+
+    private void updateVitals(Player player, boolean muted) {
+        for (int i = 0; i < hearts.length; i++) {
+            hearts[i].setDrawable(assets.hearts[i < player.health() ? 0 : 1]);
+        }
+        shield.setColor(player.blocking() ? GameAssets.GOLD : SHIELD_IDLE);
+        dodge.setValue((float) (1 - player.dodgeCooldown() / Player.DODGE_COOLDOWN));
+        sound.setText(muted ? assets.texts.text("hud.muted") : "");
+    }
+
+    private void updateWorldIndicators(GameWorld world) {
+        String objectiveKey;
+        if (world.bossReleaseActive()) {
+            objectiveKey = "hud.angels";
+        } else if (world.arenaLocked()) {
+            objectiveKey = definition.texts().bossObjective();
+        } else if (world.bossDefeated()) {
+            objectiveKey = definition.texts().exitObjective();
+        } else {
+            objectiveKey = definition.texts().travelObjective();
+        }
+        objective.setText(assets.texts.text(objectiveKey));
+        bossPanel.setVisible(world.arenaLocked() && world.boss().health() > 0);
+        bossHealth.setValue((float) world.boss().health() / world.boss().maxHealth());
+
+        int count = world.collectedBandageCount();
+        if (count != lastBandageCount) {
+            lastBandageCount = count;
+            bandageCount.setText(assets.texts.format("hud.bandageCount", count, world.level().bandages().size()));
+        }
+    }
+
+    private void updateMessage(GameWorld world, float delta) {
+        if (!world.paused()) messageTime = Math.max(0, messageTime - delta);
+        messagePanel.setVisible(messageTime > 0 && displayedConversation == null
+            && !world.paused() && world.state() == GameWorld.State.PLAYING);
+        messagePanel.getColor().a = (float) Math.max(0, Math.min(1, messageTime / .6));
+    }
+
+    private void updateOverlay(GameWorld world, float deathElapsed) {
+        GameWorld.State state = world.state();
+        overlay.setVisible(world.paused() || state == GameWorld.State.WON
+            || (state == GameWorld.State.DEAD && deathElapsed >= TemplarDeathAnimation.DURATION));
+
+        if (state == GameWorld.State.WON) {
+            overlayTitle.setText(assets.texts.text(definition.texts().completionTitle()));
+            String textKey = hasNextLevel ? "overlay.levelComplete.text" : definition.texts().completionText();
+            overlayText.setText(assets.texts.text(textKey));
+            return;
+        }
+
+        String overlayKey = world.paused() ? "pause" : state == GameWorld.State.DEAD ? "death" : "pause";
+        overlayTitle.setText(assets.texts.text("overlay." + overlayKey + ".title"));
+        overlayText.setText(assets.texts.text("overlay." + overlayKey + ".text"));
+    }
+
+    public void resize(int width, int height) {
+        stage.getViewport().update(width, height, true);
+    }
 
     @Override
-    public void dispose() { stage.dispose(); }
+    public void dispose() {
+        stage.dispose();
+    }
 }
