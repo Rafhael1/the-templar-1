@@ -22,6 +22,7 @@ public final class Hud implements Disposable {
     private final Stage stage = new Stage(new FitViewport(960, 540));
     private final GameAssets assets;
     private final LevelDefinition definition;
+    private final boolean hasRequiredConversations;
     private final boolean hasNextLevel;
     private final Image[] hearts;
     private final Image shield;
@@ -37,6 +38,7 @@ public final class Hud implements Disposable {
     private final Table messagePanel;
     private final Label conversationTitle;
     private final Label conversationBody;
+    private final Label conversationHint;
     private final Table conversationPanel;
     private final Table promptPanel;
     private final Table overlay;
@@ -51,6 +53,7 @@ public final class Hud implements Disposable {
         hearts = new Image[player.maxHealth()];
         this.assets = assets;
         this.definition = definition;
+        hasRequiredConversations = definition.hasRequiredConversations();
         this.hasNextLevel = hasNextLevel;
         Table root = new Table();
         root.setFillParent(true);
@@ -107,30 +110,29 @@ public final class Hud implements Disposable {
 
         messagePanel = new Table();
         messagePanel.setFillParent(true);
-        messagePanel.bottom().padBottom(76);
+        messagePanel.top().padTop(104);
         messagePanel.setTouchable(Touchable.disabled);
         Table messageCard = new Table();
-        messageCard.setBackground(assets.frame);
-        messageCard.pad(16, 24, 18, 24);
+        messageCard.setBackground(assets.frame.tint(new Color(1, 1, 1, .65f)));
+        messageCard.pad(8, 14, 10, 14);
         messageTitle = new Label("", assets.skin);
         messageTitle.setColor(GameAssets.GOLD);
         messageTitle.setAlignment(Align.center);
         messageTitle.setWrap(true);
-        messageTitle.setFontScale(1.05f * GameAssets.UI_FONT_SCALE);
-        messageCard.add(messageTitle).width(512).padBottom(10).row();
-        messageCard.add(new Image(assets.panel(GameAssets.GOLD))).width(48).height(2).padBottom(10).row();
+        messageTitle.setFontScale(.85f * GameAssets.UI_FONT_SCALE);
+        messageCard.add(messageTitle).width(412).padBottom(5).row();
         message = new Label("", assets.skin);
         message.setAlignment(Align.center);
         message.setWrap(true);
-        message.setFontScale(.85f * GameAssets.UI_FONT_SCALE);
-        messageCard.add(message).width(512);
-        messagePanel.add(messageCard).width(560);
+        message.setFontScale(.7f * GameAssets.UI_FONT_SCALE);
+        messageCard.add(message).width(412);
+        messagePanel.add(messageCard).width(440);
         messagePanel.setVisible(false);
         stage.addActor(messagePanel);
 
         bossPanel = new Table();
         bossPanel.setFillParent(true);
-        bossPanel.top().padTop(145);
+        bossPanel.top().padTop(194);
         Table bossCard = new Table();
         bossCard.setBackground(assets.frame);
         bossCard.pad(9);
@@ -158,8 +160,7 @@ public final class Hud implements Disposable {
         conversationTitle = conversationLine(conversationCard, 8);
         conversationTitle.setColor(GameAssets.GOLD);
         conversationBody = conversationLine(conversationCard, 10);
-        Label conversationHint = conversationLine(conversationCard, 0);
-        conversationHint.setText(assets.texts.text("conversation.close"));
+        conversationHint = conversationLine(conversationCard, 0);
         conversationHint.setColor(GameAssets.GOLD);
         conversationPanel.add(conversationCard);
         conversationPanel.setVisible(false);
@@ -222,6 +223,7 @@ public final class Hud implements Disposable {
         if (open == null) return;
         conversationTitle.setText(assets.texts.text(open.textKey() + ".title"));
         conversationBody.setText(assets.texts.text(open.textKey() + ".body"));
+        conversationHint.setText(assets.texts.text(open.required() ? "conversation.confirm" : "conversation.close"));
     }
 
     public void announce(String key) {
@@ -286,6 +288,8 @@ public final class Hud implements Disposable {
             objectiveKey = definition.texts().bossObjective();
         } else if (world.bossDefeated()) {
             objectiveKey = definition.texts().exitObjective();
+        } else if (hasRequiredConversations && !world.briefingsPending()) {
+            objectiveKey = "hud.briefingsConfirmed";
         } else {
             objectiveKey = definition.texts().travelObjective();
         }
@@ -314,8 +318,8 @@ public final class Hud implements Disposable {
 
         if (state == GameWorld.State.WON) {
             overlayTitle.setText(assets.texts.text(definition.texts().completionTitle()));
-            String textKey = hasNextLevel ? "overlay.levelComplete.text" : definition.texts().completionText();
-            overlayText.setText(assets.texts.text(textKey));
+            String prompt = hasNextLevel ? "overlay.levelComplete.next" : "overlay.victory.restart";
+            overlayText.setText(assets.texts.text(definition.texts().completionText()) + "\n\n" + assets.texts.text(prompt));
             return;
         }
 

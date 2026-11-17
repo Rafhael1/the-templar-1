@@ -38,7 +38,7 @@ class JourneySaveTest {
         Journey resumed = save().load().orElseThrow();
         assertEquals(campaign.levels().get(1), resumed.currentLevel());
         assertTrue(resumed.selectionRequired());
-        assertEquals(List.of(campaign.levels().getFirst().reward()), resumed.unlockedAbilities());
+        assertEquals(campaign.levels().getFirst().reward().stream().toList(), resumed.unlockedAbilities());
         resumed.selectAbilities(resumed.unlockedAbilities());
         GameWorld fresh = enter(resumed);
         assertEquals(GameWorld.State.PLAYING, fresh.state());
@@ -76,7 +76,10 @@ class JourneySaveTest {
         for (int i = 1; i < campaign.levels().size(); i++) {
             journey.continueAfterVictory();
             journey.selectAbilities(List.of());
-            win(enter(journey));
+            GameWorld world = enter(journey);
+            journey.currentLevel().conversations().stream().filter(c -> c.required())
+                .forEach(c -> world.confirmBriefing(c.textKey()));
+            win(world);
             save().saveVictory(journey);
         }
         assertTrue(Files.readString(directory.resolve("saves/progress.properties"))

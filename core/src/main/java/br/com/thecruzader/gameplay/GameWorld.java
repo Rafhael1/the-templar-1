@@ -4,10 +4,7 @@ import br.com.thecruzader.input.PlayerInput;
 import br.com.thecruzader.level.Bounds;
 import br.com.thecruzader.level.LevelData;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /** Session state and ordered simulation. No graphics, keyboard, filesystem or audio access. */
 public final class GameWorld {
@@ -21,8 +18,9 @@ public final class GameWorld {
 
     private final LevelData level;
     private final GameRules rules;
-    private final SpecialAbility bossReward;
+    private final Optional<SpecialAbility> bossReward;
     private final Runnable onBossDefeated;
+    private final Set<String> pendingBriefings;
     private final CollisionWorld collision;
     private final MovementSystem movement = new MovementSystem();
     private final EnemySystem enemySystem;
@@ -65,12 +63,19 @@ public final class GameWorld {
 
     GameWorld(LevelData level, GameRules rules, List<SpecialAbility> abilities, Runnable onBossDefeated,
               SpecialAbility bossReward) {
+        this(level, rules, abilities, onBossDefeated, Optional.of(bossReward), List.of());
+    }
+
+    GameWorld(LevelData level, GameRules rules, List<SpecialAbility> abilities, Runnable onBossDefeated,
+              Optional<SpecialAbility> bossReward, List<String> briefings) {
         this.bossReward = Objects.requireNonNull(bossReward);
         this.onBossDefeated = Objects.requireNonNull(onBossDefeated);
+        pendingBriefings = new HashSet<>(briefings);
         this.rules = Objects.requireNonNull(rules);
         this.level = Objects.requireNonNull(level);
         collectedBandages = new boolean[level.bandages().size()];
         collision = new CollisionWorld(level);
+        collision.setArenaClosed(arenaEntranceClosed());
         enemySystem = new EnemySystem(collision, oilPots);
         arenaEntrance = level.arenaEntrance();
         shrine = new Bounds(level.checkpoint().x() - 20, level.checkpoint().y(), 60, 80);
@@ -170,7 +175,7 @@ public final class GameWorld {
         if (arenaEntered && !bossDefeated && boss.health <= 0) {
             bossDefeated = true;
             onBossDefeated.run();
-            if (bossReward == SpecialAbility.BOW) player.equipUnlockedBow();
+            if (bossReward.orElse(null) == SpecialAbility.BOW) player.equipUnlockedBow();
             arrows.clear();
             oilPots.clear();
             effects.clear();
@@ -223,6 +228,8 @@ public final class GameWorld {
                 : enemy.state() == Enemy.State.ATTACK ? GameEvent.OIL_THROW : null;
             case HARBOR_CAPTAIN -> enemy.state() == Enemy.State.SHOT_WINDUP ? GameEvent.CAPTAIN_DRAW
                 : enemy.state() == Enemy.State.SHOT_RELEASE ? GameEvent.CAPTAIN_SHOT : null;
+            case RELIEF_DUELIST -> enemy.state() == Enemy.State.TWIN_SLASH ? GameEvent.DUELIST_SLASH
+                : enemy.state() == Enemy.State.TWIN_CROSS ? GameEvent.DUELIST_CROSS : null;
             default -> null;
         };
         if (cue == null) return;
@@ -237,7 +244,7 @@ public final class GameWorld {
     }
 
     private void enterArena() {
-        if (arenaEntered || boss.health <= 0 || player.x < level.arena().x()
+        if (arenaEntered || briefingsPending() || boss.health <= 0 || player.x < level.arena().x()
                 || player.x >= level.arena().right()) return;
         arenaEntered = true;
         collision.setArenaClosed(true);
@@ -269,6 +276,18 @@ public final class GameWorld {
     public boolean arenaEntered() { return arenaEntered; }
     public boolean arenaLocked() { return arenaEntered && gateLocked(); }
 
+    public boolean briefingsPending() {
+        return !pendingBriefings.isEmpty();
+    }
+
+    public boolean arenaEntranceClosed() {
+        return briefingsPending() || arenaLocked();
+    }
+
+    public void confirmBriefing(String textKey) {
+        if (pendingBriefings.remove(textKey)) collision.setArenaClosed(arenaEntranceClosed());
+    }
+
     public Enemy boss() {
         return boss;
     }
@@ -287,7 +306,7 @@ public final class GameWorld {
         bossReleaseElapsed = 0;
         hitStop = 0;
         pendingInput = PlayerInput.NONE;
-        collision.setArenaClosed(false);
+        collision.setArenaClosed(arenaEntranceClosed());
         arrows.clear();
         oilPots.clear();
         effects.clear();

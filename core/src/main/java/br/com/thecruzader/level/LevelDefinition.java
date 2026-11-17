@@ -4,12 +4,13 @@ import br.com.thecruzader.gameplay.SpecialAbility;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /** Authored content belonging to one level; coordinates use the simulation's upward Y axis. */
 public record LevelDefinition(String id, String mapPath, double blendWidth, TextKeys texts,
                               List<Region> regions, List<Decoration> decorations, Interior interior,
-                              SpecialAbility reward, List<Conversation> conversations) {
-    public record Conversation(double x, double y, String textKey, String spritePath) {
+                              Optional<SpecialAbility> reward, List<Conversation> conversations) {
+    public record Conversation(double x, double y, String textKey, String spritePath, boolean required) {
         public Conversation {
             if (!Double.isFinite(x) || !Double.isFinite(y) || x < 0 || y < 0)
                 throw new IllegalArgumentException("Invalid conversation position");
@@ -75,6 +76,8 @@ public record LevelDefinition(String id, String mapPath, double blendWidth, Text
         regions = List.copyOf(regions);
         decorations = List.copyOf(decorations);
         conversations = List.copyOf(conversations);
+        if (conversations.stream().map(Conversation::textKey).distinct().count() != conversations.size())
+            throw new IllegalArgumentException("Duplicate conversation text key: " + id);
         if (regions.isEmpty() || regions.getFirst().start() != 0)
             throw new IllegalArgumentException("Regions must begin at zero");
         for (int i = 1; i < regions.size(); i++)
@@ -96,5 +99,9 @@ public record LevelDefinition(String id, String mapPath, double blendWidth, Text
     }
     private static void requireText(String text) {
         if (text == null || text.isBlank()) throw new IllegalArgumentException("Content names must not be blank");
+    }
+
+    public boolean hasRequiredConversations() {
+        return conversations.stream().anyMatch(Conversation::required);
     }
 }

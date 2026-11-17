@@ -32,7 +32,7 @@ public final class Journey {
         var journey = new Journey(campaign);
         journey.index = levelIndex;
         for (int i = 0; i < levelIndex; i++)
-            journey.unlocked.add(campaign.levels().get(i).reward());
+            campaign.levels().get(i).reward().ifPresent(journey.unlocked::add);
         journey.selectionRequired = levelIndex > 0;
         return journey;
     }
@@ -65,8 +65,10 @@ public final class Journey {
         if (world != null) throw new IllegalStateException("Current level is already running");
         if (selectionRequired) throw new IllegalStateException("Choose abilities before entering this level");
         LevelDefinition definition = currentLevel();
-        world = new GameWorld(data, rules, equipped, () -> unlocked.add(definition.reward()),
-            definition.reward());
+        var briefings = definition.conversations().stream()
+            .filter(LevelDefinition.Conversation::required).map(LevelDefinition.Conversation::textKey).toList();
+        world = new GameWorld(data, rules, equipped, () -> definition.reward().ifPresent(unlocked::add),
+            definition.reward(), briefings);
         return world;
     }
     public void continueAfterVictory() {

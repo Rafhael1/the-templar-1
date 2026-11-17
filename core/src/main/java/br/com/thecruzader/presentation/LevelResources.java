@@ -14,6 +14,7 @@ import com.badlogic.gdx.utils.Disposable;
 /** A screen owns this bundle. Map geometry and graphics always use the same definition/path. */
 public final class LevelResources implements Disposable {
     static final String CAPTAIN_ATLAS = "levels/constantinople/boss/captain.png";
+    static final String DUELIST_ATLAS = "levels/nicaea/boss/duelist.png";
     private final AssetManager manager = new AssetManager();
     private final LevelDefinition definition;
     private final LevelData data;
@@ -41,6 +42,8 @@ public final class LevelResources implements Disposable {
                 if (!manager.contains(path)) manager.load(path, Texture.class);
             if (data.enemies().stream().anyMatch(spawn -> spawn.kind() == LevelData.EnemyKind.HARBOR_CAPTAIN))
                 manager.load(CAPTAIN_ATLAS, Texture.class);
+            if (data.enemies().stream().anyMatch(spawn -> spawn.kind() == LevelData.EnemyKind.RELIEF_DUELIST))
+                manager.load(DUELIST_ATLAS, Texture.class);
             manager.finishLoading();
         } catch (RuntimeException error) {
             manager.dispose();

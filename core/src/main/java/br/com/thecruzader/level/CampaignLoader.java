@@ -1,10 +1,11 @@
 package br.com.thecruzader.level;
 
 import br.com.thecruzader.gameplay.SpecialAbility;
-
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.XmlReader;
+
 import java.util.ArrayList;
+import java.util.Optional;
 
 /** Explicit, finite campaign manifest. Missing fields and unknown elements are authoring errors. */
 public final class CampaignLoader {
@@ -39,7 +40,8 @@ public final class CampaignLoader {
                             child.getAttribute("texture"), child.getAttribute("announcement")));
                     case "conversation" ->
                         conversations.add(new LevelDefinition.Conversation(child.getFloatAttribute("x"),
-                            child.getFloatAttribute("y"), child.getAttribute("text"), child.getAttribute("sprite")));
+                            child.getFloatAttribute("y"), child.getAttribute("text"), child.getAttribute("sprite"),
+                            child.getBooleanAttribute("required", false)));
                     case "decoration" -> {
                         var kind = LevelDefinition.DecorationKind.valueOf(child.getAttribute("kind"));
                         int rgb = 0;
@@ -61,7 +63,7 @@ public final class CampaignLoader {
                 level.getAttribute("completionTitle"), level.getAttribute("completionText"));
             levels.add(new LevelDefinition(level.getAttribute("id"), level.getAttribute("map"),
                 level.getFloatAttribute("blendWidth"), texts, regions, decorations, interior,
-                SpecialAbility.valueOf(level.getAttribute("reward")), conversations));
+                Optional.ofNullable(level.getAttribute("reward", null)).map(SpecialAbility::valueOf), conversations));
         }
         return new Campaign(levels);
     }

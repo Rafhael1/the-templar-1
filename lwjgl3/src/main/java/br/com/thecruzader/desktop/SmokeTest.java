@@ -23,7 +23,7 @@ final class SmokeTest extends ApplicationAdapter {
     private int frame;
     private Language originalLanguage;
     private boolean rendering;
-    private int heavyWindup, shotWindup;
+    private int heavyWindup, shotWindup, crossWindup;
 
     SmokeTest(String output, br.com.thecruzader.presentation.WindowMode windowMode) {
         this.output = output;
@@ -220,6 +220,7 @@ final class SmokeTest extends ApplicationAdapter {
             System.out.println("LANGUAGE_SMOKE_PASS: PT/EN options, menus, instructions, cutscene, HUD and saved preference");
             checkCampaignTransition();
             checkConstantinople();
+            checkNicaea();
             checkDevelopmentSelector();
             game.setLanguage(originalLanguage);
             game.showMenu();
@@ -310,6 +311,80 @@ final class SmokeTest extends ApplicationAdapter {
         System.out.println("CONSTANTINOPLE_SMOKE_PASS: full road, optional historical conversations, heavy arrow, bow reward and crossing");
     }
 
+    private void checkNicaea() {
+        tap(Input.Keys.ENTER);
+        game.getScreen().render(0);
+        if (!(game.getScreen() instanceof SpecialSelectionScreen)
+            || !game.journey().unlockedAbilities().contains(SpecialAbility.BOW))
+            throw new IllegalStateException("Niceia did not receive the bow after Constantinople");
+        tap(Input.Keys.ENTER);
+        tap(Input.Keys.DOWN);
+        tap(Input.Keys.ENTER);
+        tap(Input.Keys.DOWN);
+        tap(Input.Keys.ENTER);
+        game.getScreen().render(0);
+        var play = (PlayScreen) game.getScreen();
+        var world = play.world();
+        var definition = game.journey().currentLevel();
+        if (!definition.id().equals("nicaea") || world.level().width() != 10240
+            || world.boss().kind() != EnemyKind.RELIEF_DUELIST || world.player().specialCharges(1) != 3
+            || !world.arenaEntranceClosed())
+            throw new IllegalStateException("Niceia did not start with fresh arrows and its redoubt secured");
+        var briefings = definition.conversations();
+        int stop = 0;
+        boolean capturedEarthworks = false, capturedArena = false, sawFirstCut = false, sawCrossCut = false;
+        for (int tick = 0; tick < 180 * 120 && world.state() == GameWorld.State.PLAYING; tick++) {
+            if (stop < briefings.size() && world.player().x() >= briefings.get(stop).x() - 42) {
+                play.render(0);
+                tap(Input.Keys.F);
+                play.render(0);
+                if (!play.readingConversation() || !world.arenaEntranceClosed())
+                    throw new IllegalStateException("Briefing must remain pending until confirmed");
+                capture(stop == 0 ? "41-nicaea-camp.png" : "42-nicaea-lake.png");
+                tap(Input.Keys.F);
+                play.render(0);
+                stop++;
+                if (play.readingConversation() || world.arenaEntranceClosed() != (stop < briefings.size()))
+                    throw new IllegalStateException("The redoubt must open after both briefings");
+            }
+            var controls = routeInput(world);
+            if (!sawCrossCut && world.boss().state() == br.com.thecruzader.gameplay.Enemy.State.TWIN_CROSS_WINDUP)
+                controls = new PlayerInput(controls.direction(), false, false, false, false, true, -1);
+            world.update(GameWorld.STEP, controls);
+            if (!capturedEarthworks && world.player().x() > 4630 && world.player().grounded()) {
+                play.render(0);
+                capture("42-nicaea-earthworks.png");
+                capturedEarthworks = true;
+            }
+            if (world.arenaEntered() && !capturedArena) {
+                for (int frame = 0; frame < 8; frame++) play.render(.05f);
+                capture("43-nicaea-redoubt.png");
+                capturedArena = true;
+            }
+            if (capturedArena && world.boss().state() == br.com.thecruzader.gameplay.Enemy.State.TWIN_SLASH)
+                sawFirstCut = true;
+            if (capturedArena && !sawCrossCut
+                && world.boss().state() == br.com.thecruzader.gameplay.Enemy.State.TWIN_CROSS) {
+                play.render(0);
+                capture("43-nicaea-duelist-cross-cut.png");
+                sawCrossCut = true;
+            }
+        }
+        if (stop != briefings.size() || !world.checkpoint() || !capturedEarthworks || !capturedArena
+            || !sawFirstCut || !sawCrossCut
+            || world.state() != GameWorld.State.WON || game.journey().unlockedAbilities().size() != 2)
+            throw new IllegalStateException("Niceia route failed at x=" + world.player().x() + ", y="
+                + world.player().y() + ", hearts=" + world.player().health() + ", boss=" + world.boss().health()
+                + ", briefings=" + stop + ", first cut=" + sawFirstCut + ", cross cut=" + sawCrossCut);
+        play.render(0);
+        capture("44-nicaea-surrender.png");
+        tap(Input.Keys.ENTER);
+        play.render(0);
+        if (!game.journey().currentLevel().id().equals("exiles-road"))
+            throw new IllegalStateException("Final victory did not restart the campaign");
+        System.out.println("NICAEA_SMOKE_PASS: extended road, two mandatory briefings, both duelist cuts, Byzantine surrender and restart");
+    }
+
     private void checkDevelopmentSelector() {
         var dev = new CrusaderGame(br.com.thecruzader.level.CampaignLoader.PATH, windowMode, true);
         dev.create();
@@ -334,6 +409,16 @@ final class SmokeTest extends ApplicationAdapter {
             dev.render();
             if (!(dev.getScreen() instanceof br.com.thecruzader.screen.DevelopmentScreen))
                 throw new IllegalStateException("F2 did not return to the dev selector");
+            tap(Input.Keys.DOWN);
+            tap(Input.Keys.DOWN);
+            tap(Input.Keys.ENTER);
+            dev.getScreen().render(0);
+            if (!(dev.getScreen() instanceof SpecialSelectionScreen)
+                || !dev.journey().currentLevel().id().equals("nicaea")
+                || !dev.journey().unlockedAbilities().contains(SpecialAbility.BOW))
+                throw new IllegalStateException("Dev selector did not offer Niceia with the bow unlocked");
+            tap(Input.Keys.F2);
+            dev.render();
             tap(Input.Keys.ENTER);
             dev.getScreen().render(0);
             if (!(dev.getScreen() instanceof PlayScreen) || !dev.journey().currentLevel().id().equals("exiles-road"))
@@ -490,7 +575,7 @@ final class SmokeTest extends ApplicationAdapter {
             double distance = target.x() - player.x();
             direction = distance >= 0 ? 1 : -1;
             block = switch (target.state()) {
-                case WINDUP, ATTACK, DASH_WINDUP, DASH, JUMP_WINDUP, JUMP -> true;
+                case WINDUP, ATTACK, DASH_WINDUP, DASH, JUMP_WINDUP, JUMP, TWIN_WINDUP, TWIN_SLASH -> true;
                 default -> false;
             };
             if (!block) {
@@ -531,6 +616,13 @@ final class SmokeTest extends ApplicationAdapter {
             && Math.abs(target.y() - player.y()) < 80));
         if (dodge && target.state() == br.com.thecruzader.gameplay.Enemy.State.JUMP)
             direction = target.x() >= player.x() ? 1 : -1;
+        boolean preparingCross = target != null
+            && target.state() == br.com.thecruzader.gameplay.Enemy.State.TWIN_CROSS_WINDUP;
+        crossWindup = preparingCross ? crossWindup + (world.hitStopped() ? 0 : 1) : 0;
+        if (preparingCross || target != null && target.state() == br.com.thecruzader.gameplay.Enemy.State.TWIN_CROSS) {
+            direction = target.x() >= player.x() ? 1 : -1;
+            block = !preparingCross || crossWindup * GameWorld.STEP >= .28;
+        }
         boolean jump = player.grounded() && direction > 0 && world.level().solids().stream()
             .anyMatch(solid -> solid.top() > player.y()
                         && solid.x() >= player.x() + br.com.thecruzader.gameplay.Player.WIDTH

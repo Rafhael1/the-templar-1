@@ -62,7 +62,7 @@ public final class LevelLoader {
                         exit = rectangle(object, x, y);
                     }
                     case "sentinel", "archer", "spearman", "shield_bearer", "brute", "oil_thrower", "guardian",
-                         "harbor_captain" -> {
+                         "harbor_captain", "relief_duelist" -> {
                         point(object, x, y);
                         enemies.add(new LevelData.Spawn(x, y,
                                 LevelData.EnemyKind.valueOf(type.toUpperCase(java.util.Locale.ROOT))));

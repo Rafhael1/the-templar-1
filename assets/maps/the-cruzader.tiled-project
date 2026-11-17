@@ -63,6 +63,17 @@
       ]
     },
     {
+      "color": "#fff0a97d",
+      "drawFill": true,
+      "id": 18,
+      "members": [],
+      "name": "relief_duelist",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
+    },
+    {
       "color": "#ffc8a773",
       "drawFill": true,
       "id": 5,

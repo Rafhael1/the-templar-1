@@ -102,7 +102,7 @@ Chaves no jogo `level.constantinople.crossing.title`, `level.constantinople.cros
 > Com o apoio de Aleixo I e as companhias reunidas,\
 > a frota cruza o Bósforo rumo à Ásia.
 >
-> ENTER - Nova jornada
+> ENTER - Próxima fase
 
 **Inglês**
 
@@ -110,9 +110,9 @@ Chaves no jogo `level.constantinople.crossing.title`, `level.constantinople.cros
 > With Alexios I's support and the companies united,\
 > the fleet crosses the Bosphorus into Asia.
 >
-> ENTER - New journey
+> ENTER - Next level
 
-Chaves no jogo `level.constantinople.complete`, `level.constantinople.victory`.
+Chaves no jogo `level.constantinople.complete`, `level.constantinople.victory`, `overlay.levelComplete.next`.
 
 ## Pontos para validação histórica
 

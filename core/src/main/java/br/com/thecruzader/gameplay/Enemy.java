@@ -12,6 +12,7 @@ public final class Enemy {
         ATTACK,
         RECOVER,
         BLOCK, DASH_WINDUP, DASH, JUMP_WINDUP, JUMP, SHOT_WINDUP, SHOT_RELEASE,
+        TWIN_WINDUP, TWIN_SLASH, TWIN_CROSS_WINDUP, TWIN_CROSS,
         DEAD
     }
 
@@ -59,6 +60,7 @@ public final class Enemy {
             case OIL_THROWER -> new OilThrowerBehavior();
             case GUARDIAN -> new GuardianBehavior();
             case HARBOR_CAPTAIN -> new HarborCaptainBehavior();
+            case RELIEF_DUELIST -> new ReliefDuelistBehavior();
         };
     }
 

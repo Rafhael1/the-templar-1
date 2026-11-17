@@ -34,9 +34,9 @@ abstract class BossBehavior extends EnemyBehavior {
         }
         double distance = player.x + Player.WIDTH / 2 - (boss.x + boss.width() / 2);
         boss.facing = distance < 0 ? -1 : 1;
-        if (Math.abs(distance) > 300) {
+        if (Math.abs(distance) > engagementRange()) {
             boss.state = Enemy.State.CHASE;
-            boss.vx = boss.facing * 145;
+            boss.vx = boss.facing * approachSpeed();
             return;
         }
         if (boss.grounded) selectSkill(boss, tempo);
@@ -45,6 +45,14 @@ abstract class BossBehavior extends EnemyBehavior {
     abstract boolean updateSkill(Enemy boss, double tempo, List<Arrow> arrows);
 
     abstract void selectSkill(Enemy boss, double tempo);
+
+    double engagementRange() {
+        return 300;
+    }
+
+    double approachSpeed() {
+        return 145;
+    }
 
     final void recover(Enemy boss, double duration) {
         boss.state = Enemy.State.RECOVER;

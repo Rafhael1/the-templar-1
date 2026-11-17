@@ -73,6 +73,9 @@ public final class PlayScreen extends ScreenAdapter {
             && renderer.transitionOpacity() == 0) {
             Conversation next = openConversation == null ? nearbyConversation() : null;
             if (openConversation != next) {
+                if (openConversation != null && openConversation.required()) {
+                    world.confirmBriefing(openConversation.textKey());
+                }
                 openConversation = next;
                 audio.setPaused(openConversation != null);
                 accumulator = 0;
@@ -102,13 +105,15 @@ public final class PlayScreen extends ScreenAdapter {
         List<GameEvent> events = world.drainEvents();
         if (events.contains(GameEvent.VICTORY)) game.saveVictory();
         audio.play(events);
-        SpecialAbility reward = level.definition().reward();
+        var reward = level.definition().reward();
         for (GameEvent event : events) {
             if (event == GameEvent.CHECKPOINT)
                 hud.announce("notice.checkpoint");
             if (event == GameEvent.ARENA_START) hud.announce(level.definition().texts().arenaNotice());
-            if (event == GameEvent.BOSS_DEFEATED) hud.announceReward(reward, world.player());
-            if (event == GameEvent.GATES_OPEN && reward != SpecialAbility.BOW) hud.announce("notice.gatesOpen");
+            if (event == GameEvent.BOSS_DEFEATED)
+                reward.ifPresent(ability -> hud.announceReward(ability, world.player()));
+            if (event == GameEvent.GATES_OPEN && reward.orElse(null) != SpecialAbility.BOW)
+                hud.announce(reward.isEmpty() ? level.definition().texts().exitObjective() : "notice.gatesOpen");
             if (event == GameEvent.BANDAGE)
                 hud.announce("notice.bandage");
         }

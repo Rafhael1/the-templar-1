@@ -1,7 +1,8 @@
 """Build the Constantinople map and its pixel art. Run with Pillow from tools/requirements.txt."""
 from pathlib import Path
 import random
-import xml.etree.ElementTree as ET
+
+from level_map import write_map
 
 from PIL import Image, ImageDraw
 
@@ -223,7 +224,7 @@ def paving():
     save(image, 'maps/paving.png')
 
 
-def envoy(name, cloak, trim, crown=False):
+def envoy_image(cloak, trim, crown=False):
     image = Image.new('RGBA', (24, 36))
     d = ImageDraw.Draw(image)
     d.ellipse((3, 31, 21, 35), fill='#362e3d80')
@@ -243,7 +244,11 @@ def envoy(name, cloak, trim, crown=False):
         d.polygon([(7, 7), (9, 4), (14, 4), (17, 7), (15, 8)], fill=trim)
     d.line((11, 18, 7, 21, 5, 19), fill=trim, width=2)
     d.line((3, 17, 6, 22), fill='#dec9a2', width=2)
-    save(image, 'envoys/' + name + '.png')
+    return image
+
+
+def envoy(name, cloak, trim, crown=False):
+    save(envoy_image(cloak, trim, crown), 'envoys/' + name + '.png')
 
 
 def captain_art():
@@ -324,10 +329,8 @@ def captain_art():
 
 
 def map_file():
-    columns, rows, tile = 280, 17, 32
-    height = rows * tile
     solids = [
-        (0, 0, columns * tile, 64),
+        (0, 0, 8960, 64),
         # Outer walls: a broad rampart and a second tower terrace.
         (704, 64, 96, 32), (800, 64, 96, 64), (896, 64, 416, 96),
         (1312, 64, 96, 64), (1408, 64, 64, 32), (1664, 64, 256, 32),
@@ -343,64 +346,23 @@ def map_file():
         (6624, 64, 96, 32), (6720, 64, 256, 64), (6976, 64, 64, 32),
         (7456, 64, 96, 32), (7552, 64, 160, 64), (7712, 64, 64, 32),
     ]
-    grid = [[0] * columns for _ in range(rows)]
-    for x, y, width, depth in solids:
-        for column in range(x // tile, (x + width) // tile):
-            for row in range(y // tile, (y + depth) // tile):
-                grid[rows - row - 1][column] = 2
-    for row in range(1, rows):
-        for column in range(columns):
-            if grid[row][column] and not grid[row - 1][column]:
-                grid[row][column] = 1
-
-    tmx = ET.Element('map', {'version': '1.10', 'tiledversion': '1.11.2', 'orientation': 'orthogonal',
-                            'renderorder': 'right-down', 'width': str(columns), 'height': str(rows),
-                            'tilewidth': '32', 'tileheight': '32', 'infinite': '0', 'nextlayerid': '4'})
-    tiles = ET.SubElement(tmx, 'tileset', firstgid='1', name='paving', tilewidth='32', tileheight='32',
-                          tilecount='2', columns='2')
-    ET.SubElement(tiles, 'image', source='paving.png', width='64', height='32')
-    layer = ET.SubElement(tmx, 'layer', id='1', name='terrain', width=str(columns), height=str(rows))
-    ET.SubElement(layer, 'data', encoding='csv').text = '\n' + ',\n'.join(
-        ','.join(map(str, row)) for row in grid) + '\n'
-    collisions = ET.SubElement(tmx, 'objectgroup', id='2', name='collisions')
-    entities = ET.SubElement(tmx, 'objectgroup', id='3', name='entities')
-    object_id = 1
-
-    def place(group, kind, x, y, w=0, h=0):
-        nonlocal object_id
-        node = ET.SubElement(group, 'object', id=str(object_id), x=str(x), y=str(height - y - h))
-        object_id += 1
-        if kind:
-            node.set('type', kind)
-        if w:
-            node.set('width', str(w))
-            node.set('height', str(h))
-        else:
-            ET.SubElement(node, 'point')
-
-    for solid in solids:
-        place(collisions, None, *solid)
-    for kind, x, y in [
+    points = [
         ('spawn', 112, 64), ('checkpoint', 4864, 64),
         ('sentinel', 528, 64), ('archer', 1224, 160), ('spearman', 1808, 96),
         ('sentinel', 2930, 128), ('sentinel', 3750, 128), ('archer', 3980, 128),
         ('sentinel', 5264, 160), ('spearman', 5720, 160), ('archer', 6260, 96),
         ('sentinel', 6840, 128), ('archer', 7640, 128),
         ('harbor_captain', 8304, 64),
-    ]:
-        place(entities, kind, x, y)
-    for kind, x, y, w, h in [
+    ]
+    areas = [
         ('bandage', x, y, 24, 28) for x, y in [
             (848, 128), (1496, 64), (2180, 64), (3180, 96), (3392, 160), (4180, 64),
             (5170, 160), (5870, 160), (6432, 64), (6910, 128), (7792, 64), (8120, 64),
         ]
     ] + [
         ('arena', 7936, 64, 704, 256), ('gate', 8640, 64, 32, 256), ('exit', 8816, 64, 112, 110),
-    ]:
-        place(entities, kind, x, y, w, h)
-    tmx.set('nextobjectid', str(object_id))
-    ET.indent(tmx, space='  ')
-    ET.ElementTree(tmx).write(DEST / 'maps/constantinople.tmx', encoding='UTF-8', xml_declaration=True)
+    ]
+    write_map(DEST / 'maps/constantinople.tmx', 280, solids, points, areas)
 
 
 if __name__ == '__main__':

@@ -130,4 +130,52 @@
         <decoration kind="BRAZIER" x="7810" y="64"/>
         <decoration kind="CRATES" x="8760" y="64"/>
   </level>
+    <level id="nicaea" map="levels/nicaea/maps/nicaea.tmx" blendWidth="384"
+           chapter="level.nicaea.chapter" title="level.nicaea.title" story="level.nicaea.story"
+           travelObjective="level.nicaea.travel" arenaNotice="level.nicaea.arena"
+           bossObjective="level.nicaea.fight" bossName="level.nicaea.boss"
+           exitObjective="level.nicaea.exit" completionTitle="level.nicaea.complete"
+           completionText="level.nicaea.victory">
+        <interior exterior="levels/nicaea/redoubt/exterior.png"
+                  background="levels/nicaea/redoubt/interior.png"
+                  foreground="levels/nicaea/redoubt/foreground.png"
+                  door="levels/nicaea/redoubt/door.png"
+                  doorFrame="levels/nicaea/redoubt/door-frame.png">
+            <light x="172" y="159"/>
+            <light x="394" y="159"/>
+            <light x="566" y="159"/>
+            <light x="788" y="159"/>
+        </interior>
+        <region start="0" texture="levels/nicaea/scenery/camp.png" announcement="level.nicaea.chapter"/>
+        <region start="1920" texture="levels/nicaea/scenery/lake.png" announcement="level.nicaea.lake"/>
+        <region start="4032" texture="levels/nicaea/scenery/earthworks.png" announcement="level.nicaea.earthworks"/>
+        <region start="7008" texture="levels/nicaea/scenery/ridge.png" announcement="level.nicaea.relief"/>
+        <conversation x="352" y="64" text="level.nicaea.land" required="true"
+                      sprite="levels/nicaea/envoys/marshal.png"/>
+        <conversation x="3060" y="64" text="level.nicaea.blockade" required="true"
+                      sprite="levels/nicaea/envoys/boutoumites.png"/>
+        <decoration kind="FLAG" x="208" y="64" color="8a6047"/>
+        <decoration kind="WAGON" x="480" y="64"/>
+        <decoration kind="CRATES" x="944" y="128"/>
+        <decoration kind="PENNANT" x="1176" y="128"/>
+        <decoration kind="BRAZIER" x="1454" y="64"/>
+        <decoration kind="FLAG" x="2180" y="64" color="4f7975"/>
+        <decoration kind="CRATES" x="2540" y="128"/>
+        <decoration kind="WAGON" x="3136" y="64"/>
+        <decoration kind="CRATES" x="3340" y="160"/>
+        <decoration kind="FLAG" x="3910" y="64" color="4f7975"/>
+        <decoration kind="BRAZIER" x="4344" y="64"/>
+        <decoration kind="PENNANT" x="4580" y="160"/>
+        <decoration kind="CRATES" x="5010" y="64"/>
+        <decoration kind="WAGON" x="5210" y="64"/>
+        <decoration kind="CRATES" x="5798" y="64"/>
+        <decoration kind="BRAZIER" x="6090" y="64"/>
+        <decoration kind="FLAG" x="6508" y="128" color="8a6047"/>
+        <decoration kind="TORCH" x="6784" y="64"/>
+        <decoration kind="PENNANT" x="7380" y="96"/>
+        <decoration kind="TORCH" x="7880" y="160"/>
+        <decoration kind="FLAG" x="8410" y="64" color="854d3b"/>
+        <decoration kind="BRAZIER" x="9050" y="64"/>
+        <decoration kind="FLAG" x="10028" y="64" color="78476d"/>
+    </level>
 </campaign>

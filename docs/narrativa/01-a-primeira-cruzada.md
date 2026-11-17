@@ -107,18 +107,20 @@ seguido pela abertura das portas pelos anjos.
 **Português**
 
 > ALÉM DAS MURALHAS\
-> A passagem está livre. A jornada continua.
+> A passagem dos peregrinos está livre.\
+> Seu juramento foi cumprido.
 >
 > ENTER - Próxima fase
 
 **Inglês**
 
 > BEYOND THE WALLS\
-> The passage is clear. The journey continues.
+> The pilgrims' passage is clear.\
+> Your oath has been fulfilled.
 >
 > ENTER - Next level
 
-Chaves no jogo `overlay.victory.title`, `overlay.levelComplete.text`.
+Chaves no jogo `overlay.victory.title`, `overlay.victory.text`, `overlay.levelComplete.next`.
 
 ## Pontos para validação histórica
 

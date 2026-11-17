@@ -58,7 +58,7 @@ public final class AudioPlayer {
                         case POT_SHATTER -> "pot-shatter";
                         case FIRE_IGNITE -> "fire-ignite";
                         case JUMP -> "jump";
-                        case SWING, SPECIAL_SWING -> "sword";
+                        case SWING, SPECIAL_SWING, DUELIST_SLASH, DUELIST_CROSS -> "sword";
                         case BOW_SHOT, CAPTAIN_SHOT -> "spear-thrust";
                         case CAPTAIN_DRAW -> "spear-draw";
                         case HIT, BLOCK -> "hit";
@@ -80,6 +80,8 @@ public final class AudioPlayer {
             };
             float pitch = switch (event) {
                 case SPECIAL_SWING, CAPTAIN_SHOT -> .7f;
+                case DUELIST_SLASH -> 1.2f;
+                case DUELIST_CROSS -> .84f;
                 case PARRY -> 1.35f;
                 default -> 1;
             };

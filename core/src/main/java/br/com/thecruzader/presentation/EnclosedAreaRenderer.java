@@ -82,7 +82,10 @@ final class EnclosedAreaRenderer {
             tintRoom(batch, radiance(world));
             drawDoor(batch, world.arenaEntrance(), entranceClosure, true);
             drawDoor(batch, world.level().gate(), exitClosure, true);
-        } else drawDoor(batch, world.level().gate(), exitClosure, false);
+        } else {
+            drawDoor(batch, world.arenaEntrance(), entranceClosure, false);
+            drawDoor(batch, world.level().gate(), exitClosure, false);
+        }
     }
 
     private void drawDoor(Batch batch, Bounds gate, float closure, boolean interior) {

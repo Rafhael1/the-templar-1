@@ -27,7 +27,7 @@ O contrato atual é intencionalmente horizontal:
 | `spawn`                                                                   | 1          | Corpo do jogador livre de terreno e antes da entrada da arena             |
 | `checkpoint`                                                              | 1          | Corpo do jogador livre de terreno e antes da entrada da arena             |
 | `sentinel`, `archer`, `spearman`, `shield_bearer`, `brute`, `oil_thrower` | 0 ou mais  | Corpos livres de terreno e antes da entrada da arena                      |
-| `guardian` ou `harbor_captain`                                            | 1 no total | Corpo inteiro dentro da arena, sobre seu piso                             |
+| `guardian`, `harbor_captain` ou `relief_duelist`                          | 1 no total | Corpo inteiro dentro da arena, sobre seu piso                             |
 | `bandage`                                                                 | 1 ou mais  | Área livre de terreno/portões; representa bandagens                       |
 | `arena`                                                                   | 1          | Piso plano e livre; largura entre 70 e 896 pixels; altura mínima de 240   |
 | `gate`                                                                    | 1          | X coincide com a borda direita da arena; mesmo piso; altura mínima de 176 |
@@ -37,13 +37,14 @@ O portão de entrada tem 32 pixels de largura e fica imediatamente antes da aren
 continuamente a arena até o fim da saída. A arena e as duas barreiras devem caber na câmera centrada: metade da largura
 da arena mais a maior largura de portão deve ser no máximo 480. Assim, um portão de saída de 40 pixels limita a arena a
 880 pixels. Portões não podem sobrepor terreno estático. O validador usa corpos reais: jogador 28 × 52, inimigos comuns
-30 × 48 e guardião 42 × 68.
+30 × 48, guardião e capitão 42 × 68 e duelista 38 × 62.
 
 O carregamento rejeita formatos e posições incompatíveis, mas não prova que todos os saltos/coletas sejam alcançáveis. Ensaie a rota. Inimigos sobem degraus de até 32 pixels e saltam entre superfícies por trajetórias livres de colisão, com cerca de 110 pixels de altura máxima. Plataformas são sólidas; spawns devem ter apoio para o corpo inteiro. Fases verticais, mais checkpoints, chefes diferentes ou objetivos sem chefe exigem mudanças explícitas nesse contrato.
 
 ## 2. Registrar o conteúdo
 
-Acrescente um `<level>` ao manifesto. IDs devem ser únicos; todos os atributos abaixo são obrigatórios. Caminhos são internos aos recursos de `assets/` e não dependem do diretório de execução do aplicativo.
+Acrescente um `<level>` ao manifesto. IDs devem ser únicos; Os atributos de identificação, geometria e texto são
+obrigatórios. Caminhos são internos aos recursos de `assets/` e não dependem do diretório de execução do aplicativo.
 
 ```xml
 <level reward="GOLDEN_STRIKE" id="new-road" map="levels/new-road/maps/new-road.tmx" blendWidth="200"
@@ -68,15 +69,17 @@ Acrescente um `<level>` ao manifesto. IDs devem ser únicos; todos os atributos 
 </level>
 ```
 
-`reward` é obrigatório e corresponde a um valor implementado de `SpecialAbility`. As recompensas são
+`reward` registra um desbloqueio de habilidade. Omita o atributo quando o chefe não conceder uma habilidade. As
+recompensas são
 `GOLDEN_STRIKE` e `BOW`. `Journey` mantém os desbloqueios e pede a seleção de até dois especiais antes das
 fases posteriores à primeira. O arco entra no espaço livre ao derrotar o chefe que o concede. As três flechas
 são repostas no início da próxima fase, enquanto as cargas do Golpe Dourado também são repostas no respawn.
 
 Uma fase pode incluir `<conversation x="424" y="64" text="level.newRoad.oath" sprite="levels/new-road/envoy.png" />`.
 Posicione os personagens sobre o piso, antes da arena. A tecla **F** abre a conversa quando o jogador se aproxima.
-O atributo `text` é o prefixo dos textos `.title` e `.body`. As conversas são opcionais.
-`tools/generate_constantinople.py` recria o TMX e as imagens de Constantinopla.
+O atributo `text` é o prefixo dos textos `.title` e `.body`. Use `required="true"` para exigir a confirmação
+da conversa com F antes de liberar a entrada da arena. As confirmações persistem no respawn.
+`tools/generate_constantinople.py` e `tools/generate_nicaea.py` recriam o TMX e as imagens de cada fase.
 
 A primeira região começa em zero. Os limites seguintes ficam em ordem, dentro da largura do mapa e separados por pelo menos `blendWidth`, para que as transições não se sobreponham. Use texturas de cenário com o formato visual 960 × 540. Uma textura pode servir a várias regiões da mesma fase e é carregada uma vez por bundle.
 
@@ -99,7 +102,9 @@ textos em `assets/i18n/`.
 
 Crie todas as chaves nos dois arquivos `assets/i18n/messages_pt.properties` e `messages_en.properties`. Use UTF-8, `\n` para quebras de linha e `GameText.format` para valores dinâmicos. A fonte precisa conter os caracteres usados; `GameTextTest` verifica os catálogos.
 
-Os textos do menu/fundo vêm da primeira fase. Objetivos, nome do chefe, anúncios de região e título de conclusão vêm da definição atual. A abertura ilustrada continua sendo da campanha. Fases intermediárias usam o aviso compartilhado `overlay.levelComplete.text` com Enter para continuar; a última usa `completionText` com instrução para nova jornada.
+Os textos do menu/fundo vêm da primeira fase. Objetivos, nome do chefe, anúncios de região e título de conclusão vêm da
+definição atual. A abertura ilustrada continua sendo da campanha. O desfecho de cada fase usa `completionText`. O jogo
+acrescenta `overlay.levelComplete.next` nas fases intermediárias e `overlay.victory.restart` na última.
 
 Sprites comuns, áudio e skin pertencem a `GameAssets`; TMX/tilesets, cenários e texturas do interior pertencem ao bundle `LevelResources` da tela. Não adicione cada novo mapa ou cenário ao carregador compartilhado.
 
