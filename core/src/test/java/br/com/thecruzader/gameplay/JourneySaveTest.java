@@ -37,10 +37,10 @@ class JourneySaveTest {
         assertEquals(campaign.levels().getFirst(), journey.currentLevel());
         Journey resumed = save().load().orElseThrow();
         assertEquals(campaign.levels().get(1), resumed.currentLevel());
-        assertTrue(resumed.selectionRequired());
         assertEquals(campaign.levels().getFirst().reward().stream().toList(), resumed.unlockedAbilities());
-        resumed.selectAbilities(resumed.unlockedAbilities());
         GameWorld fresh = enter(resumed);
+        assertEquals(resumed.unlockedAbilities(), fresh.player().abilities());
+        assertEquals(3, fresh.player().specialCharges(0));
         assertEquals(GameWorld.State.PLAYING, fresh.state());
         assertEquals(GameRules.DEFAULT.playerHearts(), fresh.player().health());
         assertEquals(0, fresh.time());
@@ -58,7 +58,6 @@ class JourneySaveTest {
 
         Journey resumed = save().load().orElseThrow();
         assertThrows(IllegalStateException.class, () -> save().saveVictory(resumed));
-        resumed.selectAbilities(List.of());
         GameWorld world = enter(resumed);
         assertThrows(IllegalStateException.class, () -> save().saveVictory(resumed));
         world.player().health = 0;
@@ -75,7 +74,6 @@ class JourneySaveTest {
         save().saveVictory(journey);
         for (int i = 1; i < campaign.levels().size(); i++) {
             journey.continueAfterVictory();
-            journey.selectAbilities(List.of());
             GameWorld world = enter(journey);
             journey.currentLevel().conversations().stream().filter(c -> c.required())
                 .forEach(c -> world.confirmBriefing(c.textKey()));

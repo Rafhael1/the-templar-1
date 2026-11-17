@@ -25,7 +25,6 @@ class ConstantinopleTest {
         defeatBoss(road);
         leave(road);
         journey.continueAfterVictory();
-        journey.selectAbilities(List.of(SpecialAbility.GOLDEN_STRIKE));
         var world = journey.enterLevel(LevelLoader.load(assets.child(second.mapPath())));
         assertEquals(LevelData.EnemyKind.HARBOR_CAPTAIN, world.boss().kind());
         assertFalse(journey.unlockedAbilities().contains(SpecialAbility.BOW));
@@ -45,10 +44,10 @@ class ConstantinopleTest {
 
         leave(world);
         journey.continueAfterVictory();
-        journey.selectAbilities(List.of(SpecialAbility.BOW));
         var next = journey.enterLevel(LevelLoader.load(testAssets.child(third.mapPath())));
-        assertEquals(List.of(SpecialAbility.BOW), next.player().abilities());
+        assertEquals(List.of(SpecialAbility.GOLDEN_STRIKE, SpecialAbility.BOW), next.player().abilities());
         assertEquals(3, next.player().specialCharges(0));
+        assertEquals(3, next.player().specialCharges(1));
     }
 
     @Test

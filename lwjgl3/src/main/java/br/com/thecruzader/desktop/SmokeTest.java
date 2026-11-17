@@ -7,7 +7,6 @@ import br.com.thecruzader.i18n.Language;
 import br.com.thecruzader.input.PlayerInput;
 import br.com.thecruzader.level.LevelData.EnemyKind;
 import br.com.thecruzader.screen.PlayScreen;
-import br.com.thecruzader.screen.SpecialSelectionScreen;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -239,13 +238,8 @@ final class SmokeTest extends ApplicationAdapter {
         game.getScreen().render(0);
         tap(Input.Keys.ENTER);
         game.getScreen().render(0);
-        if (!(game.getScreen() instanceof SpecialSelectionScreen))
-            throw new IllegalStateException("Constantinople did not open its special selection");
-        tap(Input.Keys.ENTER);
-        tap(Input.Keys.DOWN);
-        tap(Input.Keys.ENTER);
-        game.getScreen().render(0);
-        var play = (PlayScreen) game.getScreen();
+        if (!(game.getScreen() instanceof PlayScreen play))
+            throw new IllegalStateException("Constantinople did not start automatically");
         var world = play.world();
         if (!game.journey().currentLevel().id().equals("constantinople"))
             throw new IllegalStateException("Campaign did not enter Constantinople");
@@ -314,16 +308,9 @@ final class SmokeTest extends ApplicationAdapter {
     private void checkNicaea() {
         tap(Input.Keys.ENTER);
         game.getScreen().render(0);
-        if (!(game.getScreen() instanceof SpecialSelectionScreen)
+        if (!(game.getScreen() instanceof PlayScreen play)
             || !game.journey().unlockedAbilities().contains(SpecialAbility.BOW))
             throw new IllegalStateException("Niceia did not receive the bow after Constantinople");
-        tap(Input.Keys.ENTER);
-        tap(Input.Keys.DOWN);
-        tap(Input.Keys.ENTER);
-        tap(Input.Keys.DOWN);
-        tap(Input.Keys.ENTER);
-        game.getScreen().render(0);
-        var play = (PlayScreen) game.getScreen();
         var world = play.world();
         var definition = game.journey().currentLevel();
         if (!definition.id().equals("nicaea") || world.level().width() != 10240
@@ -396,12 +383,9 @@ final class SmokeTest extends ApplicationAdapter {
             tap(Input.Keys.DOWN);
             tap(Input.Keys.ENTER);
             dev.getScreen().render(0);
-            if (!(dev.getScreen() instanceof SpecialSelectionScreen)
+            if (!(dev.getScreen() instanceof PlayScreen)
                 || !dev.journey().unlockedAbilities().equals(java.util.List.of(SpecialAbility.GOLDEN_STRIKE)))
                 throw new IllegalStateException("Dev stage two lacks the normal unlocked loadout");
-            tap(Input.Keys.DOWN);
-            tap(Input.Keys.ENTER);
-            dev.getScreen().render(0);
             if (!dev.journey().currentLevel().id().equals("constantinople")
                 || ((PlayScreen) dev.getScreen()).world().level().width() != 8960)
                 throw new IllegalStateException("Dev selector did not load the production second stage");
@@ -413,7 +397,7 @@ final class SmokeTest extends ApplicationAdapter {
             tap(Input.Keys.DOWN);
             tap(Input.Keys.ENTER);
             dev.getScreen().render(0);
-            if (!(dev.getScreen() instanceof SpecialSelectionScreen)
+            if (!(dev.getScreen() instanceof PlayScreen)
                 || !dev.journey().currentLevel().id().equals("nicaea")
                 || !dev.journey().unlockedAbilities().contains(SpecialAbility.BOW))
                 throw new IllegalStateException("Dev selector did not offer Niceia with the bow unlocked");
@@ -501,23 +485,16 @@ final class SmokeTest extends ApplicationAdapter {
                 java.nio.file.Path.of(output, "test-campaign-progress.properties"), "levels/test-campaign.xml",
                 campaignGame.campaign()).load().orElseThrow();
             if (!campaignGame.hasSavedJourney() || !reloaded.currentLevel().id().equals("test-road")
-                || !reloaded.selectionRequired()
                 || !reloaded.unlockedAbilities().contains(SpecialAbility.GOLDEN_STRIKE))
                 throw new IllegalStateException("Victory did not persist the next level and unlocked reward");
             capture("25-next-level-prompt.png");
             Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
             campaignGame.getScreen().render(0);
-            if (!(campaignGame.getScreen() instanceof br.com.thecruzader.screen.SpecialSelectionScreen))
-                throw new IllegalStateException("Level two must ask for specials");
-            campaignGame.getScreen().render(0);
-            capture("38-special-selection.png");
-            Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
-            Gdx.input.getInputProcessor().keyDown(Input.Keys.DOWN);
-            Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER);
-            campaignGame.getScreen().render(0);
+            if (!(campaignGame.getScreen() instanceof PlayScreen))
+                throw new IllegalStateException("Level two must start automatically");
             var second = ((PlayScreen) campaignGame.getScreen()).world();
             if (second.player().abilities().size() != 1 || second.player().specialCharges(0) != 3)
-                throw new IllegalStateException("Selected special was not equipped");
+                throw new IllegalStateException("Unlocked special was not automatically equipped");
             Gdx.input.getInputProcessor().keyDown(Input.Keys.Q);
             second.update(br.com.thecruzader.gameplay.GameWorld.STEP,
                 ((br.com.thecruzader.input.InputMapper) Gdx.input.getInputProcessor()).consume());

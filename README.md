@@ -67,9 +67,9 @@ Cada fase declara sua recompensa de chefe no atributo obrigatório `reward` do m
 chefe desbloqueia **Golpe Dourado**. O desbloqueio permanece na jornada, inclusive após morrer, e reinicia ao começar
 uma nova campanha. Não há salvamento em disco.
 
-Antes de entrar em cada fase a partir da segunda, escolha até dois especiais. A ordem de seleção define os botões **Q**
-e **E**; selecione novamente para remover, e confirme em **Iniciar fase**. A primeira fase começa sem especiais.
-O HUD mostra os especiais equipados e suas cargas.
+Ao iniciar cada fase, todos os especiais desbloqueados são equipados automaticamente: **Q** para Golpe Dourado
+e **E** para Arco e flecha quando ambos estão disponíveis. A primeira fase começa sem especiais.
+O HUD mostra as teclas e um ícone por carga; os usos consumidos ficam apagados.
 
 Golpe Dourado faz a espada brilhar durante o ataque e causa **2,5 vezes** o dano da espada comum, sem arredondamento.
 Possui **três cargas por tentativa**, restauradas na morte e ao iniciar uma fase. Cada ativação consome uma carga,
@@ -78,7 +78,9 @@ ciclo da espada lateral, respeita defesas e mantém o multiplicador de contra-at
 
 Derrotar o Capitão do Porto desbloqueia **Arco e flecha** e o equipa no próximo espaço livre. O disparo segue a direção
 do personagem e causa **0,7 vez** o dano da espada comum. Cada fase fornece **três flechas**. Uma flecha é gasta ao
-disparar, mesmo quando erra, e a munição restante é mantida após morrer.
+disparar, mesmo quando erra, e a munição restante é mantida após morrer. Com o arco equipado, cada arqueiro morto
+deixa **uma flecha**, coletada automaticamente ao encostar. A coleta repõe um disparo até o limite de três;
+com a munição cheia, a flecha permanece no chão. Flechas deixadas no cenário são removidas no respawn.
 
 ## Objetivo e conteúdo
 
@@ -92,7 +94,7 @@ e no [livro XI da Alexíada](https://sourcebooks.fordham.edu/basis/AnnaComnena-A
 
 Abra a passagem para os peregrinos. Atravesse a estrada, enfrente doze sentinelas, quatro arqueiros, três lanceiros,
 três escudeiros, dois brutos e dois lançadores de óleo, ative o santuário e derrote o guardião para abrir o portão
-final. O **conjunto de bandagens de linho** aparece em treze pontos da fase e recupera até dois pontos de vida por
+final. O **conjunto de bandagens de linho** aparece em seis pontos de cada fase e recupera até dois pontos de vida por
 coleta. Cada unidade permanece coletada após morrer.
 
 O santuário tem uma imagem de Nossa Senhora com manto azul, auréola e mãos postas, em um nicho de pedra com cruz dourada ornamentada, flores e velas. Ao ativá-lo, as duas velas se acendem. Ele restaura a vida e define onde o personagem retorna após morrer. Os inimigos reaparecem. Checkpoint e bandagens persistem durante a sessão; não há salvamento em disco. Enter após vencer avança à próxima fase registrada; depois da última fase, reinicia a campanha. Cada fase começa com vida cheia e seus próprios inimigos, checkpoint e coletas.
@@ -110,7 +112,7 @@ Durante o desenvolvimento, abra o seletor de fases com:
 ```
 
 Escolha com **W/S**, setas ou mouse. **F2** volta ao seletor durante a partida. Cada seleção começa uma sessão
-nova na fase escolhida, com as recompensas das fases anteriores disponíveis na tela de especiais.
+nova na fase escolhida, com as recompensas das fases anteriores equipadas automaticamente.
 
 ```sh
 ./gradlew :lwjgl3:run
@@ -204,7 +206,7 @@ relevos; a serra tem estratos de rocha. As decorações não alteram colisões.
 
 `python3 tools/generate_environment.py` reproduz somente os quatro fundos e `assets/sprites/environment.png` (Pillow
 necessário). O gerador completo de atmosfera usa esse mesmo script. As rotas superiores do aqueduto e do claustro agora
-têm guardas, e duas bandagens adicionais apoiam os trechos antes do santuário e na subida da serra.
+têm guardas; as seis bandagens de cada fase ficam distribuídas entre a estrada e as plataformas.
 
 ## Editar a fase
 

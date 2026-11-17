@@ -66,7 +66,7 @@ public final class AudioPlayer {
                         case HURT -> "hurt";
                         case DEATH -> throw new IllegalStateException("Death must use the requiem");
                         case BOSS_DEFEATED -> "angelic";
-                        case CHECKPOINT, BANDAGE, ARENA_START, GATES_OPEN, VICTORY -> "chime";
+                        case CHECKPOINT, BANDAGE, ARROW_PICKUP, ARENA_START, GATES_OPEN, VICTORY -> "chime";
                     };
             float volume = switch (event) {
                 case BOSS_DEFEATED -> .55f;

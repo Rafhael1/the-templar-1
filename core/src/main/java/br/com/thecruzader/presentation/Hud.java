@@ -284,12 +284,10 @@ public final class Hud implements Disposable {
         for (int slot = 0; slot < abilities.size(); slot++) {
             SpecialAbility ability = abilities.get(slot);
             Table card = new Table();
-            card.setBackground(assets.frame);
-            card.pad(6, 10, 6, 10);
             Label key = new Label(slot == 0 ? "Q" : "E", assets.skin);
             key.setFontScale(.7f * GameAssets.UI_FONT_SCALE);
             key.setColor(GameAssets.GOLD);
-            card.add(key).padRight(8);
+            card.add(key).padRight(5);
             TextureRegion icon = switch (ability) {
                 case GOLDEN_STRIKE -> assets.swords[0];
                 case BOW -> new TextureRegion(assets.texture("arrow"));
@@ -297,11 +295,11 @@ public final class Hud implements Disposable {
             Image[] icons = new Image[ability.charges()];
             for (int charge = 0; charge < icons.length; charge++) {
                 icons[charge] = new Image(icon);
-                card.add(icons[charge]).size(icon.getRegionWidth() * 1.25f,
-                    icon.getRegionHeight() * 1.25f).padRight(4);
+                card.add(icons[charge]).size(24,
+                    24f * icon.getRegionHeight() / icon.getRegionWidth()).padRight(2);
             }
             specialIcons.add(icons);
-            specials.add(card).height(36).padRight(8);
+            specials.add(card).padRight(12);
         }
     }
 

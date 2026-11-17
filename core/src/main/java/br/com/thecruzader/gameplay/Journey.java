@@ -4,7 +4,10 @@ import br.com.thecruzader.level.Campaign;
 import br.com.thecruzader.level.LevelData;
 import br.com.thecruzader.level.LevelDefinition;
 
-import java.util.*;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Campaign progress; each level starts a fresh world.
@@ -13,8 +16,6 @@ public final class Journey {
     private final Campaign campaign;
     private final GameRules rules;
     private final Set<SpecialAbility> unlocked = EnumSet.noneOf(SpecialAbility.class);
-    private List<SpecialAbility> equipped = List.of();
-    private boolean selectionRequired;
     private int index;
     private GameWorld world;
 
@@ -33,7 +34,6 @@ public final class Journey {
         journey.index = levelIndex;
         for (int i = 0; i < levelIndex; i++)
             campaign.levels().get(i).reward().ifPresent(journey.unlocked::add);
-        journey.selectionRequired = levelIndex > 0;
         return journey;
     }
 
@@ -47,27 +47,14 @@ public final class Journey {
         return currentLevel().id();
     }
 
-    public boolean selectionRequired() {
-        return selectionRequired;
-    }
-
-    public void selectAbilities(List<SpecialAbility> abilities) {
-        if (!selectionRequired || world != null) throw new IllegalStateException("Selection requires a new level");
-        if (abilities.size() > 2 || new HashSet<>(abilities).size() != abilities.size()
-            || !unlocked.containsAll(abilities))
-            throw new IllegalArgumentException("Select up to two unlocked abilities");
-        equipped = List.copyOf(abilities);
-        selectionRequired = false;
-    }
     public LevelDefinition currentLevel() { return campaign.levels().get(index); }
     public boolean hasNextLevel() { return index + 1 < campaign.levels().size(); }
     public GameWorld enterLevel(LevelData data) {
         if (world != null) throw new IllegalStateException("Current level is already running");
-        if (selectionRequired) throw new IllegalStateException("Choose abilities before entering this level");
         LevelDefinition definition = currentLevel();
         var briefings = definition.conversations().stream()
             .filter(LevelDefinition.Conversation::required).map(LevelDefinition.Conversation::textKey).toList();
-        world = new GameWorld(data, rules, equipped, () -> definition.reward().ifPresent(unlocked::add),
+        world = new GameWorld(data, rules, unlockedAbilities(), () -> definition.reward().ifPresent(unlocked::add),
             definition.reward(), briefings);
         return world;
     }
@@ -76,8 +63,6 @@ public final class Journey {
             throw new IllegalStateException("Level transition requires victory");
         boolean next = hasNextLevel();
         index = next ? index + 1 : 0;
-        selectionRequired = next;
-        equipped = List.of();
         if (!next) unlocked.clear();
         world = null;
     }

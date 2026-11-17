@@ -71,8 +71,9 @@ obrigatórios. Caminhos são internos aos recursos de `assets/` e não dependem 
 
 `reward` registra um desbloqueio de habilidade. Omita o atributo quando o chefe não conceder uma habilidade. As
 recompensas são
-`GOLDEN_STRIKE` e `BOW`. `Journey` mantém os desbloqueios e pede a seleção de até dois especiais antes das
-fases posteriores à primeira. O arco entra no espaço livre ao derrotar o chefe que o concede. As três flechas
+`GOLDEN_STRIKE` e `BOW`. `Journey` mantém os desbloqueios e equipa automaticamente todos os poderes
+ao iniciar cada fase, na ordem Golpe Dourado (Q) e Arco e flecha (E) quando ambos estão disponíveis. O arco entra no
+espaço livre ao derrotar o chefe que o concede. As três flechas
 são repostas no início da próxima fase, enquanto as cargas do Golpe Dourado também são repostas no respawn.
 
 Uma fase pode incluir `<conversation x="424" y="64" text="level.newRoad.oath" sprite="levels/new-road/envoy.png" />`.

@@ -115,10 +115,7 @@ public final class CrusaderGame extends Game {
     }
 
     public void startGame() {
-        if (journey.selectionRequired()) {
-            audio.startMenu();
-            replaceScreen(new br.com.thecruzader.screen.SpecialSelectionScreen(this, assets));
-        } else replaceScreen(new PlayScreen(this, assets, audio));
+        replaceScreen(new PlayScreen(this, assets, audio));
     }
 
     public boolean hasSavedJourney() {

@@ -284,6 +284,13 @@ public final class WorldRenderer implements Disposable {
                     (float) Math.round(r.y() + r.height() / 2 - 16
                             + Math.sin(world.time() * 3) * 2), 32, 32);
         }
+        for (ArrowPickup pickup : world.arrowPickups()) {
+            if (world.level().insideArena(pickup.x() + 8) != interior) continue;
+            if (pickup.x() < left - 32 || pickup.x() > left + 992) continue;
+            batch.setColor(GameAssets.GOLD);
+            batch.draw(assets.texture("arrow"), (float) Math.round(pickup.x()),
+                (float) Math.round(pickup.y() + 4 + Math.sin(world.time() * 3) * 2), 16, 6);
+        }
         enclosed.drawDoors(batch, world, interior, entranceClosure, exitClosure);
     }
 

@@ -40,6 +40,13 @@ public final class Player {
         return charges[slot];
     }
 
+    boolean collectArrow() {
+        int slot = abilities.indexOf(SpecialAbility.BOW);
+        if (slot < 0 || charges[slot] >= SpecialAbility.BOW.charges()) return false;
+        charges[slot]++;
+        return true;
+    }
+
     public boolean goldenStrike() {
         return attack.running() && attackAbility == SpecialAbility.GOLDEN_STRIKE;
     }

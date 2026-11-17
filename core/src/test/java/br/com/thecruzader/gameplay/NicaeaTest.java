@@ -18,6 +18,14 @@ class NicaeaTest {
     private static final PlayerInput GUARD = new PlayerInput(0, false, false, false, false, true, -1);
 
     @Test
+    void startingAtNicaeaAutomaticallyEquipsBothUnlockedPowers() {
+        var world = enter();
+        assertEquals(List.of(SpecialAbility.GOLDEN_STRIKE, SpecialAbility.BOW), world.player().abilities());
+        assertEquals(3, world.player().specialCharges(0));
+        assertEquals(3, world.player().specialCharges(1));
+    }
+
+    @Test
     void theRedoubtRequiresBothBriefingsAndRetainsConfirmationsAfterRespawn() {
         assertEquals("nicaea", journey.currentLevel().id());
         var world = enter();
@@ -82,7 +90,6 @@ class NicaeaTest {
     }
 
     private GameWorld enter() {
-        journey.selectAbilities(List.of(SpecialAbility.BOW));
         return journey.enterLevel(LevelLoader.load(assets.child(journey.currentLevel().mapPath())));
     }
 

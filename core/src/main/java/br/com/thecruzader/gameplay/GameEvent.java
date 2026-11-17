@@ -14,6 +14,7 @@ public enum GameEvent {
     HURT,
     CHECKPOINT,
     BANDAGE,
+    ARROW_PICKUP,
     DEATH,
     ARENA_START,
     BOSS_DEFEATED,

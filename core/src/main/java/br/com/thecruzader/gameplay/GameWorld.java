@@ -39,6 +39,9 @@ public final class GameWorld {
     private final boolean[] collectedBandages;
     private final List<Arrow> arrows = new ArrayList<>();
     private final List<Arrow> arrowView = Collections.unmodifiableList(arrows);
+    private final List<ArrowPickup> arrowPickups = new ArrayList<>();
+    private final List<ArrowPickup> arrowPickupView = Collections.unmodifiableList(arrowPickups);
+    private final Set<Enemy> processedArcherDeaths = new HashSet<>();
     private final List<OilPot> oilPots = new ArrayList<>();
     private final List<OilPot> oilPotView = Collections.unmodifiableList(oilPots);
     private final OilSystem oilSystem = new OilSystem();
@@ -86,6 +89,8 @@ public final class GameWorld {
 
     private void populate() {
         enemies.clear();
+        arrowPickups.clear();
+        processedArcherDeaths.clear();
         level.enemies().forEach(spawn -> enemies.add(new Enemy(spawn)));
         boss = enemies.stream().filter(Enemy::boss).findFirst().orElseThrow();
     }
@@ -134,6 +139,7 @@ public final class GameWorld {
         combat.resolve(player, enemies, events);
         if (player.releaseArrow(arrows)) events.add(GameEvent.BOW_SHOT);
         projectiles.update(arrows, player, enemies, collision, gateLocked(), dt, events);
+        updateArrowPickups(dt);
         if (arenaEntered && !bossDefeated && boss.health <= 0) {
             bossDefeated = true;
             onBossDefeated.run();
@@ -212,7 +218,24 @@ public final class GameWorld {
         }
     }
 
+    private void updateArrowPickups(double dt) {
+        for (Enemy enemy : enemies) {
+            if (enemy.archer() && enemy.health() <= 0 && processedArcherDeaths.add(enemy)
+                && player.abilities().contains(SpecialAbility.BOW)) {
+                arrowPickups.add(new ArrowPickup(enemy.x() + enemy.width() / 2 - 8, enemy.y()));
+            }
+        }
+        for (ArrowPickup pickup : arrowPickups) pickup.update(dt, collision.solids(gateLocked()));
+        arrowPickups.removeIf(pickup -> pickup.y() < -100);
+    }
+
     private void collectPickups() {
+        arrowPickups.removeIf(pickup -> {
+            if (level.insideArena(pickup.x() + 8) != insideArena()
+                || !pickup.bounds().overlaps(player.bounds()) || !player.collectArrow()) return false;
+            events.add(GameEvent.ARROW_PICKUP);
+            return true;
+        });
         if (!checkpoint && shrine.overlaps(player.bounds())) {
             checkpoint = true;
             player.health = player.maxHealth();
@@ -377,6 +400,10 @@ public final class GameWorld {
     }
 
     public List<Arrow> arrows() { return arrowView; }
+
+    public List<ArrowPickup> arrowPickups() {
+        return arrowPickupView;
+    }
 
     public boolean paused() {
         return paused;

@@ -21,7 +21,6 @@ class JourneyTest {
         assertEquals(7, first.player().health());
         complete(first);
         journey.continueAfterVictory();
-        journey.selectAbilities(java.util.List.of(SpecialAbility.GOLDEN_STRIKE));
         GameWorld second = journey.enterLevel(LevelLoader.load(testAssets.child(journey.currentLevel().mapPath())));
         assertEquals(7, second.player().maxHealth());
         assertEquals(7, second.player().health());
@@ -45,13 +44,10 @@ class JourneyTest {
         assertEquals("test-road", journey.currentLevel().id());
         assertFalse(journey.hasNextLevel());
         assertThrows(IllegalStateException.class, journey::continueAfterVictory);
-        assertTrue(journey.selectionRequired());
         assertEquals(java.util.List.of(SpecialAbility.GOLDEN_STRIKE), journey.unlockedAbilities());
-        assertThrows(IllegalStateException.class, () -> journey.enterLevel(first.level()));
-        assertThrows(IllegalArgumentException.class, () -> journey.selectAbilities(
-            java.util.List.of(SpecialAbility.GOLDEN_STRIKE, SpecialAbility.GOLDEN_STRIKE)));
-        journey.selectAbilities(java.util.List.of(SpecialAbility.GOLDEN_STRIKE));
         GameWorld second = journey.enterLevel(LevelLoader.load(testAssets.child(journey.currentLevel().mapPath())));
+        assertEquals(journey.unlockedAbilities(), second.player().abilities());
+        assertEquals(3, second.player().specialCharges(0));
         assertNotSame(first, second);
         assertNotSame(first.player(), second.player());
         assertEquals(GameRules.DEFAULT.playerHearts(), second.player().health());
