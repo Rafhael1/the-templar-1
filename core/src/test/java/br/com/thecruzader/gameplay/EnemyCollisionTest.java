@@ -103,4 +103,22 @@ class EnemyCollisionTest {
         for (int tick = 0; tick < 120; tick++) collision.move(enemy, GameWorld.STEP, false);
         assertTrue(enemy.x() > 2990);
     }
+
+    @Test
+    void staggerKnockbackStillRespectsWalls() {
+        LevelData base = collision().level();
+        LevelData walled = new LevelData(base.width(), base.height(), base.spawn(), base.checkpoint(),
+            base.bandages(), base.gate(), base.exit(), base.arena(),
+            List.of(new Bounds(0, 0, 3200, 64), new Bounds(185, 64, 32, 120)), base.enemies());
+        Enemy enemy = enemy(150, 64);
+        enemy.stagger = .18;
+        enemy.knockback = 190;
+        CollisionWorld collision = new CollisionWorld(walled);
+        EnemySystem system = new EnemySystem(collision, new java.util.ArrayList<>());
+        for (int i = 0; i < 20; i++) {
+            system.update(enemy, new Player(base.spawn()), GameWorld.STEP, new ArrayList<>(), false);
+            collision.move(enemy, GameWorld.STEP, false);
+            assertTrue(enemy.bounds().right() <= 185);
+        }
+    }
 }

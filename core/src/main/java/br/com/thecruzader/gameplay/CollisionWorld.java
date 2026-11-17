@@ -81,6 +81,7 @@ public final class CollisionWorld {
                 if (p.vy < 0) {
                     p.y = solid.top();
                     p.grounded = true;
+                    p.downwardAttackUsed = false;
                 } else if (p.vy > 0) p.y = solid.y() - Player.HEIGHT;
                 p.vy = 0;
             }

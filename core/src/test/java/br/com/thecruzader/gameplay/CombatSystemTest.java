@@ -10,7 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DynamicCombatTest {
+class CombatSystemTest {
     private LevelData level() {
         return new LevelData(3200, 544, new LevelData.Point(100, 64), new LevelData.Point(1400, 64),
             List.of(new Bounds(600, 232, 22, 30)), new Bounds(2950, 64, 40, 176),
@@ -27,6 +27,22 @@ class DynamicCombatTest {
 
     private PlayerInput input(boolean attack, boolean dodge, boolean block) {
         return new PlayerInput(0, false, attack, dodge, false, block, -1);
+    }
+
+    private GameWorld world() {
+        return new GameWorld(new LevelData(3200, 544,
+            new LevelData.Point(100, 64), new LevelData.Point(1400, 64),
+            List.of(new Bounds(740, 232, 22, 30)), new Bounds(2950, 64, 40, 176),
+            new Bounds(3010, 64, 110, 100), new Bounds(64, 64, 2886, 256), List.of(new Bounds(0, 0, 3200, 64)),
+            List.of(new LevelData.Spawn(620, 64, LevelData.EnemyKind.SENTINEL), new LevelData.Spawn(2700, 64, LevelData.EnemyKind.GUARDIAN))));
+    }
+
+    private Enemy strike(double x, int facing) {
+        Enemy enemy = new Enemy(new LevelData.Spawn(x, 64, LevelData.EnemyKind.SENTINEL));
+        enemy.facing = facing;
+        enemy.attack.start();
+        enemy.attack.update(.56);
+        return enemy;
     }
 
     @Test
@@ -237,31 +253,6 @@ class DynamicCombatTest {
     }
 
     @Test
-    void bossParryBonusIsConsumedByOnlyOneCounterattackAndExpires() {
-        Player player = new Player(new LevelData.Point(100, 64));
-        Enemy boss = enemy(150, LevelData.EnemyKind.GUARDIAN);
-        boss.stagger = .40;
-        boss.riposteReady = true;
-        CombatSystem combat = new CombatSystem();
-        player.attack.start();
-        player.attack.update(.11);
-        combat.resolve(player, List.of(boss), new ArrayList<>());
-        assertEquals(boss.maxHealth() - 2, boss.health());
-        assertFalse(boss.vulnerable());
-        player.attack.cancel();
-        player.attack.start();
-        player.attack.update(.11);
-        combat.resolve(player, List.of(boss), new ArrayList<>());
-        assertEquals(boss.maxHealth() - 3, boss.health());
-        boss.stagger = GameWorld.STEP;
-        boss.riposteReady = true;
-        new EnemySystem(new CollisionWorld(level()), new java.util.ArrayList<>()).update(boss, player, GameWorld.STEP,
-            new ArrayList<>(), false);
-        assertFalse(boss.vulnerable());
-        assertFalse(boss.riposteReady);
-    }
-
-    @Test
     void committedSentinelStillStrikesAfterBeingHitDuringWindup() {
         Player player = new Player(new LevelData.Point(100, 64));
         Enemy sentinel = enemy(140, LevelData.EnemyKind.SENTINEL);
@@ -279,134 +270,171 @@ class DynamicCombatTest {
     }
 
     @Test
-    void bothGuardianHeaviesBreakHeldGuardButRespectParryAndDodge() {
-        for (Enemy.State state : List.of(Enemy.State.DASH, Enemy.State.JUMP)) {
-            for (int defense = 0; defense < 3; defense++) {
-                Player player = new Player(new LevelData.Point(100, 64));
-                player.blocking = defense != 2;
-                player.parryWindow = defense == 1 ? .12 : 0;
-                player.invulnerable = defense == 2 ? .24 : 0;
-                Enemy boss = enemy(120, LevelData.EnemyKind.GUARDIAN);
-                boss.state = state;
-                var events = new ArrayList<GameEvent>();
-                new CombatSystem().resolve(player, List.of(boss), events);
-                assertEquals(player.maxHealth() - (defense == 0 ? 1 : 0), player.health());
-                assertEquals(defense == 0 ? List.of(GameEvent.HURT)
-                    : defense == 1 ? List.of(GameEvent.PARRY) : List.of(), events);
+    void simultaneousJumpAndDownAttackLocksDirection() {
+        GameWorld w = world();
+        w.update(GameWorld.STEP, PlayerInput.NONE);
+        w.update(GameWorld.STEP, new PlayerInput(0, true, true, false, true, false, -1));
+        assertFalse(w.player().grounded());
+        assertEquals(Player.AttackDirection.DOWN, w.player().attackDirection());
+        w.update(GameWorld.STEP, new PlayerInput(-1, false, true, false, false, false, -1));
+        assertEquals(Player.AttackDirection.DOWN, w.player().attackDirection());
+        assertEquals(1, w.player().attack().sequence());
+    }
+
+    @Test
+    void groundedDownInputUsesSideAttack() {
+        GameWorld w = world();
+        w.update(GameWorld.STEP, PlayerInput.NONE);
+        w.update(GameWorld.STEP, new PlayerInput(0, false, true, false, true, false, -1));
+        assertEquals(Player.AttackDirection.SIDE, w.player().attackDirection());
+    }
+
+    @Test
+    void downwardAttackRequiresLandingBeforeReuseEvenAfterAMissOrBounce() {
+        for (boolean hit : new boolean[]{false, true}) {
+            GameWorld w = world();
+            Player p = w.player();
+            p.y = 300;
+            PlayerInput downAttack = new PlayerInput(0, false, true, false, true, false, -1);
+            w.update(GameWorld.STEP, downAttack);
+            p.attack.update(.11);
+            if (hit) {
+                Enemy below = new Enemy(new LevelData.Spawn(p.x, p.y - 70, LevelData.EnemyKind.SENTINEL));
+                new CombatSystem().resolve(p, List.of(below), new ArrayList<>());
+                assertEquals(420, p.vy);
             }
+            for (int i = 0; i < 45; i++) w.update(GameWorld.STEP, downAttack);
+            assertFalse(p.grounded());
+            assertFalse(p.attack.running());
+            assertEquals(1, p.attack.sequence(), "Repeated presses cannot chain downward attacks in the air");
+            w.update(GameWorld.STEP, new PlayerInput(0, false, true, false, false, false, -1));
+            assertEquals(2, p.attack.sequence(), "Side attacks remain available in the air");
+            assertEquals(Player.AttackDirection.SIDE, p.attackDirection());
+            for (int i = 0; i < 180; i++) w.update(GameWorld.STEP, PlayerInput.NONE);
+            assertTrue(p.grounded());
+            w.update(GameWorld.STEP, new PlayerInput(0, true, true, false, true, false, -1));
+            assertEquals(3, p.attack.sequence());
+            assertEquals(Player.AttackDirection.DOWN, p.attackDirection());
         }
     }
 
     @Test
-    void staggerKnockbackStillRespectsWalls() {
-        LevelData base = level();
-        LevelData walled = new LevelData(base.width(), base.height(), base.spawn(), base.checkpoint(),
-            base.bandages(), base.gate(), base.exit(), base.arena(),
-            List.of(new Bounds(0, 0, 3200, 64), new Bounds(185, 64, 32, 120)), base.enemies());
-        Enemy enemy = enemy(150, LevelData.EnemyKind.SENTINEL);
-        enemy.stagger = .18;
-        enemy.knockback = 190;
-        CollisionWorld collision = new CollisionWorld(walled);
-        EnemySystem system = new EnemySystem(collision, new java.util.ArrayList<>());
-        for (int i = 0; i < 20; i++) {
-            system.update(enemy, new Player(base.spawn()), GameWorld.STEP, new ArrayList<>(), false);
-            collision.move(enemy, GameWorld.STEP, false);
-            assertTrue(enemy.bounds().right() <= 185);
+    void downwardAttackHitsBelowOnceAndStopsDealingDamageOnLanding() {
+        Player p = new Player(new LevelData.Point(100, 150));
+        p.attackDirection = Player.AttackDirection.DOWN;
+        Enemy below = new Enemy(new LevelData.Spawn(104, 64, LevelData.EnemyKind.SENTINEL));
+        Enemy beside = new Enemy(new LevelData.Spawn(150, 150, LevelData.EnemyKind.SENTINEL));
+        var events = new ArrayList<GameEvent>();
+        CombatSystem combat = new CombatSystem();
+        p.attack.start();
+        combat.resolve(p, List.of(below, beside), events);
+        assertEquals(3, below.health());
+        p.attack.update(.11);
+        combat.resolve(p, List.of(below, beside), events);
+        combat.resolve(p, List.of(below, beside), events);
+        assertEquals(2, below.health());
+        assertEquals(3, beside.health());
+        p.grounded = true;
+        below.lastPlayerAttack = -1;
+        combat.resolve(p, List.of(below), events);
+        assertEquals(2, below.health());
+    }
+
+    @Test
+    void shieldBlocksFrontFromEitherFacingButNotRear() {
+        for (int facing : new int[]{-1, 1}) {
+            Player p = new Player(new LevelData.Point(100, 64));
+            p.blocking = true;
+            p.facing = facing;
+            Enemy front = strike(100 + facing * 45, -facing);
+            var events = new ArrayList<GameEvent>();
+            CombatSystem combat = new CombatSystem();
+            combat.resolve(p, List.of(front), events);
+            combat.resolve(p, List.of(front), events);
+            assertEquals(p.maxHealth(), p.health());
+            assertEquals(List.of(GameEvent.BLOCK), events);
+            assertTrue(p.blockFlash() > 0);
+            Enemy rear = strike(100 - facing * 45, facing);
+            combat.resolve(p, List.of(rear), events);
+            assertEquals(p.maxHealth() - 1, p.health());
         }
     }
 
     @Test
-    void archerRetreatsBeforeStartingAnotherShotButKeepsCommittedWindup() {
-        Enemy archer = enemy(300, LevelData.EnemyKind.ARCHER);
-        Player player = new Player(new LevelData.Point(240, 64));
-        EnemySystem system = new EnemySystem(new CollisionWorld(level()), new java.util.ArrayList<>());
-        system.update(archer, player, GameWorld.STEP, new ArrayList<>(), false);
-        assertEquals(Enemy.State.CHASE, archer.state());
-        assertTrue(archer.vx > 0);
-        archer.attack.start();
-        system.update(archer, player, GameWorld.STEP, new ArrayList<>(), false);
-        assertEquals(Enemy.State.WINDUP, archer.state());
-        assertEquals(0, archer.vx);
+    void blockingSlowsMovementPreventsAttackAndDodgeAndEndsOnRelease() {
+        GameWorld w = world();
+        w.update(GameWorld.STEP, new PlayerInput(1, false, true, true, false, true, -1));
+        assertTrue(w.player().blocking());
+        assertEquals(70, w.player().speed());
+        assertFalse(w.player().attack().running());
+        assertFalse(w.player().dodging());
+        w.update(GameWorld.STEP, new PlayerInput(1, false, true, false, false, false, -1));
+        assertFalse(w.player().blocking());
+        assertTrue(w.player().attack().running());
+        w.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true, -1));
+        assertFalse(w.player().blocking());
     }
 
     @Test
-    void woundedGuardianChainsDashIntoTelegraphedSwordThenLeavesPunishWindow() {
-        Enemy boss = enemy(300, LevelData.EnemyKind.GUARDIAN);
-        boss.health = boss.maxHealth() / 2;
-        boss.nextMove = 1;
-        EnemySystem system = new EnemySystem(new CollisionWorld(level()), new java.util.ArrayList<>());
-        Player player = new Player(new LevelData.Point(240, 64));
-        var arrows = new ArrayList<Arrow>();
-        system.update(boss, player, .01, arrows, false);
-        assertEquals(Enemy.State.DASH_WINDUP, boss.state());
-        system.update(boss, player, .37, arrows, false);
-        assertEquals(Enemy.State.DASH, boss.state());
-        system.update(boss, player, .29, arrows, false);
-        assertEquals(Enemy.State.WINDUP, boss.state());
-        assertTrue(boss.attack.running());
-        system.update(boss, player, .56, arrows, false);
-        assertEquals(Enemy.State.ATTACK, boss.state());
-        system.update(boss, player, .16, arrows, false);
-        assertEquals(Enemy.State.RECOVER, boss.state());
-        assertFalse(boss.vulnerable(), "Missed heavies do not grant free bonus damage");
-        assertFalse(boss.comboSword);
+    void shieldCanBlockInAirButCannotInterruptDodge() {
+        GameWorld w = world();
+        w.update(GameWorld.STEP, PlayerInput.NONE);
+        w.update(GameWorld.STEP, new PlayerInput(0, true, false, false, false, true, -1));
+        assertFalse(w.player().grounded());
+        assertTrue(w.player().blocking());
+        w.update(GameWorld.STEP, new PlayerInput(0, false, false, true, false, false, -1));
+        assertTrue(w.player().dodging());
+        w.update(GameWorld.STEP, new PlayerInput(0, false, false, false, false, true, -1));
+        assertFalse(w.player().blocking());
     }
 
     @Test
-    void vulnerableBossTakesDoubleDamageButOrdinaryStaggerDoesNot() {
-        for (LevelData.EnemyKind kind : List.of(LevelData.EnemyKind.SENTINEL, LevelData.EnemyKind.GUARDIAN)) {
-            Player player = new Player(new LevelData.Point(100, 64));
-            player.attack.start();
-            player.attack.update(.11);
-            Enemy enemy = enemy(150, kind);
-            enemy.stagger = .40;
-            enemy.riposteReady = true;
-            new CombatSystem().resolve(player, List.of(enemy), new ArrayList<>());
-            assertEquals(enemy.maxHealth() - (enemy.boss() ? 2 : 1), enemy.health());
-        }
+    void windupRecoveryAndActiveWindowControlDamage() {
+        Player p = new Player(new LevelData.Point(100, 64));
+        Enemy e = new Enemy(new LevelData.Spawn(145, 64, LevelData.EnemyKind.SENTINEL));
+        var events = new ArrayList<GameEvent>();
+        CombatSystem combat = new CombatSystem();
+        p.attack.start();
+        combat.resolve(p, List.of(e), events);
+        assertEquals(3, e.health());
+        p.attack.update(.11);
+        combat.resolve(p, List.of(e), events);
+        assertEquals(2, e.health());
+        combat.resolve(p, List.of(e), events);
+        assertEquals(2, e.health(), "One hit per target per swing");
+        p.attack.update(.13);
+        assertEquals(Attack.Phase.RECOVERY, p.attack.phase());
+        e.lastPlayerAttack = -1;
+        combat.resolve(p, List.of(e), events);
+        assertEquals(2, e.health());
+        p.attack.update(1);
+        assertTrue(p.attack.start());
+        p.attack.update(.11);
+        combat.resolve(p, List.of(e), events);
+        assertEquals(1, e.health());
     }
 
     @Test
-    void hitStopFreezesSimulationAndPauseAndRetainsPressedJump() {
-        LevelData base = level();
-        GameWorld world = new GameWorld(new LevelData(base.width(), base.height(), base.spawn(), base.checkpoint(),
-            base.bandages(), base.gate(), base.exit(), base.arena(), base.solids(),
-            List.of(new LevelData.Spawn(150, 64, LevelData.EnemyKind.SENTINEL), base.enemies().getFirst())));
-        world.player().attack.start();
-        world.player().attack.update(.11);
-        world.update(GameWorld.STEP, PlayerInput.NONE);
-        assertTrue(world.hitStopped());
-        double time = world.time();
-        world.setPaused(true);
-        for (int i = 0; i < 10; i++) world.update(GameWorld.STEP, PlayerInput.NONE);
-        assertTrue(world.hitStopped());
-        assertEquals(time, world.time());
-        world.setPaused(false);
-        world.update(GameWorld.STEP, new PlayerInput(0, true, false, false, false, false, -1));
-        while (world.hitStopped()) world.update(GameWorld.STEP, PlayerInput.NONE);
-        assertEquals(time, world.time());
-        world.update(GameWorld.STEP, PlayerInput.NONE);
-        assertTrue(world.player().vy > 0);
-        assertFalse(world.player().grounded());
-        world.player().health = 0;
-        world.update(GameWorld.STEP, PlayerInput.NONE);
-        world.respawn();
-        assertFalse(world.hitStopped());
-        assertEquals(0, world.player().attackBuffer);
-        assertEquals(0, world.player().parryWindow);
-        assertEquals(0, world.player().parryFlash());
+    void attackCannotRestartDuringRecovery() {
+        Attack attack = new Attack(.1, .12, .22);
+        attack.start();
+        attack.update(.25);
+        assertEquals(Attack.Phase.RECOVERY, attack.phase());
+        assertFalse(attack.start());
     }
 
     @Test
-    void killingBlowFlashExpiresInsteadOfShakingCameraForever() {
-        Enemy enemy = enemy(150, LevelData.EnemyKind.SENTINEL);
-        enemy.health = 0;
-        enemy.flash = .14;
-        EnemySystem system = new EnemySystem(new CollisionWorld(level()), new java.util.ArrayList<>());
-        for (int i = 0; i < 20; i++)
-            system.update(enemy, new Player(level().spawn()),
-                GameWorld.STEP, new ArrayList<>(), false);
-        assertEquals(0, enemy.flash());
-        assertEquals(Enemy.State.DEAD, enemy.state());
+    void enemyStrikeDealsDamageOnlyOnce() {
+        Player p = new Player(new LevelData.Point(100, 64));
+        Enemy e = new Enemy(new LevelData.Spawn(145, 64, LevelData.EnemyKind.SENTINEL));
+        e.attack.start();
+        e.attack.update(.60);
+        var events = new ArrayList<GameEvent>();
+        CombatSystem combat = new CombatSystem();
+        combat.resolve(p, List.of(e), events);
+        assertEquals(p.maxHealth() - 1, p.health());
+        p.invulnerable = 0;
+        combat.resolve(p, List.of(e), events);
+        assertEquals(p.maxHealth() - 1, p.health());
     }
 }

@@ -1,11 +1,7 @@
 package br.com.thecruzader.gameplay;
 
 import br.com.thecruzader.input.PlayerInput;
-import br.com.thecruzader.level.Bounds;
-import br.com.thecruzader.level.Campaign;
-import br.com.thecruzader.level.CampaignLoader;
-import br.com.thecruzader.level.LevelData;
-import br.com.thecruzader.level.LevelLoader;
+import br.com.thecruzader.level.*;
 import com.badlogic.gdx.files.FileHandle;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +33,7 @@ class ConstantinopleTest {
         assertEquals(List.of(SpecialAbility.GOLDEN_STRIKE, SpecialAbility.BOW), journey.unlockedAbilities());
         assertEquals(journey.unlockedAbilities(), world.player().abilities());
         assertEquals(3, world.player().specialCharges(1));
-        while (world.bossReleaseActive()) world.update(GameWorld.STEP, PlayerInput.NONE);
+        finishBossRelease(world);
         fire(world, 1);
         assertEquals(2, world.player().specialCharges(1));
         world.player().health = 0;
@@ -148,8 +144,14 @@ class ConstantinopleTest {
         assertTrue(world.bossDefeated());
     }
 
+    private static void finishBossRelease(GameWorld world) {
+        for (int tick = 0; tick < 600 && world.bossReleaseActive(); tick++)
+            world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertFalse(world.bossReleaseActive(), "Boss release must finish within five seconds");
+    }
+
     private static void leave(GameWorld world) {
-        while (world.bossReleaseActive()) world.update(GameWorld.STEP, PlayerInput.NONE);
+        finishBossRelease(world);
         world.player().x = world.level().exit().x() + 8;
         world.update(GameWorld.STEP, PlayerInput.NONE);
         assertEquals(GameWorld.State.WON, world.state());

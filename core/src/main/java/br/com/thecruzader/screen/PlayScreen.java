@@ -3,6 +3,7 @@ package br.com.thecruzader.screen;
 import br.com.thecruzader.CrusaderGame;
 import br.com.thecruzader.gameplay.GameEvent;
 import br.com.thecruzader.gameplay.GameWorld;
+import br.com.thecruzader.gameplay.Player;
 import br.com.thecruzader.gameplay.SpecialAbility;
 import br.com.thecruzader.input.InputMapper;
 import br.com.thecruzader.level.LevelDefinition.Conversation;
@@ -105,18 +106,7 @@ public final class PlayScreen extends ScreenAdapter {
         List<GameEvent> events = world.drainEvents();
         if (events.contains(GameEvent.VICTORY)) game.saveVictory();
         audio.play(events);
-        var reward = level.definition().reward();
-        for (GameEvent event : events) {
-            if (event == GameEvent.CHECKPOINT)
-                hud.announce("notice.checkpoint");
-            if (event == GameEvent.ARENA_START) hud.announce(level.definition().texts().arenaNotice());
-            if (event == GameEvent.BOSS_DEFEATED)
-                reward.ifPresent(ability -> hud.announceReward(ability, world.player()));
-            if (event == GameEvent.GATES_OPEN && reward.orElse(null) != SpecialAbility.BOW)
-                hud.announce(reward.isEmpty() ? level.definition().texts().exitObjective() : "notice.gatesOpen");
-            if (event == GameEvent.BANDAGE)
-                hud.announce("notice.bandage");
-        }
+        announceEvents(events);
         int nextRegion = scenery.regionAt(world.player().x());
         if (!visitedRegions[nextRegion]) {
             visitedRegions[nextRegion] = true;
@@ -129,11 +119,30 @@ public final class PlayScreen extends ScreenAdapter {
         hud.render(world, openConversation == null ? delta : 0, audio.muted(), renderer.deathElapsed());
     }
 
+    private void announceEvents(List<GameEvent> events) {
+        var definition = level.definition();
+        var reward = definition.reward();
+        for (GameEvent event : events) {
+            switch (event) {
+                case CHECKPOINT -> hud.announce("notice.checkpoint");
+                case ARENA_START -> hud.announce(definition.texts().arenaNotice());
+                case BOSS_DEFEATED -> reward.ifPresent(ability -> hud.announceReward(ability, world.player()));
+                case GATES_OPEN -> {
+                    if (reward.orElse(null) != SpecialAbility.BOW)
+                        hud.announce(reward.isEmpty() ? definition.texts().exitObjective() : "notice.gatesOpen");
+                }
+                case BANDAGE -> hud.announce("notice.bandage");
+                default -> {
+                }
+            }
+        }
+    }
+
     private Conversation nearbyConversation() {
         if (world.paused() || world.state() != GameWorld.State.PLAYING || world.insideArena()) return null;
         var player = world.player();
         for (var conversation : level.definition().conversations())
-            if (Math.abs(conversation.x() - player.x() - 14) <= 76 && Math.abs(conversation.y() - player.y()) <= 44)
+            if (Math.abs(conversation.x() - player.x() - Player.WIDTH / 2) <= 76 && Math.abs(conversation.y() - player.y()) <= 44)
                 return conversation;
         return null;
     }

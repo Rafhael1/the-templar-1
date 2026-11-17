@@ -6,6 +6,8 @@ import br.com.thecruzader.level.LevelData;
 import br.com.thecruzader.level.LevelLoader;
 import com.badlogic.gdx.files.FileHandle;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +33,16 @@ class GameWorldTest {
 
     private static void advance(GameWorld world, int count, PlayerInput input) {
         for (int i = 0; i < count; i++) world.update(STEP, input);
+    }
+
+    private GameWorld configuredWorld(int hearts) {
+        LevelData level = new LevelData(3200, 544,
+            new LevelData.Point(100, 64), new LevelData.Point(1400, 64),
+            List.of(new Bounds(600, 64, 28, 28)), new Bounds(2950, 64, 40, 176),
+            new Bounds(3010, 64, 110, 100), new Bounds(2200, 64, 750, 256),
+            List.of(new Bounds(0, 0, 3200, 64)),
+            List.of(new LevelData.Spawn(2700, 64, LevelData.EnemyKind.GUARDIAN)));
+        return new GameWorld(level, new GameRules(hearts));
     }
 
     @Test
@@ -129,41 +141,6 @@ class GameWorldTest {
     }
 
     @Test
-    void windupRecoveryAndActiveWindowControlDamage() {
-        Player p = new Player(new LevelData.Point(100, 64));
-        Enemy e = new Enemy(new LevelData.Spawn(145, 64, LevelData.EnemyKind.SENTINEL));
-        var events = new ArrayList<GameEvent>();
-        CombatSystem combat = new CombatSystem();
-        p.attack.start();
-        combat.resolve(p, List.of(e), events);
-        assertEquals(3, e.health());
-        p.attack.update(.11);
-        combat.resolve(p, List.of(e), events);
-        assertEquals(2, e.health());
-        combat.resolve(p, List.of(e), events);
-        assertEquals(2, e.health(), "One hit per target per swing");
-        p.attack.update(.13);
-        assertEquals(Attack.Phase.RECOVERY, p.attack.phase());
-        e.lastPlayerAttack = -1;
-        combat.resolve(p, List.of(e), events);
-        assertEquals(2, e.health());
-        p.attack.update(1);
-        assertTrue(p.attack.start());
-        p.attack.update(.11);
-        combat.resolve(p, List.of(e), events);
-        assertEquals(1, e.health());
-    }
-
-    @Test
-    void attackCannotRestartDuringRecovery() {
-        Attack attack = new Attack(.1, .12, .22);
-        attack.start();
-        attack.update(.25);
-        assertEquals(Attack.Phase.RECOVERY, attack.phase());
-        assertFalse(attack.start());
-    }
-
-    @Test
     void dodgeAvoidsAnActiveEnemyStrike() {
         GameWorld w = world();
         Player p = w.player();
@@ -176,21 +153,6 @@ class GameWorldTest {
         assertEquals(p.maxHealth(), p.health());
         assertTrue(p.dodging());
         assertTrue(p.invulnerable() > 0);
-    }
-
-    @Test
-    void enemyStrikeDealsDamageOnlyOnce() {
-        Player p = new Player(new LevelData.Point(100, 64));
-        Enemy e = new Enemy(new LevelData.Spawn(145, 64, LevelData.EnemyKind.SENTINEL));
-        e.attack.start();
-        e.attack.update(.60);
-        var events = new ArrayList<GameEvent>();
-        CombatSystem combat = new CombatSystem();
-        combat.resolve(p, List.of(e), events);
-        assertEquals(p.maxHealth() - 1, p.health());
-        p.invulnerable = 0;
-        combat.resolve(p, List.of(e), events);
-        assertEquals(p.maxHealth() - 1, p.health());
     }
 
     @Test
@@ -368,5 +330,109 @@ class GameWorldTest {
                 GameWorld.State.WON,
                 w.state(),
                 "Route failed at x=" + w.player().x() + ", health=" + w.player().health());
+    }
+
+    @Test
+    void defaultIsThreeHearts() {
+        Player player = new Player(new LevelData.Point(100, 64));
+        assertEquals(3, player.health());
+        assertEquals(3, player.maxHealth());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 3, 7})
+    void bandagesUseConfiguredCapacity(int hearts) {
+        GameWorld world = configuredWorld(hearts);
+        Player player = world.player();
+        assertEquals(hearts, player.health());
+        player.x = 600;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertFalse(world.bandageCollected(0));
+        if (hearts == 1) return; // Zero health is death, so one-heart sessions cannot need healing.
+        player.health = hearts - 1;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertEquals(hearts, player.health());
+        assertTrue(world.bandageCollected(0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 3, 7})
+    void checkpointAndRespawnRestoreConfiguredCapacity(int hearts) {
+        GameWorld world = configuredWorld(hearts);
+        world.player().x = 1400;
+        world.player().health = Math.max(1, hearts - 1);
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertTrue(world.checkpoint());
+        assertEquals(hearts, world.player().health());
+        world.player().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        world.respawn();
+        assertEquals(hearts, world.player().maxHealth());
+        assertEquals(hearts, world.player().health());
+        assertEquals(1400, world.player().x());
+    }
+
+    @Test
+    void rejectsNonPositiveHearts() {
+        assertThrows(IllegalArgumentException.class, () -> new GameRules(0));
+        assertThrows(IllegalArgumentException.class, () -> new GameRules(-1));
+    }
+
+    @Test
+    void multipleBandagePickupsHealIndependentlyAndStayCollectedAfterRespawn() {
+        GameWorld world = new GameWorld(LevelLoader.load(new FileHandle(
+            System.getProperty("assets.path") + "/levels/exiles-road/maps/exiles-road.tmx")));
+        for (int index : new int[]{1, 2}) {
+            Bounds bandage = world.level().bandages().get(index);
+            world.player().x = bandage.x();
+            world.player().y = bandage.y();
+            world.player().health = 1;
+            world.update(GameWorld.STEP, PlayerInput.NONE);
+            assertEquals(world.player().maxHealth(), world.player().health());
+            assertTrue(world.bandageCollected(index));
+            world.player().health = 1;
+            world.update(GameWorld.STEP, PlayerInput.NONE);
+            assertEquals(1, world.player().health(), "Consumed bandage cannot heal twice");
+        }
+        assertEquals(2, world.collectedBandageCount());
+        world.player().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        world.respawn();
+        assertEquals(2, world.collectedBandageCount());
+        assertFalse(world.bandageCollected(0));
+        assertTrue(world.arrows().isEmpty());
+    }
+
+    @Test
+    void hitStopFreezesSimulationAndPauseAndRetainsPressedJump() {
+        LevelData base = terrainWorld().level();
+        GameWorld world = new GameWorld(new LevelData(base.width(), base.height(), base.spawn(), base.checkpoint(),
+            base.bandages(), base.gate(), base.exit(), base.arena(), base.solids(),
+            List.of(new LevelData.Spawn(150, 64, LevelData.EnemyKind.SENTINEL), base.enemies().getFirst())));
+        world.player().attack.start();
+        world.player().attack.update(.11);
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertTrue(world.hitStopped());
+        double time = world.time();
+        world.setPaused(true);
+        for (int i = 0; i < 10; i++) world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertTrue(world.hitStopped());
+        assertEquals(time, world.time());
+        world.setPaused(false);
+        world.update(GameWorld.STEP, new PlayerInput(0, true, false, false, false, false, -1));
+        for (int tick = 0; tick < 12 && world.hitStopped(); tick++)
+            world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertFalse(world.hitStopped(), "Hit stop must end within 100 ms");
+        assertEquals(time, world.time());
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        assertTrue(world.player().vy > 0);
+        assertFalse(world.player().grounded());
+        world.player().health = 0;
+        world.update(GameWorld.STEP, PlayerInput.NONE);
+        world.respawn();
+        assertFalse(world.hitStopped());
+        assertEquals(0, world.player().attackBuffer);
+        assertEquals(0, world.player().parryWindow);
+        assertEquals(0, world.player().parryFlash());
     }
 }

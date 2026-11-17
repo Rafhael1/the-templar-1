@@ -41,7 +41,8 @@ contagem de bandagens; não há barra inferior.
 Cada golpe exige um novo pressionamento. Nos últimos 0,12 segundo da recuperação, pressionar espada prepara um único
 golpe seguinte, preservando a direção solicitada. A esquiva pode cancelar os últimos 0,10 segundo da recuperação e
 descarta o golpe preparado. O golpe aéreo para baixo mantém sua direção até terminar, deixa de causar dano ao aterrissar
-e dá um impulso para cima ao acertar, uma vez por golpe.
+e dá um impulso para cima ao acertar, uma vez por golpe. Só é possível iniciar um golpe para baixo por salto,
+mesmo se errar o alvo; é preciso aterrissar no terreno antes de usá-lo novamente.
 
 O escudo bloqueia golpes pela frente, inclusive no ar, e reduz a velocidade; não permite atacar ou esquivar enquanto
 estiver levantado. Erguê-lo até 0,12 segundo antes do impacto apara o golpe: interrompe o atacante, abre espaço para

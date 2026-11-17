@@ -37,6 +37,7 @@ class EnemyEffectsTest {
         until(world, GameEvent.MACE_LIFT);
         world.player().x = 500;
         var events = until(world, GameEvent.MACE_IMPACT);
+        assertEquals(1, events.stream().filter(e -> e == GameEvent.MACE_SWING).count());
         assertTrue(events.indexOf(GameEvent.MACE_SWING) < events.indexOf(GameEvent.MACE_IMPACT));
         assertEquals(1, events.stream().filter(e -> e == GameEvent.MACE_IMPACT).count());
         assertEquals(CombatEffect.Kind.MACE_IMPACT, world.effects().getFirst().kind());

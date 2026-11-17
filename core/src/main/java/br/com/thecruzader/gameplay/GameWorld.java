@@ -115,49 +115,11 @@ public final class GameWorld {
         player.previousX = player.x;
         player.previousY = player.y;
         if (bossReleaseActive()) {
-            double previous = bossReleaseElapsed;
-            bossReleaseElapsed = Math.min(BossRelease.DURATION, bossReleaseElapsed + dt);
-            if (previous < BossRelease.OPEN_END && bossReleaseElapsed >= BossRelease.OPEN_END) {
-                collision.setArenaClosed(false);
-                events.add(GameEvent.GATES_OPEN);
-            }
-            player.vx = 0;
-            player.dodge = 0;
-            player.blocking = false;
-            player.attack.update(dt);
-            movement.prepare(player, PlayerInput.NONE, dt, events);
-            movement.move(player, PlayerInput.NONE, dt, collision, gateLocked());
-            if (player.health <= 0) {
-                effects.clear();
-                state = State.DEAD;
-                events.add(GameEvent.DEATH);
-            }
+            updateBossRelease(dt);
             return;
         }
         boolean locked = gateLocked();
-        player.attack.update(dt);
-        movement.prepare(player, input, dt, events);
-        if (input.direction() != 0 && !player.attack.running() && !player.dodging())
-            player.facing = input.direction();
-        player.blocking = input.block() && !player.dodging() && !player.attack.running();
-        if (player.blocking && !player.shieldHeld) player.parryWindow = .12;
-        if (!player.blocking) player.parryWindow = 0;
-        player.shieldHeld = input.block();
-        if (player.blocking || player.dodging()) player.attackBuffer = 0;
-        else if (input.attack() && (!player.attack.running() || player.attack.lateRecovery(.12))) {
-            player.attackBuffer = .14;
-            player.bufferedDown = input.down();
-        }
-        if (input.specialSlot() >= 0 && player.startSpecial(input.specialSlot()) && !player.drawingBow())
-            events.add(GameEvent.SPECIAL_SWING);
-        if (player.attackBuffer > 0 && !player.blocking && !player.dodging() && player.attack.start()) {
-            player.attackAbility = null;
-            player.attackBuffer = 0;
-            player.bounced = false;
-            player.attackDirection = player.bufferedDown && !player.grounded
-                    ? Player.AttackDirection.DOWN : Player.AttackDirection.SIDE;
-            events.add(GameEvent.SWING);
-        }
+        updatePlayerActions(input, dt);
         movement.move(player, input, dt, collision, locked);
         enterArena();
         for (Enemy enemy : enemies) {
@@ -194,6 +156,63 @@ public final class GameWorld {
             events.add(GameEvent.DEATH);
             return;
         }
+        collectPickups();
+        if (!gateLocked() && level.exit().overlaps(player.bounds())) {
+            state = State.WON;
+            events.add(GameEvent.VICTORY);
+        }
+    }
+
+    private void updatePlayerActions(PlayerInput input, double dt) {
+        player.attack.update(dt);
+        movement.prepare(player, input, dt, events);
+        if (input.direction() != 0 && !player.attack.running() && !player.dodging())
+            player.facing = input.direction();
+        player.blocking = input.block() && !player.dodging() && !player.attack.running();
+        if (player.blocking && !player.shieldHeld) player.parryWindow = .12;
+        if (!player.blocking) player.parryWindow = 0;
+        player.shieldHeld = input.block();
+        if (player.blocking || player.dodging()) player.attackBuffer = 0;
+        else if (input.attack() && (!player.attack.running() || player.attack.lateRecovery(.12))) {
+            player.attackBuffer = .14;
+            player.bufferedDown = input.down();
+        }
+        if (input.specialSlot() >= 0 && player.startSpecial(input.specialSlot()) && !player.drawingBow())
+            events.add(GameEvent.SPECIAL_SWING);
+        if (player.bufferedDown && !player.grounded && player.downwardAttackUsed)
+            player.attackBuffer = 0;
+        if (player.attackBuffer > 0 && !player.blocking && !player.dodging() && player.attack.start()) {
+            player.attackAbility = null;
+            player.attackBuffer = 0;
+            player.bounced = false;
+            player.attackDirection = player.bufferedDown && !player.grounded
+                ? Player.AttackDirection.DOWN : Player.AttackDirection.SIDE;
+            if (player.attackDirection == Player.AttackDirection.DOWN) player.downwardAttackUsed = true;
+            events.add(GameEvent.SWING);
+        }
+    }
+
+    private void updateBossRelease(double dt) {
+        double previous = bossReleaseElapsed;
+        bossReleaseElapsed = Math.min(BossRelease.DURATION, bossReleaseElapsed + dt);
+        if (previous < BossRelease.OPEN_END && bossReleaseElapsed >= BossRelease.OPEN_END) {
+            collision.setArenaClosed(false);
+            events.add(GameEvent.GATES_OPEN);
+        }
+        player.vx = 0;
+        player.dodge = 0;
+        player.blocking = false;
+        player.attack.update(dt);
+        movement.prepare(player, PlayerInput.NONE, dt, events);
+        movement.move(player, PlayerInput.NONE, dt, collision, gateLocked());
+        if (player.health <= 0) {
+            effects.clear();
+            state = State.DEAD;
+            events.add(GameEvent.DEATH);
+        }
+    }
+
+    private void collectPickups() {
         if (!checkpoint && shrine.overlaps(player.bounds())) {
             checkpoint = true;
             player.health = player.maxHealth();
@@ -206,10 +225,6 @@ public final class GameWorld {
                 player.health = Math.min(player.maxHealth(), player.health + 2);
                 events.add(GameEvent.BANDAGE);
             }
-        }
-        if (!gateLocked() && level.exit().overlaps(player.bounds())) {
-            state = State.WON;
-            events.add(GameEvent.VICTORY);
         }
     }
 

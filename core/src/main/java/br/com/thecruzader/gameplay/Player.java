@@ -81,7 +81,7 @@ public final class Player {
     boolean grounded, blocking;
     double blockFlash, hurtFlash;
     double parryWindow, parryFlash, attackBuffer;
-    boolean shieldHeld, bufferedDown, bounced;
+    boolean shieldHeld, bufferedDown, bounced, downwardAttackUsed;
     AttackDirection attackDirection = AttackDirection.SIDE;
     final Attack attack = new Attack(0.10, 0.12, 0.22);
 
