@@ -23,7 +23,7 @@ class LevelLoaderTest {
         assertEquals(64, map.spawn().y());
         assertEquals(27, map.enemies().size());
         assertTrue(map.solids().size() > 40);
-        assertEquals(13, map.bandages().size());
+        assertEquals(6, map.bandages().size());
         assertEquals(4, map.enemies().stream()
                 .filter(enemy -> enemy.kind() == LevelData.EnemyKind.ARCHER).count());
         assertEquals(List.of(new LevelData.Spawn(4640, 64, LevelData.EnemyKind.SPEARMAN),

@@ -131,16 +131,9 @@
     </object>
     <object id="65" name="bandage-0" x="742" y="284" width="28" height="28" type="bandage" />
     <object id="66" name="bandage-1" x="1888" y="444" width="28" height="28" type="bandage" />
-    <object id="67" name="bandage-2" x="3096" y="252" width="28" height="28" type="bandage" />
     <object id="68" name="bandage-3" x="3776" y="284" width="28" height="28" type="bandage" />
-    <object id="69" name="bandage-4" x="4320" y="444" width="28" height="28" type="bandage" />
     <object id="70" name="bandage-5" x="5536" y="444" width="28" height="28" type="bandage" />
-    <object id="71" name="bandage-6" x="5520" y="124" width="28" height="28" type="bandage" />
-    <object id="72" name="bandage-7" x="6320" y="284" width="28" height="28" type="bandage" />
-    <object id="73" name="bandage-8" x="6976" y="124" width="28" height="28" type="bandage" />
-    <object id="74" name="bandage-9" x="7872" y="444" width="28" height="28" type="bandage" />
     <object id="75" name="bandage-10" x="8080" y="444" width="28" height="28" type="bandage" />
-    <object id="76" name="bandage-11" x="3896" y="444" width="28" height="28" type="bandage" />
     <object id="77" name="bandage-12" x="6688" y="188" width="28" height="28" type="bandage" />
     <object id="78" name="boss-arena" x="8032" y="224" width="736" height="256" type="arena" />
     <object id="79" name="locked-gate" x="8768" y="304" width="40" height="176" type="gate" />

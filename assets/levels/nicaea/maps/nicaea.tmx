@@ -98,16 +98,9 @@
       <point />
     </object>
     <object id="43" x="920" y="388" type="bandage" width="24" height="28" />
-    <object id="44" x="1384" y="452" type="bandage" width="24" height="28" />
-    <object id="45" x="1824" y="452" type="bandage" width="24" height="28" />
     <object id="46" x="2900" y="420" type="bandage" width="24" height="28" />
-    <object id="47" x="3360" y="356" type="bandage" width="24" height="28" />
-    <object id="48" x="3984" y="452" type="bandage" width="24" height="28" />
     <object id="49" x="4916" y="420" type="bandage" width="24" height="28" />
-    <object id="50" x="5560" y="356" type="bandage" width="24" height="28" />
-    <object id="51" x="6048" y="452" type="bandage" width="24" height="28" />
     <object id="52" x="6640" y="420" type="bandage" width="24" height="28" />
-    <object id="53" x="7570" y="452" type="bandage" width="24" height="28" />
     <object id="54" x="8072" y="356" type="bandage" width="24" height="28" />
     <object id="55" x="8912" y="452" type="bandage" width="24" height="28" />
     <object id="56" x="9184" y="224" type="arena" width="704" height="256" />

@@ -72,9 +72,8 @@ variants = {'sentinel-1': 'shield_bearer', 'sentinel-4': 'brute', 'archer-1': 'o
 for n,(x,y) in enumerate(((520, 160), (980, 160), (1856, 64), (2048, 64), (2900, 160), (3470, 160), (4120, 64), (4910, 160), (5824, 64), (7056, 384), (7600, 256))): point(f'sentinel-{n}',x, floor_at(x) if x >= 6000 else y,variants.get(f'sentinel-{n}', 'sentinel'))
 for n,(x,y) in enumerate(((1250, 160), (3740, 224), (5020, 160), (7260, 192), (7888, 64))): point(f'archer-{n}',x, floor_at(x) if x >= 6000 else y,variants.get(f'archer-{n}', 'archer'))
 point('gate-guardian',8576,64,'guardian')
-for n,(x,y) in enumerate(((742,232),(1888,72),(3096,264),(3776,232),(4320,72),
-                            (5536,72),(5520,392),(6320,232),(6976,72),(7872,72),(8080,72),
-                            (3896,72),(6688,328))):
+for n,(x,y) in enumerate(((742,232),(1888,72),(3776,232),
+                            (5536,72),(6688,328),(8080,72))):
     rectangle(entities,f'bandage-{n}',x,max(y, floor_at(x,28)+8) if x >= 6000 else y,28,28,'bandage')
 rectangle(entities,'boss-arena',8032,64,736,256,'arena')
 rectangle(entities,'locked-gate',8768,64,40,176,'gate');rectangle(entities,'pilgrims-exit',8832,64,96,100,'exit')
