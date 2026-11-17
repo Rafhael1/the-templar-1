@@ -16,8 +16,12 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class Hud implements Disposable {
     private static final Color SHIELD_IDLE = Color.valueOf("66717a");
+    private static final Color SPECIAL_SPENT = new Color(.4f, .43f, .48f, .3f);
 
     private final Stage stage = new Stage(new FitViewport(960, 540));
     private final GameAssets assets;
@@ -27,7 +31,9 @@ public final class Hud implements Disposable {
     private final Image[] hearts;
     private final Image shield;
     private final ProgressBar dodge;
-    private final Label specials;
+    private final Table specials = new Table();
+    private final List<Image[]> specialIcons = new ArrayList<>();
+    private List<SpecialAbility> displayedAbilities = List.of();
     private final Label objective;
     private final Label bandageCount;
     private final Label sound;
@@ -103,9 +109,6 @@ public final class Hud implements Disposable {
         top.add(goal).height(58).right();
         root.add(top).growX();
         root.row();
-        specials = new Label("", assets.skin);
-        specials.setFontScale(.7f * GameAssets.UI_FONT_SCALE);
-        specials.setColor(GameAssets.GOLD);
         root.add(specials).left().padTop(8);
 
         messagePanel = new Table();
@@ -261,14 +264,45 @@ public final class Hud implements Disposable {
     }
 
     private void updateSpecials(Player player) {
-        StringBuilder specialText = new StringBuilder();
-        for (int slot = 0; slot < player.abilities().size(); slot++) {
-            if (slot > 0) specialText.append("     ");
-            SpecialAbility ability = player.abilities().get(slot);
-            specialText.append(assets.texts.format("special.hud", slot == 0 ? "Q" : "E",
-                assets.texts.text(ability.textKey()), player.specialCharges(slot), ability.charges()));
+        if (!displayedAbilities.equals(player.abilities())) {
+            rebuildSpecials(player.abilities());
         }
-        specials.setText(specialText);
+        for (int slot = 0; slot < specialIcons.size(); slot++) {
+            Color available = displayedAbilities.get(slot) == SpecialAbility.GOLDEN_STRIKE
+                ? GameAssets.GOLD : Color.WHITE;
+            Image[] icons = specialIcons.get(slot);
+            for (int charge = 0; charge < icons.length; charge++) {
+                icons[charge].setColor(charge < player.specialCharges(slot) ? available : SPECIAL_SPENT);
+            }
+        }
+    }
+
+    private void rebuildSpecials(List<SpecialAbility> abilities) {
+        specials.clearChildren();
+        specialIcons.clear();
+        displayedAbilities = List.copyOf(abilities);
+        for (int slot = 0; slot < abilities.size(); slot++) {
+            SpecialAbility ability = abilities.get(slot);
+            Table card = new Table();
+            card.setBackground(assets.frame);
+            card.pad(6, 10, 6, 10);
+            Label key = new Label(slot == 0 ? "Q" : "E", assets.skin);
+            key.setFontScale(.7f * GameAssets.UI_FONT_SCALE);
+            key.setColor(GameAssets.GOLD);
+            card.add(key).padRight(8);
+            TextureRegion icon = switch (ability) {
+                case GOLDEN_STRIKE -> assets.swords[0];
+                case BOW -> new TextureRegion(assets.texture("arrow"));
+            };
+            Image[] icons = new Image[ability.charges()];
+            for (int charge = 0; charge < icons.length; charge++) {
+                icons[charge] = new Image(icon);
+                card.add(icons[charge]).size(icon.getRegionWidth() * 1.25f,
+                    icon.getRegionHeight() * 1.25f).padRight(4);
+            }
+            specialIcons.add(icons);
+            specials.add(card).height(36).padRight(8);
+        }
     }
 
     private void updateVitals(Player player, boolean muted) {
