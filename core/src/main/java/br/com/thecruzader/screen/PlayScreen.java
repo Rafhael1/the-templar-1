@@ -131,6 +131,9 @@ public final class PlayScreen extends ScreenAdapter {
                     if (reward.orElse(null) != SpecialAbility.BOW)
                         hud.announce(reward.isEmpty() ? definition.texts().exitObjective() : "notice.gatesOpen");
                 }
+                case REINFORCEMENTS -> {
+                    if (!world.bossDefeated()) hud.announce("notice.reinforcements");
+                }
                 case BANDAGE -> hud.announce("notice.bandage");
                 default -> {
                 }

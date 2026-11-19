@@ -30,6 +30,15 @@ class CampaignTest {
             }
         }
     }
+
+    @Test
+    void productionLevelsHaveDistinctBosses() {
+        var bosses = campaign.levels().stream().map(level -> LevelLoader.load(assets.child(level.mapPath())))
+            .map(data -> data.enemies().stream().filter(spawn -> spawn.kind().boss).findFirst().orElseThrow().kind())
+            .toList();
+        assertEquals(bosses.size(), bosses.stream().distinct().count(), "Every level needs its own boss");
+    }
+
     @Test void emptyCampaignAndDuplicateIdsFail() {
         assertThrows(IllegalArgumentException.class, () -> new Campaign(List.of()));
         assertThrows(IllegalArgumentException.class, () -> new Campaign(List.of(campaign.levels().getFirst(), campaign.levels().getFirst())));

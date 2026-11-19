@@ -26,7 +26,7 @@ final class EnemyPerception {
         if (aware || close) alert(enemy, player);
         else {
             enemy.noticeTime += dt;
-            if (enemy.noticeTime >= .4) alert(enemy, player);
+            if (enemy.noticeTime >= enemy.behavior.noticeDuration()) alert(enemy, player);
         }
         return enemy.alertTime > 0;
     }

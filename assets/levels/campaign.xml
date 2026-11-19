@@ -5,7 +5,10 @@
            arenaNotice="notice.arena" bossObjective="hud.guardian" bossName="hud.bossName"
            exitObjective="hud.gate" completionTitle="overlay.victory.title"
            completionText="overlay.victory.text">
-    <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
+        <interior daylight="false" exterior="levels/exiles-road/chapel/exterior.png"
+                  background="levels/exiles-road/chapel/interior.png"
+                  foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png"
+                  doorFrame="levels/exiles-road/chapel/door-frame.png">
       <light x="184" y="176" />
       <light x="356" y="176" />
       <light x="604" y="176" />
@@ -82,7 +85,7 @@
            bossObjective="level.constantinople.fight" bossName="level.constantinople.boss"
            exitObjective="level.constantinople.embark" completionTitle="level.constantinople.complete"
            completionText="level.constantinople.victory">
-        <interior exterior="levels/constantinople/customs/exterior.png"
+        <interior daylight="false" exterior="levels/constantinople/customs/exterior.png"
                   background="levels/constantinople/customs/interior.png"
                   foreground="levels/constantinople/customs/foreground.png"
                   door="levels/constantinople/customs/door.png"
@@ -136,7 +139,7 @@
            bossObjective="level.nicaea.fight" bossName="level.nicaea.boss"
            exitObjective="level.nicaea.exit" completionTitle="level.nicaea.complete"
            completionText="level.nicaea.victory">
-        <interior exterior="levels/nicaea/redoubt/exterior.png"
+        <interior daylight="false" exterior="levels/nicaea/redoubt/exterior.png"
                   background="levels/nicaea/redoubt/interior.png"
                   foreground="levels/nicaea/redoubt/foreground.png"
                   door="levels/nicaea/redoubt/door.png"
@@ -177,5 +180,39 @@
         <decoration kind="FLAG" x="8410" y="64" color="854d3b"/>
         <decoration kind="BRAZIER" x="9050" y="64"/>
         <decoration kind="FLAG" x="10028" y="64" color="78476d"/>
+    </level>
+    <level id="dorylaeum" map="levels/dorylaeum/maps/dorylaeum.tmx" blendWidth="384"
+           chapter="level.dorylaeum.chapter" title="level.dorylaeum.title" story="level.dorylaeum.story"
+           travelObjective="level.dorylaeum.travel" arenaNotice="level.dorylaeum.arena"
+           bossObjective="level.dorylaeum.fight" bossName="level.dorylaeum.boss"
+           exitObjective="level.dorylaeum.exit" completionTitle="level.dorylaeum.complete"
+           completionText="level.dorylaeum.victory">
+        <interior daylight="true" exterior="levels/dorylaeum/camp/exterior.png"
+                  background="levels/dorylaeum/camp/interior.png"
+                  foreground="levels/dorylaeum/camp/foreground.png" door="levels/dorylaeum/camp/door.png"
+                  doorFrame="levels/dorylaeum/camp/door-frame.png"/>
+        <region start="0" texture="levels/dorylaeum/scenery/march.png" announcement="level.dorylaeum.chapter"/>
+        <region start="2240" texture="levels/dorylaeum/scenery/plain.png" announcement="level.dorylaeum.plain"/>
+        <region start="4480" texture="levels/dorylaeum/scenery/gully.png" announcement="level.dorylaeum.gully"/>
+        <region start="6528" texture="levels/dorylaeum/scenery/camp.png" announcement="level.dorylaeum.camp"/>
+        <conversation x="384" y="64" text="level.dorylaeum.orders" required="true"
+                      sprite="levels/dorylaeum/envoys/bohemond.png"/>
+        <decoration kind="WAGON" x="176" y="64"/>
+        <decoration kind="FLAG" x="448" y="64" color="8e4539"/>
+        <decoration kind="CRATES" x="1360" y="64"/>
+        <decoration kind="DEAD_TREE" x="1616" y="64"/>
+        <decoration kind="WAGON" x="2160" y="64"/>
+        <decoration kind="PENNANT" x="2544" y="128"/>
+        <decoration kind="DEAD_TREE" x="3040" y="64"/>
+        <decoration kind="CRATES" x="3480" y="64"/>
+        <decoration kind="DEAD_TREE" x="4992" y="64"/>
+        <decoration kind="CRATES" x="5540" y="64"/>
+        <decoration kind="WAGON" x="5904" y="64"/>
+        <decoration kind="PENNANT" x="6320" y="128"/>
+        <decoration kind="WAGON" x="6576" y="64"/>
+        <decoration kind="FLAG" x="6824" y="64" color="3d7c81"/>
+        <decoration kind="CRATES" x="7136" y="64"/>
+        <decoration kind="PENNANT" x="7408" y="64"/>
+        <decoration kind="FLAG" x="8576" y="64" color="8e4539"/>
     </level>
 </campaign>

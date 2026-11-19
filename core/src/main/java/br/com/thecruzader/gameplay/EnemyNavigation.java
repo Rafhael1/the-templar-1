@@ -128,6 +128,18 @@ final class EnemyNavigation {
         }
     }
 
+    /**
+     * Short grounded retreat stays on the current surface and keeps the weapon facing its target.
+     */
+    void backstep(Enemy enemy, int direction, double speed, double dt) {
+        if (!enemy.grounded) return;
+        int node = surfaceAt(enemy.x, enemy.y);
+        if (node < 0) return;
+        Surface floor = surfaces.get(node);
+        double target = clamp(enemy.x + direction * speed * dt, floor.left, floor.right);
+        enemy.vx = (target - enemy.x) / dt;
+    }
+
     void patrol(Enemy enemy, double dt) {
         if (!enemy.grounded) return;
         enemy.jumpVx = 0;

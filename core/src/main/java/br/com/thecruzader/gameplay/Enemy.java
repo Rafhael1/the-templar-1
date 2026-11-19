@@ -13,6 +13,7 @@ public final class Enemy {
         RECOVER,
         BLOCK, DASH_WINDUP, DASH, JUMP_WINDUP, JUMP, SHOT_WINDUP, SHOT_RELEASE,
         TWIN_WINDUP, TWIN_SLASH, TWIN_CROSS_WINDUP, TWIN_CROSS,
+        RIDER_RIDE, RIDER_DRAW, RIDER_VOLLEY, RIDER_CHARGE_WINDUP, RIDER_CHARGE,
         DEAD
     }
 
@@ -61,6 +62,7 @@ public final class Enemy {
             case GUARDIAN -> new GuardianBehavior();
             case HARBOR_CAPTAIN -> new HarborCaptainBehavior();
             case RELIEF_DUELIST -> new ReliefDuelistBehavior();
+            case MOUNTED_COMMANDER -> new MountedCommanderBehavior();
         };
     }
 
@@ -157,6 +159,10 @@ public final class Enemy {
 
     public double attackProgress() {
         return attack.phaseProgress();
+    }
+
+    public double actionSecondsRemaining() {
+        return actionTime;
     }
 
     public double aimX() {

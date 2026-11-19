@@ -33,6 +33,8 @@ abstract class GroundEnemyBehavior extends EnemyBehavior {
             if (enemy.attack.phase() == Attack.Phase.ACTIVE && !enemy.shotFired) {
                 onActiveAttack(enemy, arrows, oilPots);
             }
+            if (enemy.attack.phase() == Attack.Phase.RECOVERY)
+                repositionDuringRecovery(enemy, dt, navigation);
             return;
         }
         if (enemy.grounded) enemy.jumpVx = 0;
@@ -44,7 +46,7 @@ abstract class GroundEnemyBehavior extends EnemyBehavior {
             double distance = enemy.targetX - enemy.x;
             if (enemy.jumpVx == 0) enemy.facing = distance < 0 ? -1 : 1;
             boolean canAttack = visible && enemy.jumpVx == 0
-                && (Math.abs(distance) >= preferredSpacing() * .8 || Math.abs(enemy.targetY - enemy.y) > 60)
+                && (Math.abs(distance) >= minimumAttackSpacing() || Math.abs(enemy.targetY - enemy.y) > 60)
                 && canAttack(enemy, player, collision, gateLocked);
             if (canAttack) {
                 enemy.attack.start();
@@ -76,6 +78,13 @@ abstract class GroundEnemyBehavior extends EnemyBehavior {
 
     // Committed melee swings and oil throws retain their original target.
     void trackAttackTarget(Enemy enemy) {
+    }
+
+    double minimumAttackSpacing() {
+        return preferredSpacing() * .8;
+    }
+
+    void repositionDuringRecovery(Enemy enemy, double dt, EnemyNavigation navigation) {
     }
 
     abstract double preferredSpacing();

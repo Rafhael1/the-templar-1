@@ -324,6 +324,15 @@ class GameWorldTest {
                             && solid.x() >= p.x() + Player.WIDTH
                             && solid.x() - (p.x() + Player.WIDTH) < 85
                     && solid.top() - p.y() < 160);
+            var incoming = w.arrows().stream().filter(a -> Math.abs(a.x() - p.x()) < 160
+                    && a.y() >= p.y() && a.y() <= p.y() + 52
+                    && Math.cos(Math.toRadians(a.angle())) * (p.x() + 14 - a.x()) > 0)
+                .min(java.util.Comparator.comparingDouble(a -> Math.abs(a.x() - p.x()))).orElse(null);
+            if (incoming != null && !heavy && !p.attack().running()) {
+                block = true;
+                attack = false;
+                direction = incoming.x() > p.x() ? 1 : -1;
+            }
             w.update(STEP, new PlayerInput(direction, jump, attack, dodge, false, block, -1));
         }
         assertEquals(

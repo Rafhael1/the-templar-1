@@ -64,7 +64,7 @@ public final class CampaignLoader {
             lights.add(new LevelData.Point(light.getFloatAttribute("x"), light.getFloatAttribute("y")));
         }
         return new LevelDefinition.Interior(child.getAttribute("exterior"), child.getAttribute("background"),
-            child.getAttribute("foreground"), child.getAttribute("door"), child.getAttribute("doorFrame"), lights);
+            child.getAttribute("foreground"), child.getAttribute("door"), child.getAttribute("doorFrame"), lights, child.getBooleanAttribute("daylight"));
     }
 
     private static LevelDefinition.Decoration parseDecoration(XmlReader.Element child) {

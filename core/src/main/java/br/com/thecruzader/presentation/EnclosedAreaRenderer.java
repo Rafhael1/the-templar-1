@@ -111,7 +111,11 @@ final class EnclosedAreaRenderer {
         return progress * progress * (3 - 2 * progress);
     }
 
-    private static void tintRoom(Batch batch, float radiance) {
+    private void tintRoom(Batch batch, float radiance) {
+        if (resources.definition().interior().daylight()) {
+            batch.setColor(Color.WHITE);
+            return;
+        }
         batch.setColor(.46f + .54f * radiance, .44f + .56f * radiance,
             .62f + .38f * radiance, 1);
     }

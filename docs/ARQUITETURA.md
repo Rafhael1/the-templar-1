@@ -70,12 +70,17 @@ direção do golpe é travada quando ele começa.
 A esquiva dura 200 ms, oferece 240 ms de invulnerabilidade e tem recarga de 1400 ms. Fora do cancelamento de
 recuperação, ataque e início de esquiva são mutuamente exclusivos. O jogador possui três pontos de vida por padrão,
 definidos em `GameRules.DEFAULT`. `Player.maxHealth()` fornece a capacidade usada pela cura e pelo HUD. `Journey` recebe
-as regras da sessão e as mantém em cada fase e respawn. O santuário cura e define o retorno. Morrer repovoa inimigos,
+as regras da sessão e as mantém em cada fase e respawn. O santuário cura na ativação e define o retorno. Entrar ou
+reentrar nele repõe todas as cargas de habilidades
+equipadas; renascer em um checkpoint também as repõe. Permanecer sobre ele não recarrega a cada passo. Morrer repovoa
+inimigos,
 preservando o checkpoint e a bandagem da sessão.
 
 Erguer o escudo abre uma janela frontal de aparada de 120 ms; manter o botão pressionado não a renova. `CombatSystem`
 cancela ataques aparados e aplica atordoamento, enquanto `EnemySystem` movimenta o recuo pela colisão normal. Arqueiros
-preferem espaço antes de iniciar outro disparo. Golpes comuns não cancelam ataques comprometidos; fora deles, a reação
+priorizam o disparo quando há linha de tiro, mesmo de perto. Após soltar a flecha, podem dar um recuo curto durante
+a recuperação, respeitando as bordas da superfície. Detectam em 200 ms, preparam em 420 ms e recuperam em 650 ms. Golpes
+comuns não cancelam ataques comprometidos; fora deles, a reação
 dura 100 ms e não é renovada por novos acertos. Aparadas atordoam inimigos comuns por 450 ms e o guardião por 400 ms. O
 guardião tem 16 pontos de vida, não sofre recuo e concede dano dobrado somente ao primeiro contra-ataque após a aparada.
 Suas investidas e saltos atravessam bloqueio comum, têm aviso vermelho e continuam podendo ser aparados ou esquivados.

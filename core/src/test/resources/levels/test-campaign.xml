@@ -5,7 +5,10 @@
            arenaNotice="notice.arena" bossObjective="hud.guardian" bossName="hud.bossName"
            exitObjective="hud.gate" completionTitle="overlay.victory.title"
            completionText="overlay.victory.text">
-    <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
+        <interior daylight="false" exterior="levels/exiles-road/chapel/exterior.png"
+                  background="levels/exiles-road/chapel/interior.png"
+                  foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png"
+                  doorFrame="levels/exiles-road/chapel/door-frame.png">
       <light x="184" y="176" />
       <light x="356" y="176" />
       <light x="604" y="176" />
@@ -62,7 +65,10 @@
            arenaNotice="notice.arena" bossObjective="hud.guardian" bossName="hud.bossName"
            exitObjective="hud.gate" completionTitle="overlay.victory.title"
            completionText="overlay.victory.text">
-    <interior exterior="levels/exiles-road/chapel/exterior.png" background="levels/exiles-road/chapel/interior.png" foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png" doorFrame="levels/exiles-road/chapel/door-frame.png">
+        <interior daylight="false" exterior="levels/exiles-road/chapel/exterior.png"
+                  background="levels/exiles-road/chapel/interior.png"
+                  foreground="levels/exiles-road/chapel/foreground.png" door="levels/exiles-road/chapel/door.png"
+                  doorFrame="levels/exiles-road/chapel/door-frame.png">
       <light x="184" y="176" />
       <light x="356" y="176" />
       <light x="604" y="176" />

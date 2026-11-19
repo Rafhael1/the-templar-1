@@ -6,6 +6,24 @@ import br.com.thecruzader.level.LevelData;
 import java.util.List;
 
 public final class Player {
+    public enum DamageCause {MELEE, HEAVY, ARROW, COMMANDER_ARROW, CHARGE, FIRE, POT, FALL}
+
+    DamageCause lastDamageCause;
+    double damageNotice;
+
+    void recordDamage(DamageCause cause) {
+        lastDamageCause = cause;
+        damageNotice = 3;
+    }
+
+    public DamageCause lastDamageCause() {
+        return lastDamageCause;
+    }
+
+    public double damageNotice() {
+        return damageNotice;
+    }
+
     public static final double WIDTH = LevelData.PLAYER_WIDTH, HEIGHT = LevelData.PLAYER_HEIGHT, DODGE_COOLDOWN = 1.4;
     private final int maxHealth;
     private List<SpecialAbility> abilities = List.of();
@@ -15,6 +33,10 @@ public final class Player {
 
     void equip(List<SpecialAbility> selected) {
         abilities = List.copyOf(selected);
+        refillSpecialCharges();
+    }
+
+    void refillSpecialCharges() {
         for (int i = 0; i < abilities.size(); i++) charges[i] = abilities.get(i).charges();
     }
 

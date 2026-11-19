@@ -220,6 +220,7 @@ final class SmokeTest extends ApplicationAdapter {
             checkCampaignTransition();
             checkConstantinople();
             checkNicaea();
+            checkDorylaeum();
             checkDevelopmentSelector();
             game.setLanguage(originalLanguage);
             game.showMenu();
@@ -365,11 +366,104 @@ final class SmokeTest extends ApplicationAdapter {
                 + ", briefings=" + stop + ", first cut=" + sawFirstCut + ", cross cut=" + sawCrossCut);
         play.render(0);
         capture("44-nicaea-surrender.png");
+        System.out.println("NICAEA_SMOKE_PASS: extended road, two mandatory briefings, both duelist cuts and Byzantine surrender");
+    }
+
+    private void checkDorylaeum() {
+        tap(Input.Keys.ENTER);
+        game.getScreen().render(0);
+        var play = (PlayScreen) game.getScreen();
+        var world = play.world();
+        if (!game.journey().currentLevel().id().equals("dorylaeum") || world.level().width() != 8960
+            || world.boss().kind() != EnemyKind.MOUNTED_COMMANDER)
+            throw new IllegalStateException("Dorileia must follow Niceia with a unique mounted boss");
+        boolean orders = false, gully = false, camp = false, volley = false, charge = false, relief = false;
+        int previousHealth = world.player().health();
+        for (int tick = 0; tick < 200 * 120 && world.state() == GameWorld.State.PLAYING; tick++) {
+            if (!orders && world.player().x() >= 342) {
+                play.render(0);
+                tap(Input.Keys.F);
+                play.render(0);
+                if (!play.readingConversation()) throw new IllegalStateException("Dorileia briefing did not open");
+                capture("45-dorylaeum-march.png");
+                tap(Input.Keys.F);
+                play.render(0);
+                orders = true;
+            }
+            world.update(GameWorld.STEP, world.arenaEntered() ? campInput(world) : routeInput(world));
+            if (world.player().health() < previousHealth) {
+                System.out.println("DORYLAEUM_HIT: boss=" + world.boss().state() + ", x=" + world.player().x()
+                    + ", y=" + world.player().y() + ", seconds=" + world.campDefense().orElseThrow().secondsRemaining());
+            }
+            previousHealth = world.player().health();
+            if (!gully && world.player().x() >= 4700 && world.player().grounded()) {
+                play.render(0);
+                capture("45-dorylaeum-gully.png");
+                gully = true;
+            }
+            if (world.arenaEntered() && !camp) {
+                for (int f = 0; f < 8; f++) play.render(.05f);
+                capture("46-dorylaeum-formation.png");
+                camp = true;
+            }
+            if (camp && !volley && world.boss().state() == br.com.thecruzader.gameplay.Enemy.State.RIDER_VOLLEY) {
+                play.render(0);
+                capture("47-dorylaeum-mounted-volley.png");
+                volley = true;
+            }
+            if (camp && !charge && world.boss().state() == br.com.thecruzader.gameplay.Enemy.State.RIDER_CHARGE_WINDUP) {
+                play.render(0);
+                capture("48-dorylaeum-charge.png");
+                charge = true;
+            }
+            if (camp && !relief && world.campDefense().orElseThrow().reinforcementsArrived()) {
+                play.render(0);
+                capture("49-dorylaeum-reinforcements.png");
+                relief = true;
+            }
+        }
+        if (!orders || !gully || !camp || !volley || !charge || !relief || !world.checkpoint()
+            || world.state() != GameWorld.State.WON)
+            throw new IllegalStateException("Dorileia route failed: x=" + world.player().x() + ", y=" + world.player().y()
+                + ", health=" + world.player().health() + ", boss=" + world.boss().health()
+                + ", relief=" + relief);
+        play.render(0);
+        capture("50-dorylaeum-victory.png");
         tap(Input.Keys.ENTER);
         play.render(0);
         if (!game.journey().currentLevel().id().equals("exiles-road"))
-            throw new IllegalStateException("Final victory did not restart the campaign");
-        System.out.println("NICAEA_SMOKE_PASS: extended road, two mandatory briefings, both duelist cuts, Byzantine surrender and restart");
+            throw new IllegalStateException("Final Dorileia victory did not restart the campaign");
+        System.out.println("DORYLAEUM_SMOKE_PASS: full road, briefing, formation, moving volley, charge, relief, victory and restart");
+    }
+
+    private PlayerInput campInput(GameWorld world) {
+        var p = world.player();
+        var boss = world.boss();
+        var defense = world.campDefense().orElseThrow();
+        if (world.bossDefeated()) return new PlayerInput(1, false, false, false, false, false, -1);
+        double center = defense.formation().x() + defense.formation().width() / 2 - 14;
+        double target = defense.reinforcementsArrived() && boss.health() > 0 ? boss.x() + boss.width() / 2 - 14 : center;
+        int direction = Math.abs(target - p.x()) > 12 ? (target > p.x() ? 1 : -1) : 0;
+        boolean charging = boss.state() == br.com.thecruzader.gameplay.Enemy.State.RIDER_CHARGE;
+        double bossCenter = boss.x() + boss.width() / 2;
+        boolean approaching = (p.x() - bossCenter) * boss.facing() > 0;
+        boolean chargeWarning = boss.state() == br.com.thecruzader.gameplay.Enemy.State.RIDER_CHARGE_WINDUP;
+        boolean jump = p.grounded() && Math.abs(bossCenter - p.x()) < 300
+            && (chargeWarning && boss.actionSecondsRemaining() <= .25 || charging && approaching);
+        var arrow = world.arrows().stream().filter(a -> Math.abs(a.y() - (p.y() + 26)) < 48
+                && Math.abs(a.x() - p.x()) < 180
+                && Math.cos(Math.toRadians(a.angle())) * (p.x() + 14 - a.x()) > 0)
+            .min(java.util.Comparator.comparingDouble(a -> Math.abs(a.x() - p.x()))).orElse(null);
+        boolean drawing = boss.state() == br.com.thecruzader.gameplay.Enemy.State.RIDER_DRAW
+            || boss.state() == br.com.thecruzader.gameplay.Enemy.State.RIDER_VOLLEY;
+        boolean block = !jump && (arrow != null || drawing && Math.abs(bossCenter - p.x()) < 220);
+        if (block) direction = (arrow != null ? arrow.x() : bossCenter) >= p.x() ? 1 : -1;
+        double gap = boss.x() > p.x() ? boss.x() - (p.x() + 28) : p.x() - (boss.x() + boss.width());
+        boolean attack = defense.reinforcementsArrived() && !block && boss.health() > 0 && gap < 52 && !charging
+            && boss.state() == br.com.thecruzader.gameplay.Enemy.State.RECOVER && !p.attack().running();
+        if (attack) direction = bossCenter >= p.x() ? 1 : -1;
+        int special = attack && p.specialCharges(0) > 0 ? 0 : -1;
+        return new PlayerInput(direction, jump, attack && special < 0, false, !p.grounded(), block, special);
     }
 
     private void checkDevelopmentSelector() {
@@ -401,6 +495,17 @@ final class SmokeTest extends ApplicationAdapter {
                 || !dev.journey().currentLevel().id().equals("nicaea")
                 || !dev.journey().unlockedAbilities().contains(SpecialAbility.BOW))
                 throw new IllegalStateException("Dev selector did not offer Niceia with the bow unlocked");
+            tap(Input.Keys.F2);
+            dev.render();
+            tap(Input.Keys.DOWN);
+            tap(Input.Keys.DOWN);
+            tap(Input.Keys.DOWN);
+            tap(Input.Keys.ENTER);
+            dev.getScreen().render(0);
+            if (!(dev.getScreen() instanceof PlayScreen dorylaeum)
+                || !dev.journey().currentLevel().id().equals("dorylaeum")
+                || dorylaeum.world().campDefense().isEmpty())
+                throw new IllegalStateException("Dev selector did not load Dorileia with its defense encounter");
             tap(Input.Keys.F2);
             dev.render();
             tap(Input.Keys.ENTER);
@@ -611,6 +716,15 @@ final class SmokeTest extends ApplicationAdapter {
             double aimDuration = target.health() <= target.maxHealth() / 2 ? .78 * .8 : .78;
             jump |= shotWindup * GameWorld.STEP >= aimDuration - .15
                 && Math.abs(target.x() - player.x()) < 430;
+        }
+        var incoming = world.arrows().stream().filter(a -> Math.abs(a.x() - player.x()) < 160
+                && a.y() >= player.y() && a.y() <= player.y() + 52
+                && Math.cos(Math.toRadians(a.angle())) * (player.x() + 14 - a.x()) > 0)
+            .min(java.util.Comparator.comparingDouble(a -> Math.abs(a.x() - player.x()))).orElse(null);
+        if (incoming != null && !heavy && !player.attack().running()) {
+            block = true;
+            attack = false;
+            direction = incoming.x() > player.x() ? 1 : -1;
         }
         int special = target != null && target.kind() == EnemyKind.HARBOR_CAPTAIN && attack
             && player.specialCharges(0) > 0 ? 0 : -1;

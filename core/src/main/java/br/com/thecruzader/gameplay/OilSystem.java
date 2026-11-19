@@ -16,7 +16,11 @@ final class OilSystem {
                 continue;
             }
             if (pot.burning) {
-                if (pot.fireBounds().overlaps(player.bounds())) CombatSystem.hurtPlayer(player, events);
+                if (pot.fireBounds().overlaps(player.bounds())) {
+                    int healthBefore = player.health;
+                    CombatSystem.hurtPlayer(player, events);
+                    if (player.health < healthBefore) player.lastDamageCause = Player.DamageCause.FIRE;
+                }
                 continue;
             }
             double dx = pot.vx * dt, dy = pot.vy * dt - OilPot.GRAVITY * dt * dt / 2;
@@ -31,7 +35,9 @@ final class OilSystem {
             }
             double playerHit = ProjectileSystem.hitFraction(pot.x, pot.y, dx, dy, player.bounds(), OilPot.RADIUS, OilPot.RADIUS);
             if (playerHit < terrainHit) {
+                int healthBefore = player.health;
                 CombatSystem.hitPlayer(player, pot.x, false, events);
+                if (player.health < healthBefore) player.lastDamageCause = Player.DamageCause.POT;
                 shatter(pot.x + dx * playerHit, pot.y + dy * playerHit, events, effects);
                 iterator.remove();
                 continue;

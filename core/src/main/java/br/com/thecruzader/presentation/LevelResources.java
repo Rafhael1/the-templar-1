@@ -15,6 +15,7 @@ import com.badlogic.gdx.utils.Disposable;
 public final class LevelResources implements Disposable {
     static final String CAPTAIN_ATLAS = "levels/constantinople/boss/captain.png";
     static final String DUELIST_ATLAS = "levels/nicaea/boss/duelist.png";
+    static final String COMMANDER_ATLAS = "levels/dorylaeum/boss/commander.png";
     private final AssetManager manager = new AssetManager();
     private final LevelDefinition definition;
     private final LevelData data;
@@ -44,6 +45,8 @@ public final class LevelResources implements Disposable {
                 manager.load(CAPTAIN_ATLAS, Texture.class);
             if (data.enemies().stream().anyMatch(spawn -> spawn.kind() == LevelData.EnemyKind.RELIEF_DUELIST))
                 manager.load(DUELIST_ATLAS, Texture.class);
+            if (data.enemies().stream().anyMatch(spawn -> spawn.kind() == LevelData.EnemyKind.MOUNTED_COMMANDER))
+                manager.load(COMMANDER_ATLAS, Texture.class);
             manager.finishLoading();
         } catch (RuntimeException error) {
             manager.dispose();

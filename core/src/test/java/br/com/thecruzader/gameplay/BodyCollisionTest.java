@@ -199,7 +199,7 @@ class BodyCollisionTest {
     void dodgePassesThroughEveryEnemyKindOnEitherSide() {
         for (LevelData.EnemyKind kind : LevelData.EnemyKind.values()) {
             for (int direction : new int[] {-1, 1}) {
-                double playerX = direction == 1 ? 140 : 230;
+                double playerX = direction == 1 ? 140 : 180 + kind.width + 20;
                 LevelData base = level(List.of(), 2700);
                 var targetSpawn = new LevelData.Spawn(180, 64, kind);
                 var enemies = kind.boss ? List.of(targetSpawn) : List.of(targetSpawn, base.enemies().getFirst());
@@ -208,11 +208,11 @@ class BodyCollisionTest {
                         base.exit(), base.arena(), base.solids(), enemies));
                 Enemy target = world.enemies().stream().filter(e -> e.kind == kind).findFirst().orElseThrow();
                 double before = target.x();
-                target.attack.start(); // Committed attacks keep autonomous retreat out of this collision check.
+                target.stagger = 1; // Isolate body collision from autonomous enemy movement.
                 for (int tick = 0; tick < 24; tick++)
                     world.update(GameWorld.STEP, new PlayerInput(direction, false, false, tick == 0, false, false, -1));
                 assertEquals(playerX + direction * 100, world.player().x(), .001);
-                assertEquals(before, target.x(), .001, "Dodge must not push enemies");
+                assertEquals(before, target.x(), .001, "Dodge must not push " + kind + " direction " + direction);
                 assertEquals(GameRules.DEFAULT.playerHearts(), world.player().health());
             }
         }

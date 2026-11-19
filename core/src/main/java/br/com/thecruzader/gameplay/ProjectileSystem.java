@@ -30,8 +30,11 @@ final class ProjectileSystem {
                     continue;
                 }
             } else if (hitFraction(arrow.x, arrow.y, dx, dy, player.bounds(), halfWidth, halfHeight) < terrainHit) {
+                int healthBefore = player.health;
                 CombatSystem.hitPlayer(player, player.x + Player.WIDTH / 2
                     - Math.signum(arrow.vx) * 10, arrow.heavy(), arrow.heavy() ? 2 : 1, events);
+                if (player.health < healthBefore) player.lastDamageCause = arrow.commanderShot()
+                    ? Player.DamageCause.COMMANDER_ARROW : Player.DamageCause.ARROW;
                 iterator.remove();
                 continue;
             }

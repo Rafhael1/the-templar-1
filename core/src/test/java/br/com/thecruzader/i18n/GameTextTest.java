@@ -18,6 +18,18 @@ class GameTextTest {
             assets().child("i18n/" + file).copyTo(directory.child(file));
         return directory;
     }
+
+    @Test
+    void campStatusFormatsTimeAndDamageCausesInBothLanguages() {
+        var directory = new com.badlogic.gdx.files.FileHandle(System.getProperty("assets.path") + "/i18n");
+        for (var language : Language.values()) {
+            String status = new GameText(directory, language).format("hud.campDefense", 32);
+            assertTrue(status.contains("32s"));
+            for (var cause : br.com.thecruzader.gameplay.Player.DamageCause.values())
+                assertFalse(new GameText(directory, language).text("damage." + cause.name()).isBlank());
+        }
+    }
+
     @Test void languageChangesAllLookupsAndKeepsTheGameName() {
         GameText texts = texts();
         assertEquals("INSTRUÇÕES", texts.text("menu.instructions"));

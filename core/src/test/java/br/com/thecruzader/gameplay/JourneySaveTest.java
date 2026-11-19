@@ -127,6 +127,11 @@ class JourneySaveTest {
         world.update(GameWorld.STEP, PlayerInput.NONE);
         assertTrue(world.arenaEntered());
         world.boss().health = 0;
+        world.campDefense().ifPresent(defense -> {
+            world.player().x = defense.formation().x() + 100;
+            world.player().invulnerable = 100;
+            for (int i = 0; i < 46 * 120; i++) world.update(GameWorld.STEP, PlayerInput.NONE);
+        });
         world.update(GameWorld.STEP, PlayerInput.NONE);
         for (int i = 0; i < 600; i++) world.update(GameWorld.STEP, PlayerInput.NONE);
         world.player().x = world.level().exit().x();

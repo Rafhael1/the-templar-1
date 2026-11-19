@@ -10,6 +10,7 @@ final class MovementSystem {
             PlayerInput input,
             double dt,
             List<GameEvent> events) {
+        player.damageNotice = Math.max(0, player.damageNotice - dt);
         player.blockFlash = Math.max(0, player.blockFlash - dt);
         player.hurtFlash = Math.max(0, player.hurtFlash - dt);
         player.parryFlash = Math.max(0, player.parryFlash - dt);

@@ -43,7 +43,7 @@ public record LevelDefinition(String id, String mapPath, double blendWidth, Text
         }
     }
     public record Interior(String exterior, String background, String foreground, String door, String doorFrame,
-            List<LevelData.Point> lights) {
+                           List<LevelData.Point> lights, boolean daylight) {
         public Interior {
             for (String path : List.of(exterior, background, foreground, door, doorFrame)) requireText(path);
             lights = List.copyOf(lights);

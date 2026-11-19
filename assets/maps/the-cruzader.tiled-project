@@ -171,6 +171,17 @@
       "useAs": [
         "object"
       ]
+    },
+    {
+      "color": "#fff0a97d",
+      "drawFill": true,
+      "id": 19,
+      "members": [],
+      "name": "mounted_commander",
+      "type": "class",
+      "useAs": [
+        "object"
+      ]
     }
   ]
 }

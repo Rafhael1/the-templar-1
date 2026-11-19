@@ -2,7 +2,7 @@ package br.com.thecruzader.gameplay;
 
 public final class Arrow {
     enum Kind {
-        ARCHER(360, 3), PLAYER(620, 1), CAPTAIN(940, 1);
+        ARCHER(360, 3), PLAYER(620, 1), CAPTAIN(940, 1), COMMANDER(300, 3);
 
         final double speed, lifetime;
 
@@ -36,6 +36,10 @@ public final class Arrow {
     public double x() { return x; }
     public double y() { return y; }
     public double angle() { return Math.toDegrees(Math.atan2(vy, vx)); }
+
+    public boolean commanderShot() {
+        return kind == Kind.COMMANDER;
+    }
 
     public boolean heavy() {
         return kind == Kind.CAPTAIN;

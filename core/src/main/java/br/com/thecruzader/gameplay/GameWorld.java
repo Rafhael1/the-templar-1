@@ -31,11 +31,12 @@ public final class GameWorld {
     private final List<GameEvent> events = new ArrayList<>();
     private final List<CombatEffect> effects = new ArrayList<>();
     private final List<CombatEffect> effectView = Collections.unmodifiableList(effects);
+    private final Optional<CampDefense> campDefense;
     private Player player;
     private Enemy boss;
     private final Bounds shrine, arenaEntrance;
     private State state = State.PLAYING;
-    private boolean checkpoint, paused, arenaEntered, bossDefeated;
+    private boolean checkpoint, touchingShrine, paused, arenaEntered, bossDefeated;
     private final boolean[] collectedBandages;
     private final List<Arrow> arrows = new ArrayList<>();
     private final List<Arrow> arrowView = Collections.unmodifiableList(arrows);
@@ -85,6 +86,8 @@ public final class GameWorld {
         player = new Player(level.spawn(), rules);
         player.equip(abilities);
         populate();
+        campDefense = boss.kind() == LevelData.EnemyKind.MOUNTED_COMMANDER
+            ? Optional.of(new CampDefense(level.arena())) : Optional.empty();
     }
 
     private void populate() {
@@ -142,6 +145,7 @@ public final class GameWorld {
         updateArrowPickups(dt);
         if (arenaEntered && !bossDefeated && boss.health <= 0) {
             bossDefeated = true;
+            campDefense.ifPresent(defense -> defense.relieve(events));
             onBossDefeated.run();
             if (bossReward.orElse(null) == SpecialAbility.BOW) player.equipUnlockedBow();
             arrows.clear();
@@ -149,13 +153,17 @@ public final class GameWorld {
             effects.clear();
             events.add(GameEvent.BOSS_DEFEATED);
         }
+        if (arenaEntered && !bossDefeated && player.health > 0) updateCampDefense(dt);
         bodies.resolve(player, enemies, collision, gateLocked(), dt);
         oilSystem.update(oilPots, player, collision, gateLocked(), dt, events, effects);
         for (int i = firstEvent; i < events.size(); i++) {
             if (events.get(i) == GameEvent.HIT) hitStop = Math.max(hitStop, .035);
             if (events.get(i) == GameEvent.PARRY) hitStop = Math.max(hitStop, .055);
         }
-        if (player.y < -100) player.health = 0;
+        if (player.y < -100) {
+            player.health = 0;
+            player.recordDamage(Player.DamageCause.FALL);
+        }
         if (player.health <= 0) {
             effects.clear();
             state = State.DEAD;
@@ -167,6 +175,24 @@ public final class GameWorld {
             state = State.WON;
             events.add(GameEvent.VICTORY);
         }
+    }
+
+    private void updateCampDefense(double dt) {
+        campDefense.ifPresent(defense -> {
+            boolean arrived = defense.reinforcementsArrived();
+            defense.update(dt, player, events);
+            if (!arrived && defense.reinforcementsArrived()) {
+                player.health = player.maxHealth();
+                player.damageNotice = 0;
+                player.refillSpecialCharges();
+                boss.attack.cancel();
+                boss.state = Enemy.State.RECOVER;
+                boss.stagger = Math.max(boss.stagger, 1.4);
+                boss.actionTime = 1.2;
+                boss.vx = 0;
+                arrows.removeIf(arrow -> arrow.kind != Arrow.Kind.PLAYER);
+            }
+        });
     }
 
     private void updatePlayerActions(PlayerInput input, double dt) {
@@ -236,11 +262,7 @@ public final class GameWorld {
             events.add(GameEvent.ARROW_PICKUP);
             return true;
         });
-        if (!checkpoint && shrine.overlaps(player.bounds())) {
-            checkpoint = true;
-            player.health = player.maxHealth();
-            events.add(GameEvent.CHECKPOINT);
-        }
+        updateCheckpoint();
         for (int i = 0; i < collectedBandages.length; i++) {
             if (!collectedBandages[i] && player.health < player.maxHealth()
                     && level.bandages().get(i).overlaps(player.bounds())) {
@@ -251,8 +273,23 @@ public final class GameWorld {
         }
     }
 
+    private void updateCheckpoint() {
+        boolean touching = shrine.overlaps(player.bounds());
+        if (touching && !touchingShrine) {
+            player.refillSpecialCharges();
+            if (!checkpoint) {
+                checkpoint = true;
+                player.health = player.maxHealth();
+                events.add(GameEvent.CHECKPOINT);
+            }
+        }
+        touchingShrine = touching;
+    }
+
     private void emitEnemyCue(Enemy enemy, Enemy.State previous) {
-        if (previous == enemy.state() || enemy.health() <= 0 || enemy.stagger() > 0
+        boolean mountedShot = enemy.kind() == LevelData.EnemyKind.MOUNTED_COMMANDER && enemy.shotFired;
+        if (mountedShot) enemy.shotFired = false;
+        if (previous == enemy.state() && !mountedShot || enemy.health() <= 0 || enemy.stagger() > 0
             || Math.abs(enemy.x() - player.x()) > 600
             || level.insideArena(enemy.x()) != insideArena()) return;
         GameEvent cue = switch (enemy.kind()) {
@@ -266,6 +303,9 @@ public final class GameWorld {
                 : enemy.state() == Enemy.State.ATTACK ? GameEvent.OIL_THROW : null;
             case HARBOR_CAPTAIN -> enemy.state() == Enemy.State.SHOT_WINDUP ? GameEvent.CAPTAIN_DRAW
                 : enemy.state() == Enemy.State.SHOT_RELEASE ? GameEvent.CAPTAIN_SHOT : null;
+            case MOUNTED_COMMANDER -> enemy.state() == Enemy.State.RIDER_DRAW ? GameEvent.CAVALRY_DRAW
+                : mountedShot ? GameEvent.CAVALRY_SHOT
+                : enemy.state() == Enemy.State.RIDER_CHARGE_WINDUP ? GameEvent.CAVALRY_CHARGE : null;
             case RELIEF_DUELIST -> enemy.state() == Enemy.State.TWIN_SLASH ? GameEvent.DUELIST_SLASH
                 : enemy.state() == Enemy.State.TWIN_CROSS ? GameEvent.DUELIST_CROSS : null;
             default -> null;
@@ -326,6 +366,10 @@ public final class GameWorld {
         if (pendingBriefings.remove(textKey)) collision.setArenaClosed(arenaEntranceClosed());
     }
 
+    public Optional<CampDefense> campDefense() {
+        return campDefense;
+    }
+
     public Enemy boss() {
         return boss;
     }
@@ -338,7 +382,10 @@ public final class GameWorld {
         Player previous = player;
         player = new Player(checkpoint ? level.checkpoint() : level.spawn(), rules);
         player.restoreLoadout(previous);
+        if (checkpoint) player.refillSpecialCharges();
+        touchingShrine = checkpoint;
         populate();
+        campDefense.ifPresent(CampDefense::reset);
         arenaEntered = false;
         bossDefeated = false;
         bossReleaseElapsed = 0;

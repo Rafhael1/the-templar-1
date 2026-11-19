@@ -32,6 +32,10 @@ abstract class EnemyBehavior {
         return false;
     }
 
+    double noticeDuration() {
+        return .4;
+    }
+
     double movementScale() {
         return 1;
     }

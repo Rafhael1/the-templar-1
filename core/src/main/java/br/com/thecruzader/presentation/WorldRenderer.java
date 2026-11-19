@@ -52,6 +52,7 @@ public final class WorldRenderer implements Disposable {
     private final AngelReleaseAnimation angels;
     private final TextureRegion[] captainFrames;
     private final TextureRegion[] duelistFrames;
+    private final TextureRegion[] commanderFrames;
 
     public float cameraX() { return camera.position.x; }
     public float deathElapsed() { return playerDeath; }
@@ -81,6 +82,8 @@ public final class WorldRenderer implements Disposable {
             ? TextureRegion.split(level.texture(LevelResources.CAPTAIN_ATLAS), 80, 96)[0] : new TextureRegion[0];
         duelistFrames = level.data().enemies().stream().anyMatch(spawn -> spawn.kind() == EnemyKind.RELIEF_DUELIST)
             ? TextureRegion.split(level.texture(LevelResources.DUELIST_ATLAS), 144, 96)[0] : new TextureRegion[0];
+        commanderFrames = level.data().enemies().stream().anyMatch(spawn -> spawn.kind() == EnemyKind.MOUNTED_COMMANDER)
+            ? TextureRegion.split(level.texture(LevelResources.COMMANDER_ATLAS), 192, 128)[0] : new TextureRegion[0];
         scenery = new Texture[level.definition().regions().size()];
         for (int region = 0; region < scenery.length; region++) {
             scenery[region] = level.scenery(region);
@@ -154,6 +157,7 @@ public final class WorldRenderer implements Disposable {
         batch.begin();
         if (!interior) environment.surfaces(batch, left);
         drawObjects(world, left, interior);
+        if (interior && world.arenaEntered()) drawCampDefense(world);
         for (int i = 0; i < world.enemies().size(); i++) {
             Enemy enemy = world.enemies().get(i);
             if (world.level().insideArena(enemy.x()) != interior) continue;
@@ -163,7 +167,11 @@ public final class WorldRenderer implements Disposable {
                 drawBossDeath(world, enemy, captainFrames[enemyDeaths[i] < .16f ? 8 : 9], enemyDeaths[i]);
             else if (enemy.kind() == EnemyKind.RELIEF_DUELIST && enemyDeaths[i] < 2.2f)
                 drawBossDeath(world, enemy, duelistFrames[enemyDeaths[i] < .16f ? 7 : 8], enemyDeaths[i]);
-            else if (enemyDeaths[i] < 2.2f)
+            else if (enemy.kind() == EnemyKind.MOUNTED_COMMANDER && enemyDeaths[i] < 2.2f) {
+                batch.setColor(1, 1, 1, Math.min(1, (2.2f - enemyDeaths[i]) * 2));
+                sprite(commanderFrames[7], enemy.x() - 52, enemy.y() - 8, 192, 128, enemy.facing());
+                batch.setColor(Color.WHITE);
+            } else if (enemyDeaths[i] < 2.2f)
                 drawDeath(world, enemy.x(), enemy.y(), enemy.facing(), enemy.boss() ? 1.3f : 1,
                     deathRow(enemy), enemyDeaths[i], true);
             if (enemy.flash() > 0) impactSparks(enemy.interpolatedX(alpha) + enemy.width() / 2,
@@ -172,12 +180,12 @@ public final class WorldRenderer implements Disposable {
         }
         for (var arrow : world.arrows()) {
             if (world.level().insideArena(arrow.x()) != interior) continue;
-            float scale = arrow.heavy() ? 2 : 1;
+            float scale = arrow.heavy() ? 2 : arrow.commanderShot() ? 1.5f : 1;
             if (arrow.heavy()) {
                 double trailingX = arrow.angle() == 0 ? arrow.x() - 40 : arrow.x() + 12;
                 rect(trailingX, arrow.y() - 1, 28, 2, AIM_LINE);
             }
-            batch.setColor(arrow.heavy() ? HEAVY_ARROW : Color.WHITE);
+            batch.setColor(arrow.heavy() ? HEAVY_ARROW : arrow.commanderShot() ? GameAssets.GOLD : Color.WHITE);
             batch.draw(assets.texture("arrow"), (float) arrow.x() - 8, (float) arrow.y() - 3,
                 8, 3, 16, 6, scale, scale, (float) arrow.angle(), 0, 0, 16, 6, false, false);
         }
@@ -429,6 +437,31 @@ public final class WorldRenderer implements Disposable {
         }
     }
 
+    private void drawCampDefense(GameWorld world) {
+        world.campDefense().ifPresent(defense -> {
+            var line = defense.formation();
+            rect(line.x(), line.y(), line.width(), 5, Color.SKY);
+            for (int marker = 0; marker < 8; marker++)
+                rect(line.x() + marker * 45 + 10, line.y() + 8, 20, 2, Color.SKY);
+            for (int side = 0; side < 2; side++) {
+                double x = side == 0 ? line.x() - 28 : line.right() + 4;
+                batch.setColor(Color.WHITE);
+                sprite(assets.characters[0][0], x - 16, line.y() + 4, 64, 80, x < line.x() ? -1 : 1);
+                rect(x + 3, line.y() + 24, 18, 27, Color.SKY);
+                rect(x + 5, line.y() + 26, 14, 23, HEALTH_BACK);
+            }
+            if (defense.reinforcementsArrived()) {
+                for (int i = 0; i < 3; i++) {
+                    double x = world.level().arena().x() + 40 + i * 56;
+                    batch.setColor(Color.WHITE);
+                    sprite(assets.characters[0][0], x, line.y() - 10, 64, 80, 1);
+                    rect(x + 28, line.y() + 34, 3, 42, GameAssets.GOLD);
+                }
+            }
+        });
+        batch.setColor(Color.WHITE);
+    }
+
     private void drawDamageEdges(float left, float bottom, float strength) {
         for (int i = 0; i < 4; i++) {
             float inset = i * 6;
@@ -444,7 +477,8 @@ public final class WorldRenderer implements Disposable {
         return switch (enemy.kind()) {
             case SENTINEL -> 1;
             case GUARDIAN -> 2;
-            case HARBOR_CAPTAIN, RELIEF_DUELIST -> throw new IllegalStateException("Boss has separate death poses");
+            case HARBOR_CAPTAIN, RELIEF_DUELIST, MOUNTED_COMMANDER ->
+                throw new IllegalStateException("Boss has separate death poses");
             case ARCHER -> 3;
             case SPEARMAN -> 4;
             case SHIELD_BEARER -> 5;
@@ -459,6 +493,7 @@ public final class WorldRenderer implements Disposable {
             case GUARDIAN -> assets.characters[7][frame];
             case HARBOR_CAPTAIN -> captainFrames[frame];
             case RELIEF_DUELIST -> duelistFrames[frame];
+            case MOUNTED_COMMANDER -> commanderFrames[frame];
             case ARCHER -> assets.characters[8][frame];
             case SPEARMAN -> assets.spearman[frame];
             case SHIELD_BEARER -> assets.shieldBearer[frame];
@@ -478,18 +513,49 @@ public final class WorldRenderer implements Disposable {
         double time = world.time();
         double x = e.interpolatedX(alpha), y = e.interpolatedY(alpha);
         boolean captain = e.kind() == EnemyKind.HARBOR_CAPTAIN;
+        boolean mounted = e.kind() == EnemyKind.MOUNTED_COMMANDER;
         boolean duelist = e.kind() == EnemyKind.RELIEF_DUELIST;
         boolean warning = e.state() == Enemy.State.WINDUP
             || e.state() == Enemy.State.DASH_WINDUP || e.state() == Enemy.State.JUMP_WINDUP
             || e.state() == Enemy.State.SHOT_WINDUP || e.state() == Enemy.State.TWIN_WINDUP
-            || e.state() == Enemy.State.TWIN_CROSS_WINDUP;
+            || e.state() == Enemy.State.TWIN_CROSS_WINDUP
+            || e.state() == Enemy.State.RIDER_DRAW || e.state() == Enemy.State.RIDER_CHARGE_WINDUP;
         boolean heavy = e.heavyAttack();
         if (e.state() == Enemy.State.SHOT_WINDUP) drawCaptainAim(e, world);
         batch.setColor(
-            e.flash() > 0 ? Color.SALMON : !captain && warning ? (heavy ? HEAVY_WARNING : WINDUP) : Color.WHITE);
+            e.flash() > 0 ? Color.SALMON : !captain && !mounted && warning ? (heavy ? HEAVY_WARNING : WINDUP) : Color.WHITE);
         float scale = e.boss() ? 1.3f : 1;
         boolean moving = Math.abs(e.x() - e.interpolatedX(0)) + Math.abs(e.y() - e.interpolatedY(0)) > .01;
-        if (captain) {
+        if (mounted) {
+            int pose = switch (e.state()) {
+                case RIDER_DRAW -> 3;
+                case RIDER_VOLLEY -> 4;
+                case RIDER_CHARGE_WINDUP -> 6;
+                case RIDER_CHARGE -> (int) (time * 13) % 2 == 0 ? 5 : 8;
+                case RECOVER -> 9;
+                default -> moving ? 1 + (int) (time * 10) % 2 : 0;
+            };
+            int look = e.state() == Enemy.State.RIDER_DRAW || e.state() == Enemy.State.RIDER_VOLLEY
+                ? (e.aimX() >= e.x() + e.width() / 2 ? 1 : -1) : e.facing();
+            sprite(commanderFrames[pose], x - 52, y - 8, 192, 128, look);
+            if (e.state() == Enemy.State.RIDER_DRAW) {
+                double origin = x + e.width() / 2 + look * 34;
+                double distance = e.aimX() - origin;
+                for (int dot = 0; dot < 12; dot++) {
+                    double progress = dot / 12.0;
+                    rect(origin + distance * progress, y + 52 + (e.aimY() - y - 52) * progress,
+                        4, 2, GameAssets.GOLD);
+                }
+            }
+            if (e.state() == Enemy.State.RIDER_CHARGE_WINDUP || e.state() == Enemy.State.RIDER_CHARGE) {
+                double start = x + e.width() / 2, end = e.aimX();
+                rect(Math.min(start, end), y + 5, Math.abs(end - start), 5, HEAVY_WARNING);
+                for (int mark = 0; mark < 5; mark++) {
+                    double point = start + (end - start) * (mark + 1) / 6;
+                    rect(point, y + 11, 10, 3, HEAVY_WARNING);
+                }
+            }
+        } else if (captain) {
             int pose = switch (e.state()) {
                 case WINDUP, DASH_WINDUP -> 3;
                 case ATTACK -> 4;
@@ -514,16 +580,16 @@ public final class WorldRenderer implements Disposable {
             sprite(enemyAttacks.pose(e, enemyFrame(e, moving ? (int) (time * 7) % 8 : 0)),
                 x - 17, y - 10, 64 * scale, 80 * scale, e.facing());
         }
-        rect(x, y + (e.boss() ? 93 : 72), 34, 3, HEALTH_BACK);
+        rect(x, y + (mounted ? 118 : e.boss() ? 93 : 72), 34, 3, HEALTH_BACK);
         rect(
                 x,
-                y + (e.boss() ? 93 : 72),
+            y + (mounted ? 118 : e.boss() ? 93 : 72),
                 34.0 * e.health() / e.maxHealth(),
                 3,
                 GameAssets.GOLD);
         if (warning) {
-            rect(x + 12, y + (e.boss() ? 102 : 82), 4, 12, heavy ? HEAVY_WARNING : WARNING);
-            rect(x + 12, y + (e.boss() ? 97 : 77), 4, 3, heavy ? HEAVY_WARNING : WARNING);
+            rect(x + 12, y + (mounted ? 128 : e.boss() ? 102 : 82), 4, 12, heavy ? HEAVY_WARNING : WARNING);
+            rect(x + 12, y + (mounted ? 123 : e.boss() ? 97 : 77), 4, 3, heavy ? HEAVY_WARNING : WARNING);
         }
         if (e.state() == Enemy.State.NOTICE) {
             rect(x + 10, y + 88, 8, 2, GameAssets.GOLD);
@@ -547,7 +613,7 @@ public final class WorldRenderer implements Disposable {
             }
         } else if (e.archer()) {
             enemyAttacks.bow(batch, e, x, y);
-        } else if (!captain && !duelist) {
+        } else if (!captain && !duelist && !mounted) {
             enemyAttacks.sword(batch, e, x, y, scale);
         }
         if (e.kind() == br.com.thecruzader.level.LevelData.EnemyKind.SHIELD_BEARER) {

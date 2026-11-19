@@ -6,12 +6,31 @@ import java.util.List;
 
 final class ArcherBehavior extends GroundEnemyBehavior {
     ArcherBehavior() {
-        super(2, .65, .08, 1.10);
+        super(2, .42, .08, .65);
     }
 
     @Override
     double sightRange() {
-        return 280;
+        return 340;
+    }
+
+    @Override
+    double noticeDuration() {
+        return .2;
+    }
+
+    @Override
+    double minimumAttackSpacing() {
+        return 0;
+    }
+
+    @Override
+    void repositionDuringRecovery(Enemy enemy, double dt, EnemyNavigation navigation) {
+        if (enemy.attack.phaseProgress() >= .55 || enemy.alertTime == 0
+            || Math.abs(enemy.targetX - enemy.x) >= preferredSpacing()
+            || Math.abs(enemy.targetY - enemy.y) > 60) return;
+        int away = enemy.targetX < enemy.x ? 1 : -1;
+        navigation.backstep(enemy, away, 210, dt);
     }
 
     @Override

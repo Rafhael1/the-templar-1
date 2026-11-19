@@ -35,6 +35,8 @@ public final class Hud implements Disposable {
     private final List<Image[]> specialIcons = new ArrayList<>();
     private List<SpecialAbility> displayedAbilities = List.of();
     private final Label objective;
+    private final Label damageNotice;
+    private final Label bossAction;
     private final Label bandageCount;
     private final Label sound;
     private final Label messageTitle;
@@ -110,6 +112,12 @@ public final class Hud implements Disposable {
         root.add(top).growX();
         root.row();
         root.add(specials).left().padTop(8);
+        damageNotice = new Label("", assets.skin);
+        damageNotice.setFontScale(.7f * GameAssets.UI_FONT_SCALE);
+        damageNotice.setColor(Color.SALMON);
+        damageNotice.setWrap(true);
+        root.row();
+        root.add(damageNotice).width(240).left().padTop(8);
 
         messagePanel = new Table();
         messagePanel.setFillParent(true);
@@ -149,7 +157,10 @@ public final class Hud implements Disposable {
         bossStyle.knobBefore = assets.panel(Color.valueOf("973f4e"));
         bossStyle.knobBefore.setMinHeight(8);
         bossHealth = new ProgressBar(0, 1, .001f, false, bossStyle);
-        bossCard.add(bossHealth).width(324).height(10);
+        bossCard.add(bossHealth).width(324).height(10).row();
+        bossAction = new Label("", assets.skin);
+        bossAction.setFontScale(.65f * GameAssets.UI_FONT_SCALE);
+        bossCard.add(bossAction).padTop(7);
         bossPanel.add(bossCard).width(344);
         bossPanel.setVisible(false);
         stage.addActor(bossPanel);
@@ -254,6 +265,8 @@ public final class Hud implements Disposable {
         Player player = world.player();
         updateSpecials(player);
         updateVitals(player, muted);
+        damageNotice.setText(player.damageNotice() > 0 && player.lastDamageCause() != null
+            ? assets.texts.text("damage." + player.lastDamageCause().name()) : "");
         updateWorldIndicators(world);
         updateMessage(world, delta);
         updateOverlay(world, deathElapsed);
@@ -326,8 +339,23 @@ public final class Hud implements Disposable {
             objectiveKey = definition.texts().travelObjective();
         }
         objective.setText(assets.texts.text(objectiveKey));
+        if (world.arenaEntered() && !world.bossDefeated()) world.campDefense().ifPresent(defense -> {
+            if (!defense.reinforcementsArrived()) objective.setText(assets.texts.format(
+                defense.inFormation(world.player()) ? "hud.campDefense" : "hud.campOutside", defense.secondsRemaining()));
+            else objective.setText(assets.texts.text("hud.campRelief"));
+        });
         bossPanel.setVisible(world.arenaLocked() && world.boss().health() > 0);
         bossHealth.setValue((float) world.boss().health() / world.boss().maxHealth());
+        if (world.boss().kind() == br.com.thecruzader.level.LevelData.EnemyKind.MOUNTED_COMMANDER) {
+            String action = switch (world.boss().state()) {
+                case RIDER_DRAW, RIDER_VOLLEY -> "hud.bossArrows";
+                case RIDER_CHARGE_WINDUP, RIDER_CHARGE -> "hud.bossCharge";
+                case RECOVER -> "hud.bossOpening";
+                default -> "hud.bossMoving";
+            };
+            bossAction.setText(assets.texts.text(action));
+            bossAction.setColor(world.boss().heavyAttack() ? Color.SALMON : GameAssets.GOLD);
+        }
 
         int count = world.collectedBandageCount();
         if (count != lastBandageCount) {
@@ -357,7 +385,10 @@ public final class Hud implements Disposable {
 
         String overlayKey = world.paused() ? "pause" : state == GameWorld.State.DEAD ? "death" : "pause";
         overlayTitle.setText(assets.texts.text("overlay." + overlayKey + ".title"));
-        overlayText.setText(assets.texts.text("overlay." + overlayKey + ".text"));
+        String details = assets.texts.text("overlay." + overlayKey + ".text");
+        if (world.state() == GameWorld.State.DEAD && world.player().lastDamageCause() != null)
+            details = assets.texts.text("damage." + world.player().lastDamageCause().name()) + "\n\n" + details;
+        overlayText.setText(details);
     }
 
     public void resize(int width, int height) {

@@ -48,7 +48,7 @@ class EnemyVariantsTest {
     @Test
     void commonEnemiesApproachOrRetreatBrisklyAccordingToTheirWeapon() {
         for (LevelData.EnemyKind kind : LevelData.EnemyKind.values()) {
-            if (kind.boss) continue;
+            if (kind.boss || kind == LevelData.EnemyKind.ARCHER) continue;
             Enemy enemy = enemy(kind);
             boolean ranged = kind == LevelData.EnemyKind.ARCHER || kind == LevelData.EnemyKind.OIL_THROWER;
             Player player = new Player(new LevelData.Point(ranged ? 240 : 100, 64));
@@ -444,14 +444,13 @@ class EnemyVariantsTest {
     }
 
     @Test
-    void archerRetreatsBeforeStartingAnotherShotButKeepsCommittedWindup() {
+    void archerStartsShootingAtCloseRangeAndKeepsCommittedWindup() {
         Enemy archer = enemy(LevelData.EnemyKind.ARCHER);
         Player player = new Player(new LevelData.Point(240, 64));
         EnemySystem system = new EnemySystem(new CollisionWorld(level()), new java.util.ArrayList<>());
         system.update(archer, player, GameWorld.STEP, new ArrayList<>(), false);
-        assertEquals(Enemy.State.CHASE, archer.state());
-        assertTrue(archer.vx > 0);
-        archer.attack.start();
+        assertEquals(Enemy.State.WINDUP, archer.state());
+        assertEquals(0, archer.vx);
         system.update(archer, player, GameWorld.STEP, new ArrayList<>(), false);
         assertEquals(Enemy.State.WINDUP, archer.state());
         assertEquals(0, archer.vx);

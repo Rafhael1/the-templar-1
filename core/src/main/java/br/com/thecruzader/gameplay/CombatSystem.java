@@ -21,10 +21,13 @@ final class CombatSystem {
             if (enemy.behavior.contactAttackBounds(enemy).overlaps(player.bounds())) {
                 enemy.hitPlayer = true;
                 boolean heavy = enemy.heavyAttack();
+                int healthBefore = player.health;
                 if (hitPlayer(player, enemy.x + enemy.bounds().width() / 2, heavy, events)) {
                     stagger(enemy, enemy.boss() ? .40 : .45, enemy.boss() ? 0 : player.facing * 110);
                     enemy.riposteReady = enemy.boss();
                 }
+                if (player.health < healthBefore && enemy.state == Enemy.State.RIDER_CHARGE)
+                    player.lastDamageCause = Player.DamageCause.CHARGE;
             }
         }
     }
@@ -101,7 +104,9 @@ final class CombatSystem {
                 return false;
             }
         }
+        int healthBefore = player.health;
         hurtPlayer(player, damage, events);
+        if (player.health < healthBefore && heavy) player.lastDamageCause = Player.DamageCause.HEAVY;
         return false;
     }
 
@@ -112,6 +117,7 @@ final class CombatSystem {
     private static void hurtPlayer(Player player, int damage, List<GameEvent> events) {
         if (player.invulnerable > 0) return;
         player.health = Math.max(0, player.health - damage);
+        player.recordDamage(Player.DamageCause.MELEE);
         player.invulnerable = 0.85;
         player.hurtFlash = .28;
         events.add(GameEvent.HURT);

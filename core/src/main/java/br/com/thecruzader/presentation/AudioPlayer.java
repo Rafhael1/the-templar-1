@@ -60,7 +60,10 @@ public final class AudioPlayer {
                         case JUMP -> "jump";
                         case SWING, SPECIAL_SWING, DUELIST_SLASH, DUELIST_CROSS -> "sword";
                         case BOW_SHOT, CAPTAIN_SHOT -> "spear-thrust";
-                        case CAPTAIN_DRAW -> "spear-draw";
+                        case CAPTAIN_DRAW, CAVALRY_DRAW -> "spear-draw";
+                        case CAVALRY_SHOT -> "spear-thrust";
+                        case CAVALRY_CHARGE -> "mace-lift";
+                        case REINFORCEMENTS -> "chime";
                         case HIT, BLOCK -> "hit";
                         case PARRY -> "chime";
                         case HURT -> "hurt";

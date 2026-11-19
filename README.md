@@ -483,3 +483,15 @@ Ao cair sobre um inimigo vivo, o templário desliza gradualmente pela lateral, a
 terreno. A velocidade de queda durante o contato fica limitada a 100 pixels/s; a gravidade normal retoma assim que ele
 sai do corpo. Corpos não concedem apoio nem reiniciam o salto; um golpe aéreo para baixo bem-sucedido mantém seu impulso
 de combate.
+
+### Fase 4: A batalha de Dorileia
+
+Após Niceia, alcance o acampamento e confirme as ordens de Boemundo com F. A área azul chama aliados em 45 segundos:
+sair dela apenas pausa o contador, sem tirar vida. O apoio restaura vida e especiais e atordoa o comandante uma vez.
+Bloqueie as flechas douradas e salte ou apare a investida avisada pela faixa vermelha. A HUD indica a ação do chefe e
+a origem do dano recebido; a tela de morte também informa a causa. O chefe montado tem arte e animações próprias. A
+derrota do comandante encerra a defesa e libera a saída, mesmo antes dos reforços.
+[Roteiro e regras](docs/narrativa/04-a-batalha-de-dorileia.md). O seletor de desenvolvimento também oferece Dorileia.
+
+Os checkpoints recarregam Golpe Dourado e Arco ao chegar, reentrar após sair e renascer no santuário. Na arena de
+Dorileia, um único comandante concentra os disparos montados e as investidas; não há cavaleiro auxiliar atacando.

@@ -27,7 +27,7 @@ O contrato atual é intencionalmente horizontal:
 | `spawn`                                                                   | 1          | Corpo do jogador livre de terreno e antes da entrada da arena             |
 | `checkpoint`                                                              | 1          | Corpo do jogador livre de terreno e antes da entrada da arena             |
 | `sentinel`, `archer`, `spearman`, `shield_bearer`, `brute`, `oil_thrower` | 0 ou mais  | Corpos livres de terreno e antes da entrada da arena                      |
-| `guardian`, `harbor_captain` ou `relief_duelist`                          | 1 no total | Corpo inteiro dentro da arena, sobre seu piso                             |
+| `guardian`, `harbor_captain`, `relief_duelist` ou `mounted_commander`     | 1 no total | Corpo inteiro dentro da arena, sobre seu piso                             |
 | `bandage`                                                                 | 1 ou mais  | Área livre de terreno/portões; representa bandagens                       |
 | `arena`                                                                   | 1          | Piso plano e livre; largura entre 70 e 896 pixels; altura mínima de 240   |
 | `gate`                                                                    | 1          | X coincide com a borda direita da arena; mesmo piso; altura mínima de 176 |
@@ -37,7 +37,7 @@ O portão de entrada tem 32 pixels de largura e fica imediatamente antes da aren
 continuamente a arena até o fim da saída. A arena e as duas barreiras devem caber na câmera centrada: metade da largura
 da arena mais a maior largura de portão deve ser no máximo 480. Assim, um portão de saída de 40 pixels limita a arena a
 880 pixels. Portões não podem sobrepor terreno estático. O validador usa corpos reais: jogador 28 × 52, inimigos comuns
-30 × 48, guardião e capitão 42 × 68 e duelista 38 × 62.
+30 × 48, guardião e capitão 42 × 68 duelista 38 × 62 e comandante montado 88 × 76.
 
 O carregamento rejeita formatos e posições incompatíveis, mas não prova que todos os saltos/coletas sejam alcançáveis. Ensaie a rota. Inimigos sobem degraus de até 32 pixels e saltam entre superfícies por trajetórias livres de colisão, com cerca de 110 pixels de altura máxima. Plataformas são sólidas; spawns devem ter apoio para o corpo inteiro. Fases verticais, mais checkpoints, chefes diferentes ou objetivos sem chefe exigem mudanças explícitas nesse contrato.
 
@@ -57,7 +57,7 @@ obrigatórios. Caminhos são internos aos recursos de `assets/` e não dependem 
             announcement="level.newRoad.region.0" />
     <decoration kind="TORCH" x="230" y="64" />
     <decoration kind="FLAG" x="480" y="64" color="743844" />
-    <interior exterior="levels/new-road/chapel/exterior.png"
+    <interior daylight="false" exterior="levels/new-road/chapel/exterior.png"
               background="levels/new-road/chapel/interior.png"
               foreground="levels/new-road/chapel/foreground.png"
               door="levels/new-road/chapel/door.png" doorFrame="levels/new-road/chapel/door-frame.png">
@@ -156,3 +156,14 @@ esquerda do quadro. Altares `SHRINE` são desenhados a 96 × 128 para caberem na
 terreno e dos personagens, sem colisões. Use `tools/generate_environment.py` para reproduzir o atlas e os fundos da
 primeira fase. `EnvironmentRenderer` acrescenta desgaste, vegetação e fragmentos nas superfícies expostas, sem ocupar
 espaço físico.
+
+### Defesa de Dorileia
+
+O tipo `mounted_commander` ativa a defesa de acampamento em `CampDefense`: 45 segundos acumulados na área azul para
+chamar apoio aliado. Sair da área pausa o contador e não causa dano.
+O apoio restaura vida/especiais e atordoa o chefe uma vez. A derrota do chefe encerra a defesa e inicia a liberação
+imediatamente, mesmo antes dos reforços. Consulte
+[narrativa da fase 4](narrativa/04-a-batalha-de-dorileia.md) para os tempos, regras e gerador.
+
+O atributo obrigatório `daylight` de `<interior>` mantém arenas abertas sob luz diurna (`true`) ou aplica a
+iluminação interna compartilhada (`false`). Dorileia usa `true`; as demais fases preservam `false`.
